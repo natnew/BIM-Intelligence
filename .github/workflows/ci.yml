@@ -64,6 +64,11 @@ jobs:
       - name: Type-check
         working-directory: frontend
         run: npm run typecheck
+      - name: Contract types are current
+        # Fails when frontend/src/api/generated/types.ts is stale relative to the committed
+        # JSON Schema (ADR-014). The backend job's pytest covers Pydantic → JSON Schema drift.
+        working-directory: frontend
+        run: npm run types:check
       - name: Test
         working-directory: frontend
         run: npm test

@@ -418,6 +418,8 @@ erDiagram
     DOCUMENT ||--o{ REQUIREMENT : "is source of"
     REQUIREMENT ||--|| CHECK_SPEC : "compiles to"
     REVIEW_RUN ||--|| REVIEW_PLAN : executes
+    REVIEW_RUN ||--o{ CHECK_RESULT : records
+    CHECK_RESULT ||--o{ FINDING : lists
     REVIEW_RUN ||--o{ FINDING : produces
     FINDING }o--|| REQUIREMENT : violates
     FINDING ||--o{ ELEMENT_REF : affects
@@ -429,17 +431,24 @@ erDiagram
 
 ### 10.2 Core schemas
 
+Implemented models live in `backend/bim_intelligence/schemas/` and are exported to `frontend/src/api/generated/` (ADR-014, ADR-015). Models not yet implemented are marked *planned*.
+
 | Model | Fields (abridged) | Notes |
 |---|---|---|
-| `Session` | `id`, `created_at`, `model_hash`, `document_hashes`, `status` | directory `data/sessions/{id}/` |
-| `ElementRef` | `global_id`, `express_id`, `ifc_type`, `name`, `storey` | the only way to refer to an element |
-| `Requirement` | `id`, `title`, `statement`, `source`, `check`, `status`, `confidence`, `confirmed_by`, `confirmed_at` | status ∈ proposed/confirmed/edited/rejected/informational |
-| `CheckSpec` | `kind` (ids/native), `ids_specification` or `rule_id` + `params`, `version` | |
-| `Finding` | `id`, `run_id`, `requirement_id`, `rule_id`, `rule_version`, `severity`, `category`, `elements[]`, `observed`, `expected`, `method` ∈ {ids, native}, `created_at` | `method` can never be `llm` (FR-VAL-07) |
-| `EvidenceBundle` | `finding_id`, `element_records[]`, `container`, `siblings[]` with status, `property_stats`, `requirement_source` | everything an explanation may cite |
-| `Explanation` | `finding_group_id`, `summary`, `probable_cause`, `corrective_action`, `cited_global_ids[]`, `cited_properties[]`, `generated_by` {model id, prompt version}, `grounding` {status, violations[]} | labelled AI-generated (FR-EXP-05) |
-| `Report` | session metadata, model summary, requirements table, findings with evidence and explanations, traceability matrix, provenance | canonical JSON; Markdown rendered from it |
-| `RunLog` | plan, tool calls (name, args, duration, result size), token usage, grounding results, errors, timings | one per run (NFR-09) |
+| `Session` *(planned)* | `id`, `created_at`, `model_hash`, `document_hashes`, `status` | directory `data/sessions/{id}/` |
+| `ElementRef` | `global_id` (nullable), `express_id`, `ifc_type`, `name`, `storey` | the only way to refer to an element; GlobalId is the viewer key, `express_id` the fallback identity |
+| `ModelSummary` | `ifc_schema`, `model_hash`, `project_name`, `counts{IfcClass: n}`, `storeys[]` | produced once per upload |
+| `Requirement` | `id`, `title`, `statement`, `origin` ∈ document/ids/builtin, `source`, `check`, `status`, `confidence`, `revision`, `confirmed_revision`, `confirmed_by`, `confirmed_at` | status ∈ proposed/confirmed/edited/rejected/informational; executable only when `confirmed_revision == revision` |
+| `CheckSpec` | `id` (content hash), `kind` (ids/native), `rule_id`, `rule_version`, `ids_specification` or `params` | immutable; plans reference it by `id` only |
+| `Finding` | `id` (content hash), `check_id`, `requirement_id`, `rule_id`, `rule_version`, `facet_index`, `severity`, `category`, `elements[]`, `observed`, `expected`, `method` ∈ {ids, native} | `method` can never be `llm` (FR-VAL-07); no timestamp or run id, so `findings.json` is byte-reproducible (NFR-01) |
+| `CheckResult` | `check_id`, `requirement_id`, `status` ∈ passed/failed/error/skipped/not_applicable, `applicable_count`, `finding_ids[]`, `diagnostics[]` | execution outcome, never a defect |
+| `ReviewPlan` | `checks[] {check_id, reason}` | the planner's output; no parameters |
+| `ReviewRun` | `id`, `session_id`, `status` ∈ queued/running/completed/partial/failed/interrupted, `plan`, `plan_source` ∈ llm/default, `check_results[]`, `input_manifest`, `created_at`, `finished_at` | the only record carrying timestamps |
+| `ProblemDetail` | `type`, `title`, `status`, `detail`, `instance`, `correlation_id` | RFC 9457 body for every error response |
+| `EvidenceBundle` *(planned)* | `finding_id`, `element_records[]`, `container`, `siblings[]` with status, `property_stats`, `requirement_source` | everything an explanation may cite |
+| `Explanation` *(planned)* | `finding_group_id`, `summary`, `probable_cause`, `corrective_action`, `cited_global_ids[]`, `cited_properties[]`, `generated_by` {model id, prompt version}, `grounding` {status, violations[]} | labelled AI-generated (FR-EXP-05) |
+| `Report` *(planned)* | session metadata, model summary, requirements table, findings with evidence and explanations, traceability matrix, provenance | canonical JSON; Markdown rendered from it |
+| `RunLog` *(planned)* | plan, tool calls (name, args, duration, result size), token usage, grounding results, errors, timings | one per run (NFR-09) |
 
 ### 10.3 Traceability chain
 
@@ -563,9 +572,9 @@ Every panel renders loading, empty, error and success states. Degraded mode (LLM
 | LLM unreachable / 401 / 429 / timeout | Planner → default plan; extractor → error surfaced to user, no candidates; explainer → templated explanation with `grounding.status="fallback"`. UI shows degraded banner. Retries: exponential backoff, max 2, only on 429/5xx. |
 | Plan references unknown tool or unconfirmed requirement | Item dropped, logged as `plan_violation`; if plan empty → default plan. |
 | Tool argument schema invalid | Rejected, one corrective re-prompt, then dropped. |
-| Tool-call cap reached | Run completes with what it has; log `cap_reached`. |
+| Tool-call cap reached | Remaining planned checks are recorded as `CheckResult.status="skipped"`; the run ends `partial`, never `completed`; log `cap_reached` (ADR-015). |
 | Grounding failure | Regenerate once, then template. Never ship ungrounded prose. |
-| IfcTester exception on a specification | That specification reported as `check_error` finding category; other specifications continue. |
+| IfcTester exception on a specification | That check's `CheckResult.status="error"` with the message in `diagnostics`; no finding is created; other specifications continue (ADR-015, superseding the earlier `check_error` finding category). |
 | Frontend fails to load IFC | Findings list and report remain usable; viewer shows error and retry. |
 
 All errors are structured (`ProblemDetail`) and written to the run log with correlation id = `runId`.
@@ -691,18 +700,21 @@ BIM-Intelligence/
 │       ├── config.py         # Settings (pydantic-settings), model-id validation
 │       └── logging.py
 ├── frontend/
+│   ├── scripts/              # generate-types.mjs (JSON Schema → TypeScript, with --check)
 │   ├── src/
-│   │   ├── api/              # generated types + client
+│   │   ├── api/              # client; generated/ holds the committed schema bundle and types
 │   │   ├── components/       # panels (presentation only)
 │   │   ├── state/            # hooks and shared store
 │   │   ├── viewer/           # ViewerAdapter, That Open Components setup
 │   │   └── test/             # Vitest setup
 │   ├── package.json          # committed lockfile alongside
 │   └── vite.config.ts
+├── scripts/
+│   └── export_schemas.py     # Pydantic → frontend/src/api/generated/*.schema.json, with --check
 ├── tests/
 │   ├── unit/                 # mirrors backend package layout
 │   ├── scenario/             # end-to-end review runs with FakeClient
-│   ├── fixtures/             # small hand-built IFC and IDS files
+│   ├── fixtures/             # small hand-built IFC and IDS files and the scripts that generate them
 │   └── evaluation/           # run_eval.py, LLM recordings for replay, runs/ (git-ignored)
 ├── datasets/
 │   ├── generate.py           # synthetic benchmark generator and defect injector

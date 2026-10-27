@@ -1,3 +1,5 @@
 node_modules
 dist
 package-lock.json
+# Written by scripts/export_schemas.py (Python); its canonical form is defined there.
+src/api/generated/*.json

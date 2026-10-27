@@ -1,0 +1,58 @@
+<ids xmlns="http://standards.buildingsmart.org/IDS" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://standards.buildingsmart.org/IDS http://standards.buildingsmart.org/IDS/1.0/ids.xsd">
+    <info>
+        <title>BIM Intelligence minimal fixture</title>
+        <version>1.0.0</version>
+        <description>Two specifications exercising applicability, a property requirement and a classification requirement.</description>
+        <author>fixtures@bim-intelligence.invalid</author>
+        <date>2026-10-27</date>
+        <purpose>Test fixture</purpose>
+    </info>
+    <specifications>
+        <specification name="External walls carry a fire rating" ifcVersion="IFC4" description="Every external wall shall declare its fire rating.">
+            <applicability minOccurs="1" maxOccurs="unbounded">
+                <entity>
+                    <name>
+                        <simpleValue>IFCWALL</simpleValue>
+                    </name>
+                </entity>
+                <property dataType="IFCBOOLEAN">
+                    <propertySet>
+                        <simpleValue>Pset_WallCommon</simpleValue>
+                    </propertySet>
+                    <baseName>
+                        <simpleValue>IsExternal</simpleValue>
+                    </baseName>
+                    <value>
+                        <simpleValue>TRUE</simpleValue>
+                    </value>
+                </property>
+            </applicability>
+            <requirements>
+                <property dataType="IFCLABEL" cardinality="required">
+                    <propertySet>
+                        <simpleValue>Pset_WallCommon</simpleValue>
+                    </propertySet>
+                    <baseName>
+                        <simpleValue>FireRating</simpleValue>
+                    </baseName>
+                </property>
+            </requirements>
+        </specification>
+        <specification name="Walls carry a classification reference" ifcVersion="IFC4" description="Every wall shall carry a classification reference in the project system.">
+            <applicability minOccurs="1" maxOccurs="unbounded">
+                <entity>
+                    <name>
+                        <simpleValue>IFCWALL</simpleValue>
+                    </name>
+                </entity>
+            </applicability>
+            <requirements>
+                <classification cardinality="required">
+                    <system>
+                        <simpleValue>Uniclass 2015</simpleValue>
+                    </system>
+                </classification>
+            </requirements>
+        </specification>
+    </specifications>
+</ids>

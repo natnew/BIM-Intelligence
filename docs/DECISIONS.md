@@ -20,6 +20,7 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 | [ADR-012](#adr-012-chat-completions-protocol-first) | Chat Completions protocol first | Adopted, revisit |
 | [ADR-013](#adr-013-fastapi-background-tasks-and-sse-no-task-queue) | FastAPI background tasks and SSE, no task queue | Adopted |
 | [ADR-014](#adr-014-frontend-types-generated-from-pydantic-json-schema) | Frontend types generated from Pydantic JSON Schema | Adopted |
+| [ADR-015](#adr-015-contract-model-immutable-checkspec-content-addressed-finding-per-check-checkresult) | Contract model: immutable `CheckSpec`, content-addressed `Finding`, per-check `CheckResult` | Adopted |
 
 ---
 
@@ -218,6 +219,31 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 **Trade-offs.** One generation step to maintain; guarantees identical `Finding`/`Requirement`/`Explanation` shapes on both sides (C-07).
 
 **Evidence.** docs.pydantic.dev/latest/concepts/json_schema (`model_json_schema()`).
+
+**Implementation note (27 October 2026, ADR-015).** Generated files are committed and checked, not produced "during build": `python scripts/export_schemas.py` writes `frontend/src/api/generated/bim_intelligence.schema.json` (a pytest asserts it is current); `npm run types:generate` writes `types.ts` from it with `json-schema-to-typescript`, and `npm run types:check` fails CI when stale. The frontend build therefore never requires Python.
+
+---
+
+## ADR-015 Contract model: immutable `CheckSpec`, content-addressed `Finding`, per-check `CheckResult`
+
+**Status.** Adopted 27 October 2026 as the owner-approved technical direction for the vertical slice ([BAKEOFF_ARCHITECTURE_REVIEW.md](./BAKEOFF_ARCHITECTURE_REVIEW.md) C-02, C-03, C-05). Implemented in `backend/bim_intelligence/schemas/`.
+
+**Decision.**
+
+1. **`CheckSpec` is immutable and content-addressed.** `CheckSpec.id = sha1(kind | rule_id | rule_version | payload)[:16]`, where the payload is the serialised IDS `<specification>` for `kind="ids"` or the canonical JSON of `params` for `kind="native"`. A `ReviewPlan` item carries only `{check_id, reason}`; the orchestrator resolves the id to the confirmed `CheckSpec` server-side. No code path accepts model-supplied parameters, so a plan can select which confirmed checks run but can never weaken what a check asserts.
+2. **A `Requirement` is executable only at its confirmed revision.** `status="confirmed"` requires `confirmed_revision == revision`; an edit bumps `revision`, and `edited` is never executable until the user re-confirms. A requirement with `origin="document"` must carry a verbatim `source` quote.
+3. **`Finding` identity and order are canonical.** `Finding.id = sha1(check_id | rule_version | facet_index | sorted element keys)[:16]`, where an element key is its GlobalId or `#express_id` when none exists. `elements` are stored in key order; `findings.json` is serialised with sorted keys, findings ordered by `(check_id, facet_index, first element key, id)`. `Finding` has **no** `created_at` and **no** `run_id`: both would break the byte-identity NFR-01 demands, and the run already lists its findings through `CheckResult.finding_ids`. `method` remains `ids | native` only (ADR-001).
+4. **Execution status is separate from defects.** `CheckResult {check_id, requirement_id, status ∈ passed | failed | error | skipped | not_applicable, applicable_count, finding_ids[], diagnostics[]}`; `failed` ⇔ `finding_ids` non-empty, `error` requires a diagnostic, `not_applicable` requires zero applicable elements. `ReviewRun {id, session_id, status ∈ queued | running | completed | partial | failed | interrupted, plan, plan_source ∈ llm | default, check_results[], input_manifest, created_at, finished_at}` is the only record that carries timestamps. An IfcTester exception, a cap hit or a required specification with no applicable entities is a `CheckResult` status, never a finding; this supersedes the `check_error` finding category in [ARCHITECTURE.md §14](./ARCHITECTURE.md).
+5. **`ElementRef.global_id` is nullable; `express_id` is always present.** GlobalId remains the viewer join key (ADR-007); `express_id` is diagnostic and the fallback identity for non-`IfcRoot` entities.
+6. **Contract models forbid unknown fields** and are exported in serialisation mode, so every field is required in the TypeScript types and an unexpected key (such as `params` on a plan item or `created_at` on a finding) is a validation error, not a silent drop.
+
+**Alternatives.** UUID finding ids with timestamps (not reproducible; NFR-01 untestable); modelling errors and zero applicability as finding categories (pollutes precision and lets skipped checks read as compliance); letting plans pass `params` (schema-valid plans could check weaker conditions than the user confirmed).
+
+**Trade-offs.** Identity is bound to `rule_version`, so a rule change renames every finding it produced — intended, since the finding's meaning changed. Content-addressed ids are not globally unique across models; they are scoped to a session's inputs. `CheckSpec.params` is typed as JSON, which is acceptable because `CheckSpec` is never sent to the model.
+
+**Evidence.** `tests/unit/schemas/` (identity, ordering, invariants, drift); `ifctester` 0.9.0 verified locally: `Specification.failed_entities` is a `set`, `applicable_entities` an ordered list, and each `requirement.failures` entry is a `dict` `{"element": entity, "reason": str}`; `Facet.to_string(clause_type, specification, requirement)` renders the `expected` text (closes Q-03 of the review).
+
+**Unresolved.** Whether the two native rules that overlap IDS facets are retained (review Q-06); how `ids_specification` is re-hydrated into an `ifctester` object in the runner (slice step 7).
 
 ---
 

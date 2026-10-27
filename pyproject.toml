@@ -72,7 +72,8 @@ known-first-party = ["bim_intelligence"]
 
 [tool.mypy]
 python_version = "3.10"
-mypy_path = "backend"
+# "tests" lets test modules import the fixture generator as ``fixtures.make_minimal_ifc``.
+mypy_path = "backend,tests"
 files = ["backend/bim_intelligence", "tests"]
 plugins = ["pydantic.mypy"]
 warn_unused_configs = true
@@ -91,9 +92,15 @@ strict = true
 module = ["ifcopenshell.*", "ifctester.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# ifcopenshell 0.9 ships partial inline annotations; modules that drive it directly may call
+# its untyped functions. Confined to the fixture generator and its test.
+module = ["fixtures.*", "test_minimal_fixture"]
+disallow_untyped_calls = false
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["backend"]
+pythonpath = ["backend", "tests"]
 addopts = "-ra --strict-markers"
 markers = [
   "live: makes real Meta Model API calls; skipped unless BIMI_LIVE_LLM=1 (requires spend approval, C-06)",

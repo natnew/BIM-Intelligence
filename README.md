@@ -73,6 +73,7 @@ Verified versions and sources: [docs/ARCHITECTURE.md — Appendix B](./docs/ARCH
 |---|---|
 | Architecture, requirements, decisions, plan, evaluation design, risks, demo plan | Written — see [docs/](./docs) |
 | Repository skeleton: Python project, FastAPI app with `/api/v1/health`, validated configuration, Vite/React frontend with a health panel, CI | **Done (Day 2)** — no review functionality yet |
+| Domain schemas (`Finding`, `CheckSpec`, `Requirement`, `CheckResult`, `ReviewRun`, …), generated TypeScript contract, reproducible minimal IFC/IDS fixture | **Done (Day 2, T-0)** — see [ADR-015](./docs/DECISIONS.md#adr-015-contract-model-immutable-checkspec-content-addressed-finding-per-check-checkresult) |
 | IFC ingestion, validation rules, requirement extraction, orchestration, viewer, report | **Not started** |
 | Benchmark and measured accuracy | **Not started** — no metrics exist yet |
 | Hackathon rule verification | Outstanding (see [docs/REQUIREMENTS.md — Open items](./docs/REQUIREMENTS.md#7-open-items)) |
@@ -130,8 +131,15 @@ pytest
 # Frontend
 cd frontend
 npm run lint && npm run format:check && npm run typecheck
+npm run types:check             # generated contract types are current (ADR-014)
 npm test
 npm run build
+cd ..
+
+# Regenerate committed artefacts after changing them (then re-run the checks above)
+python scripts/export_schemas.py          # Pydantic schemas → frontend/src/api/generated/*.schema.json
+(cd frontend && npm run types:generate)   # JSON Schema → frontend/src/api/generated/types.ts
+python tests/fixtures/make_minimal_ifc.py # tests/fixtures/minimal.ifc + minimal.ids (byte-reproducible)
 
 # Later in the plan (not yet implemented)
 python tests/evaluation/run_eval.py --replay   # benchmark metrics from recorded LLM responses

@@ -35,10 +35,11 @@ Shipped:
 - [x] Frontend scaffold (Vite, React 19, TypeScript strict, oxlint, Prettier, Vitest + Testing Library) with a `HealthPanel` covering loading/error/success and a dev proxy to the API.
 - [x] `datasets/README.md` policy, `hackathon-private/` (ignored), `.github/` CI on Ubuntu + Windows, PR template, Dependabot.
 - [x] Verified locally: IfcOpenShell 0.9.0.post1 and IfcTester 0.9.0 wheels install on Python 3.12/Windows; `pytest` 27 passed; `ruff`, `mypy`, `tsc`, `vitest`, `vite build` clean.
+- [x] **T-0 (BAKEOFF review §7.1):** `schemas/` — `ElementRef`, `ModelSummary`, `Requirement`, `CheckSpec`, `Finding`, `CheckResult`, `ReviewPlan`, `ReviewRun`, `ProblemDetail` under `mypy --strict`, with content-addressed ids and canonical ordering (ADR-015). `scripts/export_schemas.py` → committed JSON Schema → `npm run types:generate` / `types:check`. `tests/fixtures/make_minimal_ifc.py` generating byte-reproducible `minimal.ifc` (IFC4, storey `L00`, three extruded walls) and `minimal.ids` (two specifications; expected failures W-002 and W-003). 85 new unit tests; `pytest` 112 passed.
 
 Carried to Day 3:
 
-- [ ] `schemas/`: `Session`, `ElementRef`, `ModelSummary`, `Requirement`, `CheckSpec`, `Finding`, `EvidenceBundle`, `Explanation`, `Report`, `RunLog`. JSON Schema export script.
+- [ ] `schemas/`: `Session`, `EvidenceBundle`, `Explanation`, `Report`, `RunLog` (the remaining models; the T-0 set is done).
 - [ ] `store/SessionStore` with atomic writes and hashing.
 - [ ] `bim/`: `IfcLoader`, `ModelIndex` builder, inspection queries. Unit tests against a tiny fixture IFC (FR-ING-01..04).
 - [ ] `api/`: sessions, model upload, elements.
