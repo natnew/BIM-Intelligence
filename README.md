@@ -72,15 +72,30 @@ Verified versions and sources: [docs/ARCHITECTURE.md — Appendix B](./docs/ARCH
 | Area | Status |
 |---|---|
 | Architecture, requirements, decisions, plan, evaluation design, risks, demo plan | Written — see [docs/](./docs) |
-| Backend, frontend, evaluation harness | **Not started** |
+| Repository skeleton: Python project, FastAPI app with `/api/v1/health`, validated configuration, Vite/React frontend with a health panel, CI | **Done (Day 2)** — no review functionality yet |
+| IFC ingestion, validation rules, requirement extraction, orchestration, viewer, report | **Not started** |
 | Benchmark and measured accuracy | **Not started** — no metrics exist yet |
 | Hackathon rule verification | Outstanding (see [docs/REQUIREMENTS.md — Open items](./docs/REQUIREMENTS.md#7-open-items)) |
 
 The ten-day schedule is in [docs/IMPLEMENTATION_PLAN.md](./docs/IMPLEMENTATION_PLAN.md).
 
+## Repository layout
+
+| Path | Purpose |
+|---|---|
+| `backend/bim_intelligence/` | Python API, AI orchestration and BIM validation (installed from the root `pyproject.toml`) |
+| `frontend/` | Interactive BIM review interface (Vite, React, TypeScript) |
+| `tests/` | Unit, scenario and evaluation tests; small IFC/IDS fixtures |
+| `datasets/` | Synthetic and permitted IFC test models with their requirement artefacts |
+| `docs/` | Technical architecture, decisions and engineering plans |
+| `.github/` | CI workflows, PR template and Dependabot configuration |
+| `hackathon-private/` | Untracked event documents and project briefs (git-ignored) |
+| `AGENTS.md` | Engineering rules for human and AI contributors |
+| `.env.example` | Configuration variable names without secret values |
+
 ## Local setup
 
-> Not yet verified — these instructions describe the intended setup and will be validated when the code exists (Day 8 of the plan).
+Verified on Windows 11 with Python 3.12.12 and Node.js 24 (27 October 2026).
 
 **Prerequisites:** Python **3.10–3.12** (IfcOpenShell publishes wheels for these versions only — Python 3.13+ will not install), Node.js 20+, a Meta Model API key for live LLM features (optional; the deterministic pipeline runs without one).
 
@@ -89,12 +104,12 @@ git clone https://github.com/natnew/BIM-Intelligence.git
 cd BIM-Intelligence
 cp .env.example .env            # edit MODEL_API_KEY if you want live LLM calls
 
-# Backend
-cd backend
+# Backend (from the repository root)
 python -m venv .venv
 # Windows: .venv\Scripts\activate   macOS/Linux: source .venv/bin/activate
 pip install -e ".[dev]"
-uvicorn bim_intelligence.api.main:app --reload --host 127.0.0.1 --port 8000
+uvicorn bim_intelligence.api.main:app --reload --app-dir backend --host 127.0.0.1 --port 8000
+# → http://127.0.0.1:8000/api/v1/health  and  /api/v1/docs
 
 # Frontend (second terminal)
 cd frontend
@@ -102,20 +117,28 @@ npm install
 npm run dev                     # http://localhost:5173, proxies /api to :8000
 ```
 
-Configuration variables are documented in [.env.example](./.env.example). The server binds to loopback only by default.
+Configuration variables are documented in [.env.example](./.env.example). The server refuses to bind to a non-loopback address unless `ALLOW_REMOTE=true`, and rejects `-contributor` model ids unless `ALLOW_CONTRIBUTOR_MODELS=true`.
 
 ## Testing
 
-> Not yet verified — intended commands.
-
 ```bash
-cd backend && pytest                       # unit + scenario tests (no API calls)
-cd frontend && npm test                    # component tests
-python evaluation/run_eval.py --replay     # benchmark metrics from recorded LLM responses
-BIMI_LIVE_LLM=1 pytest -m live             # opt-in live API tests; requires key and spend approval
+# Backend, from the repository root (no API calls in the default run)
+ruff check . && ruff format --check .
+mypy
+pytest
+
+# Frontend
+cd frontend
+npm run lint && npm run format:check && npm run typecheck
+npm test
+npm run build
+
+# Later in the plan (not yet implemented)
+python tests/evaluation/run_eval.py --replay   # benchmark metrics from recorded LLM responses
+BIMI_LIVE_LLM=1 pytest -m live                 # opt-in live API tests; requires key and spend approval
 ```
 
-Evaluation design, metrics and thresholds: [docs/EVALUATION.md](./docs/EVALUATION.md).
+The same commands run in CI on Ubuntu and Windows ([.github/workflows/ci.yml](./.github/workflows/ci.yml)). Evaluation design, metrics and thresholds: [docs/EVALUATION.md](./docs/EVALUATION.md).
 
 ## Documentation
 

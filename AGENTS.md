@@ -34,8 +34,8 @@ See [ARCHITECTURE.md Appendix A](./docs/ARCHITECTURE.md#appendix-a--recommended-
 - `llm/` is the **only** package that imports the `openai` SDK.
 - `bim/` and `validation/` are the **only** packages that import `ifcopenshell` / `ifctester`.
 - Prompts live in `orchestration/prompts/` and `reporting/prompts/` as versioned files (`planner.v1.md`); never inline long prompts in code.
-- `backend/tests/unit/` mirrors the package layout; `backend/tests/scenario/` holds end-to-end tests; small hand-built IFC/IDS fixtures go in `backend/tests/fixtures/`.
-- `evaluation/` is independent of the backend tests and may import the backend as a library.
+- `tests/unit/` mirrors the backend package layout; `tests/scenario/` holds end-to-end tests; small hand-built IFC/IDS fixtures go in `tests/fixtures/`.
+- `tests/evaluation/` holds the metrics runner and LLM recordings; it is not part of the default `pytest` run and may import the backend as a library. Benchmark inputs live in `datasets/` (see its README for the synthetic/permitted policy).
 - `frontend/src/viewer/` is the only place that imports `@thatopen/*`, `web-ifc` or `three`.
 - `docs/` holds engineering documentation only. No planning notes, scratch files or meeting logs.
 - `data/` is runtime storage and is git-ignored.
@@ -44,7 +44,7 @@ See [ARCHITECTURE.md Appendix A](./docs/ARCHITECTURE.md#appendix-a--recommended-
 ## 4. Dependency management
 
 - **Python 3.10–3.12 only** (`requires-python = ">=3.10,<3.13"`); develop on 3.12. IfcOpenShell has no wheels for 3.13+. (`ADR-005`)
-- Backend dependencies in `backend/pyproject.toml` with pinned minimums and upper bounds for `ifcopenshell`, `ifctester`, `openai`, `fastapi`, `pydantic`. Dev extras under `[project.optional-dependencies] dev`.
+- Backend dependencies in the root `pyproject.toml` with pinned minimums and upper bounds for `ifcopenshell`, `ifctester`, `openai`, `fastapi`, `pydantic`. Dev extras under `[project.optional-dependencies] dev`. Install from the repository root with `pip install -e ".[dev]"`.
 - Frontend dependencies in `frontend/package.json` with a committed lockfile. Respect That Open Components peer ranges (`three >= 0.182.0`, `web-ifc >= 0.0.77`).
 - Adding a dependency requires: a one-line justification in the PR/commit message, licence check (permissive or LGPL as installed package), and an entry in the README licence table if user-facing.
 - Do not install packages speculatively. Do not add an agent framework; the orchestrator is intentionally hand-rolled (`ADR-002`, `ADR-003`).
@@ -66,7 +66,7 @@ See [ARCHITECTURE.md Appendix A](./docs/ARCHITECTURE.md#appendix-a--recommended-
 - Functional components and hooks; one component per file; presentation separated from state and data fetching.
 - Every data-bearing component handles loading, empty, error and success states.
 - Semantic HTML and ARIA labels on interactive controls; keyboard-reachable finding list.
-- `eslint` + `prettier` with the repository configuration.
+- `oxlint` + `prettier` with the repository configuration (`npm run lint`, `npm run format:check`).
 
 **Both**
 
@@ -81,7 +81,7 @@ See [ARCHITECTURE.md Appendix A](./docs/ARCHITECTURE.md#appendix-a--recommended-
 - **No live API calls in the default test run.** Live tests are marked `@pytest.mark.live`, skipped unless `BIMI_LIVE_LLM=1`, and require explicit spend approval from the project owner (`C-06`).
 - **Determinism:** tests must not depend on wall-clock time, random ordering or network. Seed anything random.
 - Frontend: Vitest + React Testing Library for panels; one Playwright smoke test on the benchmark.
-- Evaluation runs (`evaluation/run_eval.py`) are not tests; they produce metrics that are reported, never asserted as passing until thresholds are agreed.
+- Evaluation runs (`tests/evaluation/run_eval.py`) are not tests; they produce metrics that are reported, never asserted as passing until thresholds are agreed.
 
 ## 7. Documentation responsibilities
 
@@ -107,7 +107,7 @@ Mermaid diagrams must render on GitHub; check syntax before committing. Keep ter
 - Outbound network calls go only to `LLM_BASE_URL`. No telemetry, no analytics.
 - Server binds to `127.0.0.1` unless `ALLOW_REMOTE=true`.
 - Treat BEP/document content as untrusted input (prompt-injection surface). Validate all model output by schema; never execute anything derived from document text without the plan filter and human confirmation.
-- Run a secret scan before any push. Never commit `.ifc` files outside `backend/tests/fixtures/`, anything under `data/`, or anything under `hackathon-private/`.
+- Run a secret scan before any push. Never commit `.ifc` files outside `tests/fixtures/` or `datasets/`, anything under `data/`, or anything under `hackathon-private/`.
 
 ## 9. Agent boundaries and prohibited actions
 
@@ -134,6 +134,6 @@ When blocked by any of these, stop, explain the constraint, and ask.
 1. Read the relevant requirement ids and ADRs.
 2. Write or update the failing test.
 3. Implement the smallest complete change that satisfies the requirement — including error handling and documentation.
-4. Run `ruff`, `mypy`, `pytest` (backend) or `eslint`, `tsc --noEmit`, `vitest` (frontend).
+4. Run `ruff check . && ruff format --check . && mypy && pytest` (backend, from the repository root) or `npm run lint && npm run format:check && npm run typecheck && npm test` (frontend).
 5. Update docs per §7.
 6. Summarise: what changed, which requirement ids it serves, what was validated, what needs the owner's decision.

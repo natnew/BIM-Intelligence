@@ -1,0 +1,16 @@
+# Normalise line endings so lint/format checks behave identically on Windows and Linux CI.
+* text=auto eol=lf
+
+# Windows-specific scripts keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.frag binary
+*.ifczip binary

@@ -1,6 +1,6 @@
 # Evaluation
 
-**Status:** v0.1 design. No evaluation has been run; no metric below is a result. Values will be filled in only when produced by `evaluation/run_eval.py`.
+**Status:** v0.1 design. No evaluation has been run; no metric below is a result. Values will be filled in only when produced by `tests/evaluation/run_eval.py`.
 
 ## 1. Evaluation objective
 
@@ -117,13 +117,13 @@ Comparisons with commercial checkers are **not** made; no claim of superiority i
 
 ```bash
 # from repository root, Python 3.12 virtual environment active
-cd backend && pip install -e ".[dev]" && cd ..
-python evaluation/benchmark/generate.py          # writes evaluation/benchmark/generated/
-python evaluation/run_eval.py --replay            # deterministic, no API calls
-python evaluation/run_eval.py --live              # requires MODEL_API_KEY and approval; records new fixtures
+pip install -e ".[dev]"
+python datasets/generate.py                           # writes datasets/synthetic/ (committed)
+python tests/evaluation/run_eval.py --replay          # deterministic, no API calls
+python tests/evaluation/run_eval.py --live            # requires MODEL_API_KEY and approval; records new fixtures
 ```
 
-Outputs: `evaluation/runs/<timestamp>/metrics.json`, `confusion.md`, `run.log.jsonl`. Results are copied into §8 of this document by hand with the commit hash.
+Outputs: `tests/evaluation/runs/<timestamp>/metrics.json`, `confusion.md`, `run.log.jsonl` (git-ignored). Results are copied into §8 of this document by hand with the commit hash.
 
 ## 8. Results
 

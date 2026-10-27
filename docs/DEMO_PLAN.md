@@ -33,7 +33,7 @@ The demo cannot be recorded until each row is implemented and passes its accepta
 ## 3. Visual sequence and assets
 
 - Screen recording at 1920×1080, browser only (no terminal with environment variables visible).
-- Benchmark model with injected defects (`evaluation/benchmark/generated/benchmark.ifc`) — small enough to load in seconds.
+- Benchmark model with injected defects (`datasets/synthetic/benchmark.ifc`) — small enough to load in seconds.
 - Pre-scripted objective text and requirement decisions so the run is reproducible.
 - Title and closing cards: project name, one-line description, link to repository, "Built with Meta Muse Spark via the Meta Model API".
 - Lower-third labels on AI-generated content so the audience sees the labelling convention.

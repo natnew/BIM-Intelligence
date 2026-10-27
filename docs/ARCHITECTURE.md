@@ -213,7 +213,7 @@ flowchart LR
 | **llm/** | `LLMClient` protocol: `complete_structured(messages, schema)`, `complete_with_tools(messages, tools)`. Implementations: Meta Model API (OpenAI SDK), Fake (tests), Recording/Replay (evaluation). Token accounting. | — | openai ≥ 1.x |
 | **reporting/** | Explain findings (LLM structured output) → grounding check → fallback template; assemble `Report`; render Markdown; optional BCF 3.0 via `bcf-client`. | Yes (prose) | bcf-client (P2) |
 | **frontend/** | Upload, requirement confirmation UI, objective input, progress, findings list and detail, 3D viewer with highlight sync, report view. | No | React, TS, @thatopen/* 3.6, three ≥ 0.182, web-ifc ≥ 0.0.77 |
-| **evaluation/** | Benchmark generator (defect injection), ground truth, metrics runner, LLM replay fixtures. | Replay only | ifcopenshell.api |
+| **tests/evaluation/** and **datasets/** | Benchmark generator (defect injection), ground truth, metrics runner, LLM replay fixtures. | Replay only | ifcopenshell.api |
 
 ---
 
@@ -530,7 +530,7 @@ flowchart TB
 
 - **DECISION:** the browser loads the IFC itself using That Open Components' `IfcLoader` (web-ifc in a worker) and converts to Fragments. The backend does not serve geometry. This avoids a second geometry pipeline and keeps the backend free of mesh processing.
 - **DECISION:** the join key between backend findings and viewer objects is the **IFC GlobalId**. The viewer builds a `GlobalId → fragment/local id` map after load. **PROPOSAL (Day-1 spike):** confirm the exact 3.6 API for GlobalId lookup and `Highlighter` selection by id set; docs were unreachable from the research sandbox, so method names in this document are placeholders until verified.
-- **DECISION:** Vite + React 18 + TypeScript strict; Zustand for the small amount of shared state; no router beyond a single page with panels.
+- **DECISION:** Vite + React 19 + TypeScript strict (as scaffolded by the current `create-vite` template, with `oxlint` and Prettier); Zustand for the small amount of shared state once more than one panel needs it; no router beyond a single page with panels.
 - Frontend types are generated from the backend's Pydantic JSON Schema (`model_json_schema()` → `json-schema-to-typescript`) so that `Finding`, `Requirement` and `Explanation` are identical on both sides (C-07).
 
 ### 12.2 States to handle
@@ -600,7 +600,7 @@ flowchart LR
 |---|---|---|
 | Unit | pytest | Model Index correctness vs direct IfcOpenShell reads; each native rule on hand-built fixtures; IDS compiler output validates against XSD; grounding checker on adversarial cases; tool registry rejects bad calls; config rejects contributor models. |
 | Scenario | pytest + FakeClient | End-to-end review on the benchmark with a scripted plan; default plan with LLM disabled; degraded-mode behaviour. |
-| Benchmark | `evaluation/run_eval.py` | Precision/recall per rule category against ground truth (NFR-02); determinism across two runs (NFR-01). |
+| Benchmark | `tests/evaluation/run_eval.py` | Precision/recall per rule category against ground truth (NFR-02); determinism across two runs (NFR-01). |
 | Agent reliability | recorded live runs, replayed | Plan validity rate, tool-call schema validity, grounding pass rate, token cost per run. |
 | Frontend | Vitest + React Testing Library; Playwright smoke | Findings panel states; viewer loads benchmark and highlights a known GlobalId. |
 
@@ -677,45 +677,50 @@ Full register: [RISKS.md](./RISKS.md). Top architectural risks:
 ```
 BIM-Intelligence/
 ├── backend/
-│   ├── bim_intelligence/
-│   │   ├── api/              # FastAPI routers, request/response models, SSE
-│   │   ├── orchestration/    # planner, tool registry, tool loop, prompts/
-│   │   ├── llm/              # LLMClient protocol, Meta Model API client, fake, recording/replay
-│   │   ├── bim/              # IFC loading, ModelIndex, inspection queries
-│   │   ├── requirements/     # document text extraction, extractor, IDS compiler
-│   │   ├── validation/       # IDS runner, native rules, finding normaliser
-│   │   ├── investigation/    # evidence collector
-│   │   ├── reporting/        # explainer, grounding, report builder, BCF export
-│   │   ├── schemas/          # Pydantic domain models (single source of truth)
-│   │   ├── store/            # SessionStore
-│   │   ├── config.py         # Settings (pydantic-settings), model-id validation
-│   │   └── logging.py
-│   ├── tests/
-│   │   ├── unit/
-│   │   ├── scenario/
-│   │   └── fixtures/         # small hand-built IFC and IDS files
-│   └── pyproject.toml
+│   └── bim_intelligence/
+│       ├── api/              # FastAPI routers, request/response models, SSE
+│       ├── orchestration/    # planner, tool registry, tool loop, prompts/
+│       ├── llm/              # LLMClient protocol, Meta Model API client, fake, recording/replay
+│       ├── bim/              # IFC loading, ModelIndex, inspection queries
+│       ├── requirements/     # document text extraction, extractor, IDS compiler
+│       ├── validation/       # IDS runner, native rules, finding normaliser
+│       ├── investigation/    # evidence collector
+│       ├── reporting/        # explainer, grounding, report builder, BCF export
+│       ├── schemas/          # Pydantic domain models (single source of truth)
+│       ├── store/            # SessionStore
+│       ├── config.py         # Settings (pydantic-settings), model-id validation
+│       └── logging.py
 ├── frontend/
 │   ├── src/
 │   │   ├── api/              # generated types + client
-│   │   ├── components/       # panels
+│   │   ├── components/       # panels (presentation only)
+│   │   ├── state/            # hooks and shared store
 │   │   ├── viewer/           # ViewerAdapter, That Open Components setup
-│   │   └── state/            # Zustand store
-│   ├── package.json
+│   │   └── test/             # Vitest setup
+│   ├── package.json          # committed lockfile alongside
 │   └── vite.config.ts
-├── evaluation/
-│   ├── benchmark/            # generator, defect spec, ground truth, benchmark IFC/IDS/BEP
-│   ├── recordings/           # LLM request/response pairs for replay
-│   └── run_eval.py
+├── tests/
+│   ├── unit/                 # mirrors backend package layout
+│   ├── scenario/             # end-to-end review runs with FakeClient
+│   ├── fixtures/             # small hand-built IFC and IDS files
+│   └── evaluation/           # run_eval.py, LLM recordings for replay, runs/ (git-ignored)
+├── datasets/
+│   ├── generate.py           # synthetic benchmark generator and defect injector
+│   ├── synthetic/            # committed benchmark IFC, IDS, BEP and ground truth
+│   └── permitted/            # openly licensed samples with recorded licences
 ├── docs/
-├── data/                     # git-ignored runtime sessions (README.md only committed)
+├── .github/                  # CI workflows, PR template, Dependabot
+├── data/                     # git-ignored runtime sessions
+├── hackathon-private/        # git-ignored confidential briefs
+├── pyproject.toml            # single Python project: deps, ruff, mypy, pytest (package-dir = backend)
+├── .python-version           # 3.12
 ├── .env.example
 ├── AGENTS.md
 ├── README.md
 └── LICENSE
 ```
 
-Only `docs/` exists at the time of writing; the remaining directories are created when their first file is implemented.
+The Python project is defined once at the repository root with `package-dir = {"" = "backend"}`, so `pip install -e .` from the root installs `bim_intelligence` and `pytest` discovers `tests/` without path manipulation. Directories under `backend/bim_intelligence/` beyond `api/` are created when their first module is implemented.
 
 ## Appendix B — Verified technology facts (26 October 2026)
 
