@@ -1,0 +1,101 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bim-intelligence"
+version = "0.1.0"
+description = "AI-native architectural BIM model review: deterministic IFC validation with grounded, Muse Spark-assisted interpretation and explanation."
+readme = "README.md"
+license = { file = "LICENSE" }
+# IfcOpenShell publishes wheels for CPython 3.10-3.12 only (ADR-005).
+requires-python = ">=3.10,<3.13"
+authors = [{ name = "Natasha" }]
+keywords = ["bim", "ifc", "ids", "openbim", "fastapi", "llm"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Framework :: FastAPI",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering",
+]
+dependencies = [
+  "fastapi>=0.115,<1.0",
+  "uvicorn[standard]>=0.30,<1.0",
+  "pydantic>=2.7,<3.0",
+  "pydantic-settings>=2.7,<3.0",
+  "python-multipart>=0.0.9",
+  "ifcopenshell>=0.8.0,<0.10",
+  "ifctester>=0.8.0,<0.10",
+  "openai>=1.40,<3.0",
+  "pypdf>=4.2,<7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2",
+  "pytest-cov>=5.0",
+  "httpx>=0.27",
+  "ruff>=0.5",
+  "mypy>=1.10",
+]
+
+[project.urls]
+Repository = "https://github.com/natnew/BIM-Intelligence"
+Documentation = "https://github.com/natnew/BIM-Intelligence/tree/main/docs"
+
+[tool.setuptools]
+package-dir = { "" = "backend" }
+
+[tool.setuptools.packages.find]
+where = ["backend"]
+include = ["bim_intelligence*"]
+
+[tool.setuptools.package-data]
+bim_intelligence = ["py.typed", "**/*.md"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["backend", "tests"]
+extend-exclude = ["frontend", "datasets", "data", "hackathon-private"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "SIM", "RUF"]
+ignore = ["B008"]  # FastAPI dependency injection uses calls in defaults
+
+[tool.ruff.lint.isort]
+known-first-party = ["bim_intelligence"]
+
+[tool.mypy]
+python_version = "3.10"
+mypy_path = "backend"
+files = ["backend/bim_intelligence", "tests"]
+plugins = ["pydantic.mypy"]
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+# Strict mode on the packages that define the contract (AGENTS.md §5).
+module = ["bim_intelligence.schemas.*", "bim_intelligence.validation.*", "bim_intelligence.orchestration.*"]
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["ifcopenshell.*", "ifctester.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["backend"]
+addopts = "-ra --strict-markers"
+markers = [
+  "live: makes real Meta Model API calls; skipped unless BIMI_LIVE_LLM=1 (requires spend approval, C-06)",
+]
+filterwarnings = ["error::DeprecationWarning:bim_intelligence.*"]

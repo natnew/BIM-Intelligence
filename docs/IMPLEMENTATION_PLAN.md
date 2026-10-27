@@ -21,18 +21,28 @@ Requirement ids refer to [REQUIREMENTS.md](./REQUIREMENTS.md); ADRs to [DECISION
 ### Day 1 — Sun 26 Oct — Architecture and spikes
 
 - [x] Architecture and engineering documentation (this repository state).
-- [ ] **Spike A (LLM):** `openai` SDK against `https://api.meta.ai/v1`; one `muse-spark-1.3` call with `response_format` JSON schema using a nested Pydantic model; one tool-calling round trip. Record raw responses into `evaluation/recordings/`. *Requires API spend approval (OQ-07).*
+- [ ] **Spike A (LLM):** `openai` SDK against `https://api.meta.ai/v1`; one `muse-spark-1.3` call with `response_format` JSON schema using a nested Pydantic model; one tool-calling round trip. Record raw responses into `tests/evaluation/recordings/`. *Requires API spend approval (OQ-07).*
 - [ ] **Spike B (viewer):** Vite + React + `@thatopen/components@3.6.0`: load a small IFC, resolve GlobalId → fragment ids, highlight a set, listen for click → GlobalId. Write findings into `docs/DECISIONS.md` OQ-01.
-- **Exit:** both spikes documented; blockers escalated.
+- **Exit:** both spikes documented; blockers escalated. *Status: spikes carried over to Day 2–3; neither has run yet.*
 
-### Day 2 — Mon 27 Oct — Backend foundations (M0)
+### Day 2 — Mon 27 Oct — Repository structure and backend foundations (M0)
 
-- `backend/pyproject.toml` (Python `>=3.10,<3.13`), `bim_intelligence/` package, settings via `pydantic-settings`, structured logging.
-- `schemas/`: `Session`, `ElementRef`, `ModelSummary`, `Requirement`, `CheckSpec`, `Finding`, `EvidenceBundle`, `Explanation`, `Report`, `RunLog`. JSON Schema export script.
-- `store/SessionStore` with atomic writes and hashing.
-- `bim/`: `IfcLoader`, `ModelIndex` builder, inspection queries. Unit tests against a tiny fixture IFC (FR-ING-01..04).
-- `api/`: `/health`, sessions, model upload, elements.
-- **Exit:** `pytest` green; upload → summary works via `curl`.
+Shipped:
+
+- [x] Root `pyproject.toml` (Python `>=3.10,<3.13`, package-dir `backend/`), ruff/mypy/pytest configuration, `.python-version`.
+- [x] `config.py` with validated settings: Contributor-model rejection (ADR-010), live-mode key requirement, loopback-binding guard, comma-separated CORS origins. Unit-tested.
+- [x] `api/main.py` + `api/health.py`: `/api/v1/health` reporting versions and key *presence* only; OpenAPI under `/api/v1/docs`. Unit-tested, including a regression test that `create_app(settings)` injects the given settings.
+- [x] Frontend scaffold (Vite, React 19, TypeScript strict, oxlint, Prettier, Vitest + Testing Library) with a `HealthPanel` covering loading/error/success and a dev proxy to the API.
+- [x] `datasets/README.md` policy, `hackathon-private/` (ignored), `.github/` CI on Ubuntu + Windows, PR template, Dependabot.
+- [x] Verified locally: IfcOpenShell 0.9.0.post1 and IfcTester 0.9.0 wheels install on Python 3.12/Windows; `pytest` 27 passed; `ruff`, `mypy`, `tsc`, `vitest`, `vite build` clean.
+
+Carried to Day 3:
+
+- [ ] `schemas/`: `Session`, `ElementRef`, `ModelSummary`, `Requirement`, `CheckSpec`, `Finding`, `EvidenceBundle`, `Explanation`, `Report`, `RunLog`. JSON Schema export script.
+- [ ] `store/SessionStore` with atomic writes and hashing.
+- [ ] `bim/`: `IfcLoader`, `ModelIndex` builder, inspection queries. Unit tests against a tiny fixture IFC (FR-ING-01..04).
+- [ ] `api/`: sessions, model upload, elements.
+- **Exit (M0):** upload → summary works via `curl`; both Day-1 spikes resolved.
 
 ### Day 3 — Tue 28 Oct — Validation core (M1 part 1)
 
@@ -43,8 +53,8 @@ Requirement ids refer to [REQUIREMENTS.md](./REQUIREMENTS.md); ADRs to [DECISION
 
 ### Day 4 — Wed 29 Oct — Benchmark and evaluation (M1)
 
-- `evaluation/benchmark/generate.py`: clean synthetic model via `ifcopenshell.api`; `inject_defects.py` with defect spec (15–20 defects across the four P0 rule families + clean controls); `ground_truth.json`; a matching `benchmark.ids` and `benchmark_bep.md`. *Requires approval of ADR-011 (OQ-03).*
-- `evaluation/run_eval.py`: precision/recall per rule, determinism check (two runs).
+- `datasets/generate.py`: clean synthetic model via `ifcopenshell.api`; defect injection with a defect spec (15–20 defects across the four P0 rule families + clean controls); `ground_truth.json`; a matching `benchmark.ids` and `benchmark_bep.md` written to `datasets/synthetic/`. *Requires approval of ADR-011 (OQ-03).*
+- `tests/evaluation/run_eval.py`: precision/recall per rule, determinism check (two runs).
 - Fix rule gaps revealed by the benchmark.
 - **Exit:** metrics printed; results recorded in `EVALUATION.md` as measured values.
 
