@@ -113,6 +113,142 @@
       "title": "CheckSpec",
       "type": "object"
     },
+    "ClassificationRef": {
+      "additionalProperties": false,
+      "description": "A classification reference attached to an element, directly or through its type.",
+      "properties": {
+        "identification": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Reference code (IFC4 Identification / IFC2X3 ItemReference)."
+        },
+        "inherited": {
+          "description": "True when inherited from the element's type object.",
+          "type": "boolean"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "system": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Name of the IfcClassification, when resolvable."
+        }
+      },
+      "required": [
+        "system",
+        "identification",
+        "name",
+        "inherited"
+      ],
+      "title": "ClassificationRef",
+      "type": "object"
+    },
+    "ElementRecord": {
+      "additionalProperties": false,
+      "description": "Denormalised Model Index entry for one product, type object or spatial element.",
+      "properties": {
+        "classifications": {
+          "description": "Classification references in (system, identification, name) order.",
+          "items": {
+            "$ref": "#/$defs/ClassificationRef"
+          },
+          "type": "array"
+        },
+        "container": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ElementRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Direct or aggregate-inherited spatial container, if any."
+        },
+        "object_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "IfcObject.ObjectType attribute."
+        },
+        "predefined_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Resolved PredefinedType (instance, then type, USERDEFINED→ObjectType/ElementType)."
+        },
+        "psets": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "$ref": "#/$defs/PropertyValue"
+            },
+            "type": "object"
+          },
+          "description": "Property and quantity sets keyed by set name, then property name.",
+          "type": "object"
+        },
+        "ref": {
+          "$ref": "#/$defs/ElementRef"
+        },
+        "type_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ElementRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The IfcTypeObject this occurrence is typed by, if any."
+        }
+      },
+      "required": [
+        "ref",
+        "object_type",
+        "predefined_type",
+        "type_ref",
+        "container",
+        "psets",
+        "classifications"
+      ],
+      "title": "ElementRecord",
+      "type": "object"
+    },
     "ElementRef": {
       "additionalProperties": false,
       "description": "A reference to one entity in the uploaded model.",
@@ -445,6 +581,25 @@
       "title": "ProblemDetail",
       "type": "object"
     },
+    "PropertyValue": {
+      "additionalProperties": false,
+      "description": "One property or quantity value with its provenance (C-03).\n\n``value`` is the value as IfcOpenShell reads it: a scalar, a list for enumerations, or an\nobject for bounded, table and complex properties. It carries no field description because\na ``description`` beside ``$ref`` makes json-schema-to-typescript emit an object type.",
+      "properties": {
+        "inherited": {
+          "description": "True when the value comes from the element's type object rather than being defined on the element itself.",
+          "type": "boolean"
+        },
+        "value": {
+          "$ref": "#/$defs/JsonValue"
+        }
+      },
+      "required": [
+        "value",
+        "inherited"
+      ],
+      "title": "PropertyValue",
+      "type": "object"
+    },
     "Requirement": {
       "additionalProperties": false,
       "description": "A single reviewable requirement bound to exactly one CheckSpec.",
@@ -685,6 +840,61 @@
       ],
       "title": "ReviewRun",
       "type": "object"
+    },
+    "Session": {
+      "additionalProperties": false,
+      "description": "Session metadata as returned by ``GET /sessions/{sid}``. Never carries file paths.",
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "document_hashes": {
+          "description": "SHA-256 of each uploaded requirement document.",
+          "items": {
+            "description": "Lower-case SHA-256 hex.",
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "id": {
+          "description": "Lower-case, hyphenated UUID4.",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "model_hash": {
+          "anyOf": [
+            {
+              "description": "Lower-case SHA-256 hex.",
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "SHA-256 of the stored IFC bytes; None until uploaded."
+        },
+        "status": {
+          "description": "'created' until an IFC has been indexed, then 'model_ready'.",
+          "enum": [
+            "created",
+            "model_ready"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "created_at",
+        "status",
+        "model_hash",
+        "document_hashes"
+      ],
+      "title": "Session",
+      "type": "object"
     }
   },
   "$id": "https://github.com/natnew/BIM-Intelligence/schemas/contracts.json",
@@ -697,6 +907,12 @@
     },
     "checkSpec": {
       "$ref": "#/$defs/CheckSpec"
+    },
+    "classificationRef": {
+      "$ref": "#/$defs/ClassificationRef"
+    },
+    "elementRecord": {
+      "$ref": "#/$defs/ElementRecord"
     },
     "elementRef": {
       "$ref": "#/$defs/ElementRef"
@@ -716,6 +932,9 @@
     "problemDetail": {
       "$ref": "#/$defs/ProblemDetail"
     },
+    "propertyValue": {
+      "$ref": "#/$defs/PropertyValue"
+    },
     "requirement": {
       "$ref": "#/$defs/Requirement"
     },
@@ -727,6 +946,9 @@
     },
     "reviewRun": {
       "$ref": "#/$defs/ReviewRun"
+    },
+    "session": {
+      "$ref": "#/$defs/Session"
     }
   },
   "title": "BimIntelligenceContracts",

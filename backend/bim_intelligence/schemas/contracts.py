@@ -15,7 +15,13 @@ from pydantic_core import CoreSchema
 
 from bim_intelligence.schemas.canonical import canonical_json
 from bim_intelligence.schemas.checks import CheckSpec
-from bim_intelligence.schemas.elements import ElementRef, ModelSummary
+from bim_intelligence.schemas.elements import (
+    ClassificationRef,
+    ElementRecord,
+    ElementRef,
+    ModelSummary,
+    PropertyValue,
+)
 from bim_intelligence.schemas.findings import Finding
 from bim_intelligence.schemas.problems import ProblemDetail
 from bim_intelligence.schemas.requirements import Requirement, RequirementSource
@@ -26,9 +32,14 @@ from bim_intelligence.schemas.runs import (
     ReviewPlan,
     ReviewRun,
 )
+from bim_intelligence.schemas.sessions import Session
 
 CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
+    Session,
     ElementRef,
+    PropertyValue,
+    ClassificationRef,
+    ElementRecord,
     ModelSummary,
     CheckSpec,
     RequirementSource,

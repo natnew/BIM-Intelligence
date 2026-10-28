@@ -247,6 +247,29 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 
 ---
 
+## ADR-016 Ingestion contract: staged upload, content-hash ETag and identifier handling
+
+**Status.** Adopted 28 October 2026 with the T-1 implementation (`store/`, `bim/`, `api/`). Records assumptions the earlier documents did not cover; the owner may revise any point before T-2 builds on it.
+
+**Decision.**
+
+1. **Uploads are staged, validated, then published.** `SessionStore.stage_model()` writes the upload to a temporary file inside the session directory while hashing it and enforcing `MAX_IFC_MB`. The staged bytes are parsed and indexed in place; only after indexing succeeds is the file renamed to `model.ifc` and the index and summary written. A malformed or oversized upload therefore never replaces a previously indexed model (ARCHITECTURE §14), and the stored bytes are the client's bytes (C-04, FR-ING-03).
+2. **The model hash is the cache key.** `GET /sessions/{sid}/model/file` serves the stored bytes with `ETag` equal to the quoted SHA-256 and honours `If-None-Match` with 304 (C-07). `Session.model_hash` and `ModelSummary.model_hash` carry the same value, so viewer, validator and `InputManifest` always refer to the same bytes.
+3. **Identifiers are validated at the boundary, not trusted.** Session ids must be lower-case UUID4 and artefact names come from a fixed allow-list before any path is formed; a malformed session id or GlobalId is 400, an unknown one 404. Client filenames are used only for the extension check.
+4. **Malformed GlobalIds do not abort ingestion.** An `IfcRoot` whose `GlobalId` fails the 22-character check is indexed with `ElementRef.global_id = None` and listed in `ModelIndex.malformed_global_ids`; this extends ADR-015 §5 (nullable `global_id`) from non-`IfcRoot` entities to invalid ids. Duplicate GlobalIds keep every record (`duplicate_global_ids`), `by_global_id()` raises, and the API returns 409. Both are inputs to the P1 `identity.unique_global_id` rule (FR-VAL-06) rather than findings in themselves (ADR-001).
+5. **Problem types are project-scoped URIs.** `ProblemDetail.type` is `https://github.com/natnew/BIM-Intelligence/problems/<slug>`, mirroring the schema bundle's `$id`; it identifies the problem class for clients without implying a resolvable document.
+6. **Property provenance is reproduced, not reinvented.** `ElementRecord.psets` reproduces `ifcopenshell.util.element.get_psets()`'s merge (type first, instance overrides, property by property) and flags each value `inherited` when it comes from the type object; the tests assert equality with IfcOpenShell for every indexed entity.
+
+**Alternatives.** Writing `model.ifc` directly and deleting it on failure (a window in which a session has no model, and a re-upload failure destroys the old one); treating a malformed GlobalId as a 422 (rejects real-world files the validator should be able to report on); `about:blank` problem types (no client-side discrimination).
+
+**Trade-offs.** FastAPI's `UploadFile` spools the whole request body before the handler runs, so the byte cap is enforced after receipt rather than during it; acceptable for a localhost MVP, revisit if `ALLOW_REMOTE` is used. `GET /elements/{globalId}` re-reads `model_index.json` per request; an in-process cache keyed by `model_hash` is the obvious optimisation once the orchestrator needs the index in memory anyway. Index, summary and session record are three separate atomic writes, not one transaction.
+
+**Evidence.** `tests/unit/store/`, `tests/unit/bim/`, `tests/unit/api/` (171 tests, 28 October 2026): fixture SHA-256 equals the stored hash and the `ETag`; AC-01, AC-02, AC-03, AC-04 and AC-11 of the Bakeoff review are covered; a `curl` round trip against `uvicorn` reproduced the test results.
+
+**Unresolved.** Materials and storey elevations are not indexed (FR-ING-02 partial, FR-VAL-05); `409` on model re-upload during an active run (AC-12) awaits the run lifecycle in T-3; whether IFC4X3 should remain accepted once a benchmark exists for it (FR-ING-05 is P3).
+
+---
+
 ## Open questions register
 
 | ID | Question | Related | Needed by |

@@ -8,6 +8,8 @@ import pytest
 
 from bim_intelligence.config import Settings, get_settings
 
+pytest_plugins = ("support.api_fixtures",)
+
 ENV_VARS = (
     "MODEL_API_KEY",
     "LLM_BASE_URL",

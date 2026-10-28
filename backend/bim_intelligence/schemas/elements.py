@@ -1,8 +1,9 @@
-"""Element references and the model summary (ARCHITECTURE §10.2, C-03).
+"""Element references, element records and the model summary (ARCHITECTURE §10.2, C-03).
 
 ``ElementRef`` is the only way any part of the system refers to an IFC element. The GlobalId is
 the viewer-facing join key (ADR-007); ``express_id`` is always present and serves as a
-diagnostic and as the fallback identity for entities without a GlobalId.
+diagnostic and as the fallback identity for entities without a GlobalId. ``ElementRecord`` is
+the denormalised Model Index entry served by ``GET /elements/{globalId}`` (FR-ING-04).
 """
 
 from __future__ import annotations
@@ -10,7 +11,7 @@ from __future__ import annotations
 import re
 from typing import Annotated
 
-from pydantic import Field, field_validator
+from pydantic import Field, JsonValue, field_validator
 
 from bim_intelligence.schemas.base import FrozenContractModel
 
@@ -40,6 +41,63 @@ class ElementRef(FrozenContractModel):
     def key(self) -> str:
         """Stable identity used for ordering and hashing: GlobalId, else ``#express_id``."""
         return self.global_id if self.global_id is not None else f"#{self.express_id}"
+
+
+class PropertyValue(FrozenContractModel):
+    """One property or quantity value with its provenance (C-03).
+
+    ``value`` is the value as IfcOpenShell reads it: a scalar, a list for enumerations, or an
+    object for bounded, table and complex properties. It carries no field description because
+    a ``description`` beside ``$ref`` makes json-schema-to-typescript emit an object type.
+    """
+
+    value: JsonValue
+    inherited: bool = Field(
+        description="True when the value comes from the element's type object rather than "
+        "being defined on the element itself."
+    )
+
+
+class ClassificationRef(FrozenContractModel):
+    """A classification reference attached to an element, directly or through its type."""
+
+    system: str | None = Field(description="Name of the IfcClassification, when resolvable.")
+    identification: str | None = Field(
+        description="Reference code (IFC4 Identification / IFC2X3 ItemReference)."
+    )
+    name: str | None = None
+    inherited: bool = Field(description="True when inherited from the element's type object.")
+
+
+class ElementRecord(FrozenContractModel):
+    """Denormalised Model Index entry for one product, type object or spatial element."""
+
+    ref: ElementRef
+    object_type: str | None = Field(default=None, description="IfcObject.ObjectType attribute.")
+    predefined_type: str | None = Field(
+        default=None,
+        description="Resolved PredefinedType (instance, then type, USERDEFINED→"
+        "ObjectType/ElementType).",
+    )
+    type_ref: ElementRef | None = Field(
+        default=None, description="The IfcTypeObject this occurrence is typed by, if any."
+    )
+    container: ElementRef | None = Field(
+        default=None, description="Direct or aggregate-inherited spatial container, if any."
+    )
+    psets: dict[str, dict[str, PropertyValue]] = Field(
+        description="Property and quantity sets keyed by set name, then property name."
+    )
+    classifications: list[ClassificationRef] = Field(
+        description="Classification references in (system, identification, name) order."
+    )
+
+    def plain_psets(self) -> dict[str, dict[str, JsonValue]]:
+        """Values only, in the shape ``ifcopenshell.util.element.get_psets`` returns minus ids."""
+        return {
+            pset: {name: prop.value for name, prop in props.items()}
+            for pset, props in self.psets.items()
+        }
 
 
 class ModelSummary(FrozenContractModel):

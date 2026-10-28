@@ -39,11 +39,12 @@ Shipped:
 
 Carried to Day 3:
 
-- [ ] `schemas/`: `Session`, `EvidenceBundle`, `Explanation`, `Report`, `RunLog` (the remaining models; the T-0 set is done).
-- [ ] `store/SessionStore` with atomic writes and hashing.
-- [ ] `bim/`: `IfcLoader`, `ModelIndex` builder, inspection queries. Unit tests against a tiny fixture IFC (FR-ING-01..04).
-- [ ] `api/`: sessions, model upload, elements.
-- **Exit (M0):** upload → summary works via `curl`; both Day-1 spikes resolved.
+- [x] `schemas/`: `Session`, `ElementRecord` (+ `PropertyValue`, `ClassificationRef`). *Carried:* `EvidenceBundle`, `Explanation`, `Report`, `RunLog`.
+- [x] `store/SessionStore` with UUID4-validated ids, fixed artefact names, atomic JSON writes, staged SHA-256 uploads with a byte cap.
+- [x] `bim/`: `open_ifc` (IFC2X3/IFC4/IFC4X3, structured failures), `ModelIndex` keyed by express id with a GlobalId multimap (duplicates kept, ambiguous lookups fail, malformed ids recorded), pset provenance (instance vs type), classification references, containment and storeys; `ingest_model` stage → parse → index → publish. Unit tests against `minimal.ifc` and in-memory variants (type inheritance, duplicate and malformed GlobalIds, hand-written IFC2X3).
+- [x] `api/`: `POST /sessions`, `GET /sessions/{sid}`, `POST …/model`, `GET …/model/summary`, `GET …/model/file` (ETag = SHA-256, 304), `GET …/elements/{globalId}`; RFC 9457 `ProblemDetail` for every error; `X-Correlation-ID` middleware; import-boundary test for AGENTS.md §3. **T-1 (Day 3):** 171 new unit tests; `pytest` 283 passed; upload → summary verified via `curl` ([ADR-016](./DECISIONS.md#adr-016-ingestion-contract-staged-upload-content-hash-etag-and-identifier-handling)).
+- [ ] Both Day-1 spikes resolved (still outstanding).
+- **Exit (M0):** reached for the backend; the viewer spike remains open.
 
 ### Day 3 — Tue 28 Oct — Validation core (M1 part 1)
 
