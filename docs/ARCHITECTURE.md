@@ -1,7 +1,7 @@
 # BIM Intelligence — Technical Architecture
 
-**Version:** 0.1 (architecture baseline, 26 October 2026)
-**Status:** Proposed. No application code exists yet. Every statement about behaviour describes design intent, not measured results.
+**Version:** 0.2 (architecture baseline 26 October 2026; §8.1, §10.2, §11 and §14 updated 28 October 2026 for the implemented ingestion slice)
+**Status:** Partially implemented. Rows and paragraphs marked *Implemented* or ✓ are backed by unit tests; every other statement about behaviour describes design intent, not measured results.
 **Audience:** Engineers and coding agents implementing the MVP during the Meta Global AI Developer Hackathon (26 October – 4 November 2026).
 
 Notation used in this document:
@@ -332,6 +332,10 @@ flowchart TB
 
 The Model Index is a denormalised JSON snapshot built once per upload. It exists so that tools and native rules operate on a fast, in-memory structure rather than re-walking the IFC graph, and so that the frontend can request element records without the backend holding an IfcOpenShell file open per request.
 
+**Implemented (T-1, `bim/`).** `open_ifc` accepts IFC2X3, IFC4 and IFC4X3 and raises `IfcLoadError` / `UnsupportedSchemaError` otherwise; messages never contain storage paths. `build_index` indexes every `IfcProduct` (including spatial elements) and `IfcTypeObject` in express-id order, reading values through `ifcopenshell.util` so the index agrees with IfcOpenShell by construction: property and quantity sets with instance-versus-type provenance (`PropertyValue.inherited`), classification references resolved per system, the direct or aggregate-inherited container and the containing storey. Records are keyed by `express_id` with a `GlobalId → [express_id]` multimap: duplicates are kept and reported in `duplicate_global_ids`, `by_global_id()` raises `AmbiguousGlobalIdError`, and GlobalIds failing the 22-character check are recorded in `malformed_global_ids` with the record carrying `global_id=None` ([ADR-016](./DECISIONS.md#adr-016-ingestion-contract-staged-upload-content-hash-etag-and-identifier-handling)). Materials and storey elevations are not yet indexed.
+
+**Ingestion contract.** `ingest_model` writes the upload to a staged file inside the session directory, hashes and size-caps it, parses and indexes from the staged copy and only then publishes it as `model.ifc` with an atomic rename, followed by `model_index.json` and `model_summary.json`. A rejected upload therefore never replaces a previously indexed model.
+
 **DECISION:** geometry is **not** processed on the backend in the MVP. Bounding boxes and storey assignment by elevation (FR-VAL-05) are deferred to P1 and, if implemented, use `ifcopenshell.geom.iterator` on a worker thread with a time budget. Rendering happens entirely in the browser (§12).
 
 ### 8.2 IDS validation
@@ -435,9 +439,10 @@ Implemented models live in `backend/bim_intelligence/schemas/` and are exported 
 
 | Model | Fields (abridged) | Notes |
 |---|---|---|
-| `Session` *(planned)* | `id`, `created_at`, `model_hash`, `document_hashes`, `status` | directory `data/sessions/{id}/` |
+| `Session` | `id` (UUID4), `created_at`, `status` ∈ created/model_ready, `model_hash`, `document_hashes` | directory `data/sessions/{id}/`; `model_ready` ⇔ `model_hash` present; never carries paths |
 | `ElementRef` | `global_id` (nullable), `express_id`, `ifc_type`, `name`, `storey` | the only way to refer to an element; GlobalId is the viewer key, `express_id` the fallback identity |
-| `ModelSummary` | `ifc_schema`, `model_hash`, `project_name`, `counts{IfcClass: n}`, `storeys[]` | produced once per upload |
+| `ElementRecord` | `ref`, `object_type`, `predefined_type`, `type_ref`, `container`, `psets{set: {name: {value, inherited}}}`, `classifications[] {system, identification, name, inherited}` | the Model Index entry served by `GET /elements/{globalId}`; `inherited=true` marks values that come from the type object (C-03) |
+| `ModelSummary` | `ifc_schema`, `model_hash`, `project_name`, `counts{IfcClass: n}`, `storeys[]` | produced once per upload; counts cover indexed `IfcProduct` and `IfcTypeObject` instances |
 | `Requirement` | `id`, `title`, `statement`, `origin` ∈ document/ids/builtin, `source`, `check`, `status`, `confidence`, `revision`, `confirmed_revision`, `confirmed_by`, `confirmed_at` | status ∈ proposed/confirmed/edited/rejected/informational; executable only when `confirmed_revision == revision` |
 | `CheckSpec` | `id` (content hash), `kind` (ids/native), `rule_id`, `rule_version`, `ids_specification` or `params` | immutable; plans reference it by `id` only |
 | `Finding` | `id` (content hash), `check_id`, `requirement_id`, `rule_id`, `rule_version`, `facet_index`, `severity`, `category`, `elements[]`, `observed`, `expected`, `method` ∈ {ids, native} | `method` can never be `llm` (FR-VAL-07); no timestamp or run id, so `findings.json` is byte-reproducible (NFR-01) |
@@ -471,16 +476,17 @@ The grounding checker is deterministic and runs on every explanation:
 
 ## 11. API architecture and principal endpoints
 
-Base path `/api/v1`. JSON everywhere; errors follow a single `ProblemDetail` schema (`type`, `title`, `status`, `detail`, `instance`).
+Base path `/api/v1`. JSON everywhere; errors follow a single `ProblemDetail` schema (`type`, `title`, `status`, `detail`, `instance`, `correlation_id`) served as `application/problem+json`. Every response carries `X-Correlation-ID` (echoed from the request when well-formed, otherwise generated). Rows marked ✓ are implemented and unit-tested; the others are design intent.
 
 | Method | Path | Purpose | Requirement |
 |---|---|---|---|
-| `GET` | `/health` | Liveness, versions, LLM reachability flag (no key exposure) | NFR-09 |
-| `POST` | `/sessions` | Create review session | — |
-| `GET` | `/sessions/{sid}` | Session status and artefact list | — |
-| `POST` | `/sessions/{sid}/model` | Upload IFC (multipart); returns `ModelSummary` | FR-ING-01..03 |
-| `GET` | `/sessions/{sid}/model/summary` | Model summary | FR-ING-02 |
-| `GET` | `/sessions/{sid}/elements/{globalId}` | Element record | FR-ING-04 |
+| `GET` | `/health` ✓ | Liveness, versions, LLM reachability flag (no key exposure) | NFR-09 |
+| `POST` | `/sessions` ✓ | Create review session; 201 with `Location` | — |
+| `GET` | `/sessions/{sid}` ✓ | Session status and model hash (never paths) | — |
+| `POST` | `/sessions/{sid}/model` ✓ | Upload IFC (multipart, `.ifc` only, ≤ `MAX_IFC_MB`); returns `ModelSummary`; 413/415/422 as `ProblemDetail`; re-upload replaces the model | FR-ING-01..03 |
+| `GET` | `/sessions/{sid}/model/summary` ✓ | Model summary | FR-ING-02 |
+| `GET` | `/sessions/{sid}/model/file` ✓ | Stored IFC bytes, `application/x-step`, `ETag` = quoted SHA-256, `If-None-Match` → 304 (C-07); the viewer's geometry source | FR-VIS-01 |
+| `GET` | `/sessions/{sid}/elements/{globalId}` ✓ | `ElementRecord`; 400 malformed id, 404 unknown, 409 when the GlobalId is duplicated | FR-ING-04 |
 | `GET` | `/sessions/{sid}/elements?ifc_type=&storey=&limit=` | Element list | FR-ING-02 |
 | `POST` | `/sessions/{sid}/documents` | Upload BEP (md/txt/pdf) or IDS (xml) | FR-REQ-01, FR-REQ-05 |
 | `POST` | `/sessions/{sid}/requirements/extract` | Run LLM extraction for a document; returns candidates | FR-REQ-02..03 |
@@ -567,8 +573,11 @@ Every panel renders loading, empty, error and success states. Degraded mode (LLM
 
 | Failure | Behaviour |
 |---|---|
-| IFC fails to open | 422 with IfcOpenShell message; session remains usable for a new upload. |
-| Unsupported schema (e.g. IFC4X3 geometry) | Index what parses; mark `geometry_supported=false`; viewer may still load via web-ifc. |
+| IFC fails to open | 422 `ifc-unreadable` with IfcOpenShell's message (storage paths scrubbed); a previously indexed model in the session is left untouched and the session remains usable for a new upload. *Implemented (T-1).* |
+| Unsupported or unknown `FILE_SCHEMA` | 422 `unsupported-ifc-schema` naming the declared schema. IFC2X3, IFC4 and IFC4X3 are accepted; geometry support is a viewer concern (§12). *Implemented (T-1).* |
+| Upload too large / wrong extension / missing field | 413 `upload-too-large` / 415 `unsupported-upload` / 422 `request-validation`. The size cap is enforced while the staged file is written; nothing is published. *Implemented (T-1).* |
+| Duplicate GlobalId in the model | Both records are indexed; `GET /elements/{globalId}` returns 409 `ambiguous-global-id` listing the express ids; a future `identity.unique_global_id` rule turns it into a `Finding` (FR-VAL-06). *Implemented (T-1).* |
+| Storage read/write failure | 500 `storage-failure` with a generic detail; the cause is logged server-side with the correlation id. *Implemented (T-1).* |
 | LLM unreachable / 401 / 429 / timeout | Planner → default plan; extractor → error surfaced to user, no candidates; explainer → templated explanation with `grounding.status="fallback"`. UI shows degraded banner. Retries: exponential backoff, max 2, only on 429/5xx. |
 | Plan references unknown tool or unconfirmed requirement | Item dropped, logged as `plan_violation`; if plan empty → default plan. |
 | Tool argument schema invalid | Rejected, one corrective re-prompt, then dropped. |
@@ -577,7 +586,7 @@ Every panel renders loading, empty, error and success states. Degraded mode (LLM
 | IfcTester exception on a specification | That check's `CheckResult.status="error"` with the message in `diagnostics`; no finding is created; other specifications continue (ADR-015, superseding the earlier `check_error` finding category). |
 | Frontend fails to load IFC | Findings list and report remain usable; viewer shows error and retry. |
 
-All errors are structured (`ProblemDetail`) and written to the run log with correlation id = `runId`.
+All errors are structured (`ProblemDetail`) with `type = https://github.com/natnew/BIM-Intelligence/problems/<slug>` (the same non-resolving, project-scoped URI convention as the schema bundle's `$id`) and are written to the run log with correlation id = `runId` once runs exist.
 
 ---
 

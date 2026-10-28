@@ -11,7 +11,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from bim_intelligence import __version__
+from bim_intelligence.api.correlation import CORRELATION_HEADER, CorrelationIdMiddleware
+from bim_intelligence.api.elements import router as elements_router
+from bim_intelligence.api.errors import register_exception_handlers
 from bim_intelligence.api.health import router as health_router
+from bim_intelligence.api.model import router as model_router
+from bim_intelligence.api.sessions import router as sessions_router
 from bim_intelligence.config import Settings, get_settings
 
 API_PREFIX = "/api/v1"
@@ -36,9 +41,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_origins=settings.cors_origins,
         allow_credentials=False,
         allow_methods=["GET", "POST", "PATCH", "DELETE"],
-        allow_headers=["Content-Type"],
+        allow_headers=["Content-Type", CORRELATION_HEADER],
+        expose_headers=["ETag", CORRELATION_HEADER],
     )
-    app.include_router(health_router, prefix=API_PREFIX)
+    app.add_middleware(CorrelationIdMiddleware)
+    register_exception_handlers(app)
+    for router in (health_router, sessions_router, model_router, elements_router):
+        app.include_router(router, prefix=API_PREFIX)
     # Routers resolve settings through this dependency; binding it here means the
     # instance passed to create_app() is the one actually used (tests rely on this).
     app.dependency_overrides[get_settings] = lambda: settings

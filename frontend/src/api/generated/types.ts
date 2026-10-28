@@ -15,16 +15,20 @@ export type JsonValue = unknown;
 export interface BimIntelligenceContracts {
   readonly checkResult?: CheckResult;
   readonly checkSpec?: CheckSpec;
+  readonly classificationRef?: ClassificationRef;
+  readonly elementRecord?: ElementRecord;
   readonly elementRef?: ElementRef;
   readonly finding?: Finding;
   readonly inputManifest?: InputManifest;
   readonly modelSummary?: ModelSummary;
   readonly plannedCheck?: PlannedCheck;
   readonly problemDetail?: ProblemDetail;
+  readonly propertyValue?: PropertyValue;
   readonly requirement?: Requirement;
   readonly requirementSource?: RequirementSource;
   readonly reviewPlan?: ReviewPlan;
   readonly reviewRun?: ReviewRun;
+  readonly session?: Session;
 }
 /**
  * Execution outcome of one planned check.
@@ -72,6 +76,60 @@ export interface CheckSpec {
   readonly rule_version: string;
 }
 /**
+ * A classification reference attached to an element, directly or through its type.
+ */
+export interface ClassificationRef {
+  /**
+   * Reference code (IFC4 Identification / IFC2X3 ItemReference).
+   */
+  readonly identification: string | null;
+  /**
+   * True when inherited from the element's type object.
+   */
+  readonly inherited: boolean;
+  readonly name: string | null;
+  /**
+   * Name of the IfcClassification, when resolvable.
+   */
+  readonly system: string | null;
+}
+/**
+ * Denormalised Model Index entry for one product, type object or spatial element.
+ */
+export interface ElementRecord {
+  /**
+   * Classification references in (system, identification, name) order.
+   */
+  readonly classifications: ClassificationRef[];
+  /**
+   * Direct or aggregate-inherited spatial container, if any.
+   */
+  readonly container: ElementRef | null;
+  /**
+   * IfcObject.ObjectType attribute.
+   */
+  readonly object_type: string | null;
+  /**
+   * Resolved PredefinedType (instance, then type, USERDEFINED→ObjectType/ElementType).
+   */
+  readonly predefined_type: string | null;
+  /**
+   * Property and quantity sets keyed by set name, then property name.
+   */
+  readonly psets: {
+    [k: string]:
+      | {
+          [k: string]: PropertyValue | undefined;
+        }
+      | undefined;
+  };
+  readonly ref: ElementRef;
+  /**
+   * The IfcTypeObject this occurrence is typed by, if any.
+   */
+  readonly type_ref: ElementRef | null;
+}
+/**
  * A reference to one entity in the uploaded model.
  */
 export interface ElementRef {
@@ -89,6 +147,20 @@ export interface ElementRef {
    * Name of the containing storey.
    */
   readonly storey: string | null;
+}
+/**
+ * One property or quantity value with its provenance (C-03).
+ *
+ * ``value`` is the value as IfcOpenShell reads it: a scalar, a list for enumerations, or an
+ * object for bounded, table and complex properties. It carries no field description because
+ * a ``description`` beside ``$ref`` makes json-schema-to-typescript emit an object type.
+ */
+export interface PropertyValue {
+  /**
+   * True when the value comes from the element's type object rather than being defined on the element itself.
+   */
+  readonly inherited: boolean;
+  readonly value: JsonValue;
 }
 /**
  * One verified defect affecting one or more elements.
@@ -259,4 +331,28 @@ export interface ReviewRun {
   readonly plan_source: 'llm' | 'default';
   readonly session_id: string;
   readonly status: 'queued' | 'running' | 'completed' | 'partial' | 'failed' | 'interrupted';
+}
+/**
+ * Session metadata as returned by ``GET /sessions/{sid}``. Never carries file paths.
+ */
+export interface Session {
+  readonly created_at: string;
+  /**
+   * SHA-256 of each uploaded requirement document.
+   *
+   * Items: Lower-case SHA-256 hex.
+   */
+  readonly document_hashes: string[];
+  /**
+   * Lower-case, hyphenated UUID4.
+   */
+  readonly id: string;
+  /**
+   * SHA-256 of the stored IFC bytes; None until uploaded.
+   */
+  readonly model_hash: string | null;
+  /**
+   * 'created' until an IFC has been indexed, then 'model_ready'.
+   */
+  readonly status: 'created' | 'model_ready';
 }

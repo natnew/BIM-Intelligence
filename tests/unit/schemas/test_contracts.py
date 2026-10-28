@@ -14,7 +14,11 @@ from bim_intelligence.schemas import CONTRACT_MODELS, build_contract_schema, con
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCHEMA_PATH = REPO_ROOT / "frontend" / "src" / "api" / "generated" / "bim_intelligence.schema.json"
 EXPECTED_NAMES = {
+    "Session",
     "ElementRef",
+    "PropertyValue",
+    "ClassificationRef",
+    "ElementRecord",
     "ModelSummary",
     "CheckSpec",
     "RequirementSource",
