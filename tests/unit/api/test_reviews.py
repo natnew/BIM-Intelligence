@@ -6,12 +6,15 @@ The run is synchronous in this slice: the response body is the terminal ``Review
 from __future__ import annotations
 
 import hashlib
-from typing import Any
+from typing import Any, cast
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from bim_intelligence.api.deps import get_llm_client
 from bim_intelligence.api.main import API_PREFIX
+from bim_intelligence.llm.client import FakeClient
 from fixtures.make_minimal_ifc import GLOBAL_IDS, SPEC_CLASSIFICATION, SPEC_FIRE_RATING
 from support.api import FIXTURE_BYTES, assert_problem, upload
 from support.ids import FIXTURE_IDS_BYTES, upload_ids
@@ -48,6 +51,41 @@ def test_review_run_executes_both_checks_and_links_to_itself(
     fetched = client.get(f"{API_PREFIX}/sessions/{review_session}/reviews/{run['id']}")
     assert fetched.status_code == 200
     assert fetched.json() == run
+
+
+def test_objective_uses_only_model_selected_confirmed_checks(
+    client: TestClient, review_session: str
+) -> None:
+    check_id = client.get(f"{API_PREFIX}/sessions/{review_session}/requirements").json()[0][
+        "check"
+    ]["id"]
+    cast(FastAPI, client.app).dependency_overrides[get_llm_client] = lambda: FakeClient(
+        [{"checks": [{"check_id": check_id, "reason": "It directly supports the objective."}]}]
+    )
+    response = client.post(
+        f"{API_PREFIX}/sessions/{review_session}/reviews",
+        json={"objective": "Review classification quality"},
+    )
+    assert response.status_code == 201, response.text
+    run = response.json()
+    assert run["plan_source"] == "llm"
+    assert [item["check_id"] for item in run["plan"]["checks"]] == [check_id]
+    assert len(run["check_results"]) == 2
+    assert run["check_results"][1]["status"] == "skipped"
+
+
+def test_invalid_objective_plan_falls_back_to_deterministic_default(
+    client: TestClient, review_session: str
+) -> None:
+    cast(FastAPI, client.app).dependency_overrides[get_llm_client] = lambda: FakeClient(
+        [{"checks": [{"check_id": "unconfirmed", "reason": "Not registered."}]}]
+    )
+    response = client.post(
+        f"{API_PREFIX}/sessions/{review_session}/reviews",
+        json={"objective": "Review only the unconfirmed check"},
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["plan_source"] == "default"
 
 
 def test_findings_expose_the_two_fixture_defects_with_evidence(
@@ -110,6 +148,46 @@ def test_findings_can_be_filtered(client: TestClient, review_session: str) -> No
     assert by_severity.json() == []
     bad_severity = client.get(base, params={"run_id": run_id, "severity": "fatal"})
     assert_problem(bad_severity, 422, "request-validation")
+
+
+def test_explanation_is_separate_from_deterministic_findings(
+    client: TestClient, review_session: str
+) -> None:
+    run = _start(client, review_session).json()
+    base = f"{API_PREFIX}/sessions/{review_session}"
+    findings = client.get(f"{base}/findings", params={"run_id": run["id"]}).json()
+    finding = findings[0]
+    element = finding["elements"][0]
+    cast(FastAPI, client.app).dependency_overrides[get_llm_client] = lambda: FakeClient(
+        [
+            {
+                "finding_id": finding["id"],
+                "summary": (
+                    f"{finding['observed']}; the verified check expected {finding['expected']}."
+                ),
+                "probable_cause": "The deterministic check found a mismatch.",
+                "corrective_action": "Review the cited requirement and model element.",
+                "citations": [
+                    {
+                        "finding_id": finding["id"],
+                        "global_id": element["global_id"],
+                        "requirement_id": finding["requirement_id"],
+                        "rule_id": finding["rule_id"],
+                        "expected": finding["expected"],
+                        "observed": finding["observed"],
+                    }
+                ],
+            }
+        ]
+    )
+    response = client.post(f"{base}/reviews/{run['id']}/findings/{finding['id']}/explanation")
+    assert response.status_code == 200, response.text
+    explanation = response.json()
+    assert explanation["source"] == "ai_generated"
+    assert explanation["grounding_status"] == "passed"
+    assert explanation["finding_id"] == finding["id"]
+    assert explanation["citations"][0]["global_id"] == element["global_id"]
+    assert client.get(f"{base}/findings", params={"run_id": run["id"]}).json() == findings
 
 
 def test_findings_require_a_run_id(client: TestClient, review_session: str) -> None:

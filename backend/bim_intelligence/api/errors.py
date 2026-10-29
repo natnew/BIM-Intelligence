@@ -28,7 +28,7 @@ from bim_intelligence.bim import (
     UnsupportedUploadError,
 )
 from bim_intelligence.orchestration import NoExecutableChecksError
-from bim_intelligence.requirements import InvalidIdsError
+from bim_intelligence.requirements import InvalidIdsError, RequirementInterpretationError
 from bim_intelligence.schemas import ProblemDetail
 from bim_intelligence.store import (
     ArtefactNotFoundError,
@@ -79,6 +79,9 @@ DOMAIN_PROBLEMS: dict[type[Exception], ProblemSpec] = {
     AmbiguousGlobalIdError: ProblemSpec(409, "ambiguous-global-id", "Ambiguous GlobalId"),
     ModelVersionMismatchError: ProblemSpec(412, "model-version-mismatch", "Model version mismatch"),
     InvalidIdsError: ProblemSpec(422, "ids-invalid", "IDS document invalid"),
+    RequirementInterpretationError: ProblemSpec(
+        422, "requirement-interpretation-invalid", "Requirement interpretation invalid"
+    ),
     InvalidRunIdError: ProblemSpec(400, "invalid-run-id", "Invalid run id"),
     RunNotFoundError: ProblemSpec(404, "run-not-found", "Review run not found"),
     DocumentNotFoundError: ProblemSpec(404, "document-not-found", "Document not found"),

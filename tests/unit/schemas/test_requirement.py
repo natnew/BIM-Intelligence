@@ -58,7 +58,7 @@ def test_confirmed_revision_cannot_exceed_revision() -> None:
 def test_document_origin_requires_verbatim_source() -> None:
     with pytest.raises(ValidationError, match="source"):
         make_requirement(origin="document", source=None)
-    source = RequirementSource(document_id="bep-01", location="p-034", quote="All external walls…")
+    source = RequirementSource(document_id="0" * 64, location="p-034", quote="All external walls…")
     assert make_requirement(origin="document", source=source).source == source
 
 

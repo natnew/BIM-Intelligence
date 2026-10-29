@@ -34,6 +34,12 @@ class ReviewPlan(FrozenContractModel):
     checks: list[PlannedCheck] = Field(default_factory=list)
 
 
+class ReviewRequest(FrozenContractModel):
+    """Optional objective for a bounded AI-selected plan; omitted means deterministic default."""
+
+    objective: str | None = Field(default=None, min_length=1, max_length=4_000)
+
+
 class CheckResult(ContractModel):
     """Execution outcome of one planned check."""
 

@@ -6,6 +6,7 @@ Terminology is fixed here: *Session*, *ElementRef*, *ElementRecord*, *ModelSumma
 the TypeScript contract (``python scripts/export_schemas.py``) and updating the tests.
 """
 
+from bim_intelligence.schemas.ai import BudgetStatus, EvidenceCitation, Explanation
 from bim_intelligence.schemas.canonical import canonical_json, compact_canonical_json, content_hash
 from bim_intelligence.schemas.checks import CheckKind, CheckSpec, compute_check_id
 from bim_intelligence.schemas.contracts import (
@@ -32,6 +33,10 @@ from bim_intelligence.schemas.findings import (
 from bim_intelligence.schemas.problems import ProblemDetail
 from bim_intelligence.schemas.requirements import (
     Requirement,
+    RequirementCandidate,
+    RequirementCandidateBatch,
+    RequirementCandidateConfirmation,
+    RequirementExtractionRequest,
     RequirementOrigin,
     RequirementSource,
     RequirementStatus,
@@ -44,6 +49,7 @@ from bim_intelligence.schemas.runs import (
     PlannedCheck,
     PlanSource,
     ReviewPlan,
+    ReviewRequest,
     ReviewRun,
     RunStatus,
 )
@@ -53,6 +59,7 @@ __all__ = [
     "CONTRACT_MODELS",
     "SESSION_ID_PATTERN",
     "TERMINAL_RUN_STATUSES",
+    "BudgetStatus",
     "CheckKind",
     "CheckResult",
     "CheckSpec",
@@ -62,6 +69,8 @@ __all__ = [
     "DocumentKind",
     "ElementRecord",
     "ElementRef",
+    "EvidenceCitation",
+    "Explanation",
     "Finding",
     "FindingMethod",
     "InputManifest",
@@ -71,10 +80,15 @@ __all__ = [
     "ProblemDetail",
     "PropertyValue",
     "Requirement",
+    "RequirementCandidate",
+    "RequirementCandidateBatch",
+    "RequirementCandidateConfirmation",
+    "RequirementExtractionRequest",
     "RequirementOrigin",
     "RequirementSource",
     "RequirementStatus",
     "ReviewPlan",
+    "ReviewRequest",
     "ReviewRun",
     "RunStatus",
     "Session",

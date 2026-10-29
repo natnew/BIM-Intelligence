@@ -1,0 +1,7 @@
+title = "BIM Intelligence secret scanning"
+minVersion = "v8.25.0"
+
+[[allowlists]]
+description = "The synthetic GlobalId asserted by the element-record schema test."
+paths = ['''^tests/unit/schemas/test_element_record\.py$''']
+regexes = ['''21KH8X9wHPWw7JLiY2NtSZ''']

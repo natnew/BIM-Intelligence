@@ -2,7 +2,7 @@
 
 **AI-native architectural BIM model review.** Upload an IFC model and your project's BIM Execution Plan, state what you want reviewed in plain language, and get deterministic, traceable findings — explained in context, highlighted in 3D, and exported as a review report.
 
-> **Development status: implementation in progress.** Verified slices cover domain contracts and a reproducible fixture, IFC ingestion and version-consistent storage, deterministic IDS import and review, and the T-3 interactive viewer on the minimal fixture. The complete AI-assisted workflow, native rules, benchmark and reporting are not yet implemented; no benchmark metrics have been measured. See [Development status](#development-status).
+> **Development status: implementation in progress.** Verified slices cover domain contracts and a reproducible fixture, IFC ingestion and version-consistent storage, deterministic IDS/native review, the T-3 viewer, and the T-5 offline AI integration path. No live Meta request has been authorised or made; API compatibility remains unverified, the frontend AI panels and benchmark remain outstanding, and no benchmark metrics have been measured. See [Development status](#development-status).
 
 Built for the Meta Global AI Developer Hackathon (26 October – 4 November 2026) using Meta Muse Spark via the Meta Model API.
 
@@ -78,7 +78,8 @@ Verified versions and sources: [docs/ARCHITECTURE.md — Appendix B](./docs/ARCH
 | Deterministic IDS validation: IDS 1.0 import as confirmed requirements, per-check IfcTester execution, `Finding` / `CheckResult` normalisation, synchronous review run, `documents` / `requirements` / `reviews` / `findings` endpoints | **Done (Day 4, T-2)** — produces the two expected findings on the minimal fixture with byte-identical `findings.json` across runs; see [ADR-018](./docs/DECISIONS.md#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock) |
 | T-3 viewer: local IFC rendering, GlobalId selection, version-pinned findings and element details | **Verified on the minimal fixture** — see [T-3 evidence](./docs/IMPLEMENTATION_PLAN.md#t-3--interactive-3d-bim-viewer) |
 | T-4 deterministic review workflow: bounded default plan, explicit native classification-consistency check, pinned run and viewer hand-off | **Verified on the minimal fixture** — no LLM calls; benchmark evaluation remains open under T-6 |
-| BEP requirement extraction, LLM planner and explanations, report | **Not started** |
+| T-5 offline AI interfaces: quote-verified TXT/Markdown candidates, bounded objective planning, grounded explanations, Fake/Replay clients and persistent spend safeguards | **Implemented and offline-tested** — no live API call; only existing confirmed CheckSpecs can be selected; full BEP-to-IDS authoring is out of scope |
+| Meta API compatibility and integrated frontend AI panels | **Not verified / not implemented** — M0 API capability spike remains open; M2 is in progress |
 | Benchmark and measured accuracy | **Not started** — no metrics exist yet |
 | Hackathon rule verification | Outstanding (see [docs/REQUIREMENTS.md — Open items](./docs/REQUIREMENTS.md#7-open-items)) |
 
@@ -109,7 +110,7 @@ Verified on Windows 11 with Python 3.12.12 and Node.js 24 (27 October 2026).
 ```bash
 git clone https://github.com/natnew/BIM-Intelligence.git
 cd BIM-Intelligence
-cp .env.example .env            # edit MODEL_API_KEY if you want live LLM calls
+cp .env.example .env            # LLM_MODE=off by default; Live requires explicit approval and opt-in
 
 # Backend (from the repository root)
 python -m venv .venv
@@ -188,17 +189,21 @@ npm test
 npm run build
 cd ..
 
+# Secret scanning (requires Gitleaks CLI; all findings are redacted)
+python scripts/secret_scan.py --staged   # staged changes, also used by .githooks/pre-commit
+python scripts/secret_scan.py --working-tree # tracked and untracked non-ignored files
+python scripts/secret_scan.py            # full repository Git history
+
 # Regenerate committed artefacts after changing them (then re-run the checks above)
 python scripts/export_schemas.py          # Pydantic schemas → frontend/src/api/generated/*.schema.json
 (cd frontend && npm run types:generate)   # JSON Schema → frontend/src/api/generated/types.ts
 python tests/fixtures/make_minimal_ifc.py # tests/fixtures/minimal.ifc + minimal.ids (byte-reproducible)
 
-# Later in the plan (not yet implemented)
-python tests/evaluation/run_eval.py --replay   # benchmark metrics from recorded LLM responses
-BIMI_LIVE_LLM=1 pytest -m live                 # opt-in live API tests; requires key and spend approval
+# Evaluation harness and benchmark remain a later task; see docs/EVALUATION.md
+BIMI_LIVE_LLM=1 BIMI_LIVE_APPROVAL=T5-META-MUSE-SPARK-SMOKE pytest tests/live/test_meta_smoke.py -m live
 ```
 
-The same commands run in CI on Ubuntu and Windows ([.github/workflows/ci.yml](./.github/workflows/ci.yml)). Evaluation design, metrics and thresholds: [docs/EVALUATION.md](./docs/EVALUATION.md).
+The live command is an exact one-request smoke test, not general authorisation. It additionally requires `LLM_MODE=live`, `ALLOW_LIVE_LLM=true`, a backend `MODEL_API_KEY`, and sufficient remaining application budget. Do not run it until the project owner approves that session. The repository-local staged hook at `.githooks/pre-commit` is enabled through the repository-local `core.hooksPath` setting and runs the redacted staged Gitleaks scan. This setting overrides the prior global hook path for this repository; the project owner approved that change. The hook was verified against an empty index (no staged files). The same test, lint and type-check commands run in CI on Ubuntu and Windows ([.github/workflows/ci.yml](./.github/workflows/ci.yml)). Evaluation design, metrics and thresholds: [docs/EVALUATION.md](./docs/EVALUATION.md).
 
 ## Documentation
 

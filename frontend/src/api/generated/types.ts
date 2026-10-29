@@ -13,12 +13,15 @@ export type JsonValue = unknown;
  * Generated from backend/bim_intelligence/schemas by scripts/export_schemas.py. Do not edit by hand.
  */
 export interface BimIntelligenceContracts {
+  readonly budgetStatus?: BudgetStatus;
   readonly checkResult?: CheckResult;
   readonly checkSpec?: CheckSpec;
   readonly classificationRef?: ClassificationRef;
   readonly documentImport?: DocumentImport;
   readonly elementRecord?: ElementRecord;
   readonly elementRef?: ElementRef;
+  readonly evidenceCitation?: EvidenceCitation;
+  readonly explanation?: Explanation;
   readonly finding?: Finding;
   readonly inputManifest?: InputManifest;
   readonly modelSummary?: ModelSummary;
@@ -26,10 +29,25 @@ export interface BimIntelligenceContracts {
   readonly problemDetail?: ProblemDetail;
   readonly propertyValue?: PropertyValue;
   readonly requirement?: Requirement;
+  readonly requirementCandidate?: RequirementCandidate;
+  readonly requirementCandidateBatch?: RequirementCandidateBatch;
+  readonly requirementCandidateConfirmation?: RequirementCandidateConfirmation;
+  readonly requirementExtractionRequest?: RequirementExtractionRequest;
   readonly requirementSource?: RequirementSource;
   readonly reviewPlan?: ReviewPlan;
+  readonly reviewRequest?: ReviewRequest;
   readonly reviewRun?: ReviewRun;
   readonly session?: Session;
+}
+/**
+ * Non-sensitive application-level accounting summary; never includes prompt content.
+ */
+export interface BudgetStatus {
+  readonly project_budget_usd: number;
+  readonly remaining_usd: number;
+  readonly request_count: number;
+  readonly reserved_usd: number;
+  readonly spent_usd: number;
 }
 /**
  * Execution outcome of one planned check.
@@ -98,7 +116,7 @@ export interface ClassificationRef {
  * Result of importing one document: its identity and the requirements it established.
  */
 export interface DocumentImport {
-  readonly kind: 'ids';
+  readonly kind: 'ids' | 'text' | 'markdown';
   /**
    * Requirements derived from this document, in document order.
    */
@@ -139,6 +157,9 @@ export interface Requirement {
  * Where a document-derived requirement came from; the quote is verbatim (FR-REQ-02).
  */
 export interface RequirementSource {
+  /**
+   * Lower-case SHA-256 hex.
+   */
   readonly document_id: string;
   /**
    * Paragraph or page identifier.
@@ -217,6 +238,30 @@ export interface PropertyValue {
    */
   readonly inherited: boolean;
   readonly value: JsonValue;
+}
+/**
+ * Exact deterministic provenance cited by one explanation.
+ */
+export interface EvidenceCitation {
+  readonly expected: string;
+  readonly finding_id: string;
+  readonly global_id: string;
+  readonly observed: string;
+  readonly requirement_id: string;
+  readonly rule_id: string;
+}
+/**
+ * Interpretation kept separate from immutable deterministic Finding records.
+ */
+export interface Explanation {
+  readonly citations: EvidenceCitation[];
+  readonly corrective_action: string;
+  readonly finding_id: string;
+  readonly grounding_status: 'passed' | 'fallback';
+  readonly model: string | null;
+  readonly probable_cause: string;
+  readonly source: 'ai_generated' | 'deterministic_template';
+  readonly summary: string;
 }
 /**
  * One verified defect affecting one or more elements.
@@ -332,10 +377,56 @@ export interface ProblemDetail {
   readonly type: string;
 }
 /**
+ * Unconfirmed narrative candidate; it can only reference an existing immutable check.
+ */
+export interface RequirementCandidate {
+  /**
+   * Existing confirmed CheckSpec id; null when no safe mapping is available.
+   */
+  readonly check_id: string | null;
+  readonly confidence: number | null;
+  readonly document_kind: 'text' | 'markdown';
+  readonly id: string;
+  readonly source: RequirementSource;
+  readonly statement: string;
+  readonly status: 'proposed' | 'informational';
+  readonly title: string;
+}
+/**
+ * Unconfirmed candidates returned for one narrative document.
+ */
+export interface RequirementCandidateBatch {
+  readonly candidates: RequirementCandidate[];
+  /**
+   * Lower-case SHA-256 hex.
+   */
+  readonly document_id: string;
+  readonly document_kind: 'text' | 'markdown';
+  readonly rejected_count: number;
+}
+export interface RequirementCandidateConfirmation {
+  readonly candidate: RequirementCandidate;
+  readonly check_id: string;
+  readonly confirmed_by: string;
+}
+export interface RequirementExtractionRequest {
+  /**
+   * Lower-case SHA-256 hex.
+   */
+  readonly document_id: string;
+  readonly document_kind: 'text' | 'markdown';
+}
+/**
  * The ordered set of checks a run intends to execute (plan-then-execute, C-01).
  */
 export interface ReviewPlan {
   readonly checks: PlannedCheck[];
+}
+/**
+ * Optional objective for a bounded AI-selected plan; omitted means deterministic default.
+ */
+export interface ReviewRequest {
+  readonly objective: string | null;
 }
 /**
  * One review run over a session; the only record that carries timestamps.

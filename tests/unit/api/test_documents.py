@@ -65,12 +65,43 @@ def test_invalid_ids_is_422_problem(
     assert client.get(f"{API_PREFIX}/sessions/{session_id}/requirements").json() == []
 
 
-@pytest.mark.parametrize("filename", ["requirements.txt", "model.ifc", "bep.pdf", "ids"])
-def test_only_ids_documents_are_accepted_in_this_slice(
+@pytest.mark.parametrize("filename", ["model.ifc", "bep.pdf", "ids"])
+def test_unsupported_document_extensions_are_rejected(
     client: TestClient, session_id: str, filename: str
 ) -> None:
     response = upload_ids(client, session_id, FIXTURE_IDS_BYTES, filename=filename)
     assert_problem(response, 415, "unsupported-upload", detail_contains=".ids")
+
+
+def test_narrative_upload_is_stored_but_creates_no_requirements(
+    client: TestClient, session_id: str
+) -> None:
+    content = b"# Requirements\n\nEvery wall shall have a fire rating.\n"
+    response = client.post(
+        f"{API_PREFIX}/sessions/{session_id}/documents",
+        files={"file": ("requirements.md", content, "text/markdown")},
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["kind"] == "markdown"
+    assert body["sha256"] == hashlib.sha256(content).hexdigest()
+    assert body["requirements"] == []
+    assert client.get(f"{API_PREFIX}/sessions/{session_id}/requirements").json() == []
+    duplicate = client.post(
+        f"{API_PREFIX}/sessions/{session_id}/documents",
+        files={"file": ("requirements.md", content, "text/markdown")},
+    )
+    assert duplicate.status_code == 200
+
+
+def test_narrative_upload_rejects_binary_and_empty_content(
+    client: TestClient, session_id: str
+) -> None:
+    base = f"{API_PREFIX}/sessions/{session_id}/documents"
+    binary = client.post(base, files={"file": ("requirements.txt", b"\xff", "text/plain")})
+    assert binary.status_code == 422
+    empty = client.post(base, files={"file": ("requirements.md", b" \n", "text/markdown")})
+    assert empty.status_code == 422
 
 
 def test_oversized_document_is_413(client: TestClient, session_id: str) -> None:

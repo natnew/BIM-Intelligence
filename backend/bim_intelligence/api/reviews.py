@@ -12,12 +12,12 @@ import logging
 
 from fastapi import APIRouter, Depends, Request, Response
 
-from bim_intelligence.api.deps import get_store
+from bim_intelligence.api.deps import get_llm_client, get_store
 from bim_intelligence.api.errors import problem_responses
 from bim_intelligence.api.versioning import if_match_sha256
 from bim_intelligence.config import Settings, get_settings
-from bim_intelligence.orchestration import run_review
-from bim_intelligence.schemas import CheckResult, ReviewRun
+from bim_intelligence.orchestration import LLMClient, run_review
+from bim_intelligence.schemas import CheckResult, ReviewRequest, ReviewRun
 from bim_intelligence.store import SessionStore
 
 router = APIRouter(tags=["reviews"])
@@ -29,10 +29,13 @@ logger = logging.getLogger(__name__)
     "/sessions/{session_id}/reviews",
     status_code=201,
     response_model=ReviewRun,
-    summary="Run a deterministic review",
+    summary="Run a bounded review",
     description=(
-        "Executes the stable default plan of unique confirmed checks against the active model "
-        "version and returns the terminal ``ReviewRun``: one ``CheckResult`` per unique check "
+        "Executes a bounded plan against the active model version and returns the terminal "
+        "``ReviewRun``. Without an objective or an enabled LLM client, it uses the stable "
+        "deterministic default plan. With an objective and an enabled client, Muse Spark may "
+        "select only confirmed immutable check ids; invalid or unavailable AI plans fall back "
+        "to the default plan. One ``CheckResult`` is recorded per unique check "
         "(``passed``, ``failed``, "
         "``error``, ``skipped`` or ``not_applicable``) and the ``InputManifest`` naming the "
         "model hash, IDS hashes, requirement revisions and rule versions it ran against. The "
@@ -44,7 +47,9 @@ logger = logging.getLogger(__name__)
         "any check is skipped, not applicable or raises inside the engine; findings of the "
         "other checks are still recorded. ``MAX_PLAN_CHECKS`` limits the ordered plan and "
         "``MAX_TOOL_CALLS_PER_RUN`` limits executed checks; any cap hit is recorded as skipped. "
-        "No language model is involved (``plan_source`` is always ``default`` here)."
+        "The model receives no tools and cannot alter validation criteria or create Findings. "
+        "Live calls require explicit live-mode configuration and are bounded by the persistent "
+        "application-level budget ledger."
     ),
     responses=problem_responses(400, 404, 409, 412),
 )
@@ -52,8 +57,10 @@ def start_review(
     session_id: str,
     request: Request,
     response: Response,
+    body: ReviewRequest | None = None,
     store: SessionStore = Depends(get_store),
     settings: Settings = Depends(get_settings),
+    client: LLMClient | None = Depends(get_llm_client),
 ) -> ReviewRun:
     outcome = run_review(
         store,
@@ -61,6 +68,8 @@ def start_review(
         pinned_model_hash=if_match_sha256(request),
         observer=_log_check,
         settings=settings,
+        objective=body.objective if body else None,
+        client=client,
     )
     response.headers["Location"] = request.url_for(
         "get_review", session_id=session_id, run_id=outcome.run.id

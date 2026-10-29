@@ -1,8 +1,4 @@
-"""Requirements: how a session's reviewable requirements come into being (ARCHITECTURE §9).
-
-This slice implements the IDS path (FR-REQ-05). Narrative document extraction and interactive
-confirmation (FR-REQ-01..04) are later tasks and will live beside it.
-"""
+"""Requirements: how a session's reviewable requirements come into being (ARCHITECTURE §9)."""
 
 from bim_intelligence.requirements.ids_import import (
     CONFIRMED_BY_IDS_IMPORT,
@@ -10,6 +6,12 @@ from bim_intelligence.requirements.ids_import import (
     executable_requirements,
     import_ids_document,
     requirements_for_document,
+)
+from bim_intelligence.requirements.narrative import (
+    RequirementInterpretationError,
+    confirm_candidate,
+    extract_candidates,
+    verify_candidate_quote,
 )
 from bim_intelligence.requirements.native import (
     CONFIRMED_BY_NATIVE_SELECTION,
@@ -24,8 +26,12 @@ __all__ = [
     "IdsImportResult",
     "InvalidIdsError",
     "NativeRequirementResult",
+    "RequirementInterpretationError",
+    "confirm_candidate",
     "confirm_classification_consistency",
     "executable_requirements",
+    "extract_candidates",
     "import_ids_document",
     "requirements_for_document",
+    "verify_candidate_quote",
 ]

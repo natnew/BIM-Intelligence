@@ -9,10 +9,12 @@ unless remote access is explicitly allowed.
 from __future__ import annotations
 
 import ipaddress
+from decimal import Decimal
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -51,17 +53,25 @@ class Settings(BaseSettings):
     llm_mode: LLMMode = LLMMode.OFF
     llm_recordings_dir: Path = Path("tests/evaluation/recordings")
     allow_contributor_models: bool = False
+    allow_live_llm: bool = False
     llm_timeout_seconds: float = Field(default=60.0, gt=0)
-    llm_max_retries: int = Field(default=2, ge=0, le=5)
+    llm_max_retries: int = Field(default=0, ge=0, le=2)
 
     # Orchestration limits (NFR-05, NFR-06)
     max_tool_calls_per_run: int = Field(default=12, ge=1, le=100)
     max_plan_checks: int = Field(default=10, ge=1, le=50)
     max_input_tokens_per_run: int = Field(default=150_000, ge=1_000)
 
-    # Cost estimation (USD per 1M tokens; indicative)
-    llm_price_input_per_m: float = Field(default=1.25, ge=0)
-    llm_price_output_per_m: float = Field(default=4.25, ge=0)
+    # Muse Spark Standard pricing (USD per 1M tokens; configurable).
+    llm_price_input_per_m: Decimal | None = Field(default=Decimal("1.25"), ge=0)
+    llm_price_cached_input_per_m: Decimal | None = Field(default=Decimal("0.15"), ge=0)
+    llm_price_output_per_m: Decimal | None = Field(default=Decimal("4.25"), ge=0)
+    llm_max_input_tokens_per_call: int = Field(default=8_000, ge=1, le=8_000)
+    llm_max_output_tokens_per_call: int = Field(default=500, ge=1, le=500)
+    llm_max_calls_per_run: int = Field(default=2, ge=1, le=2)
+    llm_max_call_budget_usd: Decimal = Field(default=Decimal("0.10"), gt=0, le=Decimal("0.10"))
+    llm_max_run_budget_usd: Decimal = Field(default=Decimal("0.10"), gt=0, le=Decimal("0.10"))
+    llm_project_budget_usd: Decimal = Field(default=Decimal("5.00"), gt=0, le=Decimal("5.00"))
 
     # Server
     bimi_host: str = "127.0.0.1"
@@ -93,6 +103,20 @@ class Settings(BaseSettings):
             raise ConfigurationError("LLM_MODEL must not be empty.")
         return value.strip()
 
+    @field_validator("llm_base_url")
+    @classmethod
+    def _only_meta_api_endpoint(cls, value: str) -> str:
+        parsed = urlsplit(value)
+        if (
+            parsed.scheme != "https"
+            or parsed.netloc != "api.meta.ai"
+            or parsed.path.rstrip("/") != "/v1"
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ConfigurationError("LLM_BASE_URL must be https://api.meta.ai/v1.")
+        return "https://api.meta.ai/v1"
+
     @model_validator(mode="after")
     def _reject_contributor_models(self) -> Settings:
         """Contributor-mode ids permit Meta to train on submitted content (ADR-010)."""
@@ -107,8 +131,29 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _require_key_for_live_mode(self) -> Settings:
-        if self.llm_mode is LLMMode.LIVE and not self.has_api_key:
-            raise ConfigurationError("LLM_MODE=live requires MODEL_API_KEY to be set.")
+        if self.llm_mode is LLMMode.LIVE:
+            if not self.has_api_key:
+                raise ConfigurationError("LLM_MODE=live requires MODEL_API_KEY to be set.")
+            if not self.allow_live_llm:
+                raise ConfigurationError(
+                    "LLM_MODE=live also requires ALLOW_LIVE_LLM=true as an explicit opt-in."
+                )
+            if any(
+                price is None
+                for price in (
+                    self.llm_price_input_per_m,
+                    self.llm_price_cached_input_per_m,
+                    self.llm_price_output_per_m,
+                )
+            ):
+                raise ConfigurationError(
+                    "LLM_MODE=live requires all Muse Spark token pricing to be configured."
+                )
+        if (
+            self.llm_max_call_budget_usd > self.llm_max_run_budget_usd
+            or self.llm_max_run_budget_usd > self.llm_project_budget_usd
+        ):
+            raise ConfigurationError("LLM call and run budgets must not exceed the project budget.")
         return self
 
     @model_validator(mode="after")

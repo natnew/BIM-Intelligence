@@ -31,6 +31,14 @@ EXPECTED_NAMES = {
     "ReviewRun",
     "ProblemDetail",
     "DocumentImport",
+    "RequirementCandidate",
+    "RequirementCandidateBatch",
+    "RequirementCandidateConfirmation",
+    "RequirementExtractionRequest",
+    "ReviewRequest",
+    "Explanation",
+    "EvidenceCitation",
+    "BudgetStatus",
 }
 
 

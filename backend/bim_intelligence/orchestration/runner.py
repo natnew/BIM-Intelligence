@@ -27,13 +27,17 @@ import logging
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
-from bim_intelligence.bim import load_index
+from bim_intelligence.bim import load_index, load_summary
 from bim_intelligence.config import Settings, get_settings
+from bim_intelligence.llm.client import LLMClient
+from bim_intelligence.llm.errors import LLMClientError
 from bim_intelligence.orchestration.default_plan import default_plan
+from bim_intelligence.orchestration.planner import PlanViolation, propose_plan, validate_plan
 from bim_intelligence.schemas import (
     CheckResult,
     Finding,
     InputManifest,
+    PlanSource,
     Requirement,
     ReviewPlan,
     ReviewRun,
@@ -78,6 +82,8 @@ def run_review(
     pinned_model_hash: str | None = None,
     observer: CheckObserver | None = None,
     settings: Settings | None = None,
+    objective: str | None = None,
+    client: LLMClient | None = None,
 ) -> ReviewOutcome:
     """Run the default plan against the session's active model and publish the result.
 
@@ -91,19 +97,46 @@ def run_review(
         if pinned_model_hash is not None and pinned_model_hash != version.sha256:
             raise ModelVersionMismatchError(session_id, pinned_model_hash, version.sha256)
         full_plan, by_check = default_plan(store.read_requirements(session_id))
-        ordered_checks = list(by_check.items())
-        if not ordered_checks:
+        all_checks = list(by_check.items())
+        if not all_checks:
             raise NoExecutableChecksError(session_id)
-        planned_count = min(len(ordered_checks), settings.max_plan_checks)
-        plan = ReviewPlan(checks=full_plan.checks[:planned_count])
-        attributed = [requirement for _, requirement in ordered_checks]
+        run_id = store.new_id()
+        plan = ReviewPlan(checks=full_plan.checks[: settings.max_plan_checks])
+        plan_source: PlanSource = "default"
+        if objective is not None and client is not None:
+            try:
+                proposed = propose_plan(
+                    client,
+                    objective=objective,
+                    summary=load_summary(version),
+                    requirements=list(by_check.values()),
+                    settings=settings,
+                    run_id=run_id,
+                )
+                selected = validate_plan(
+                    proposed,
+                    list(by_check.values()),
+                    max_checks=min(settings.max_plan_checks, settings.max_tool_calls_per_run),
+                )
+            except (LLMClientError, PlanViolation) as exc:
+                logger.warning(
+                    "AI plan rejected; deterministic default used (%s)", type(exc).__name__
+                )
+            else:
+                plan = proposed
+                plan_source = "llm"
+                all_checks = list(selected.items()) + [
+                    item for item in all_checks if item[0] not in selected
+                ]
+        planned_count = min(len(plan.checks), settings.max_plan_checks)
+        attributed = [requirement for _, requirement in by_check.items()]
         manifest = _manifest(store, session_id, version, attributed)
 
         created_at = store.now()
         with ValidationTarget.open(version.path_for(MODEL_FILE), load_index(version)) as target:
             results, findings = _execute(
                 target,
-                ordered_checks,
+                all_checks,
                 planned_count=planned_count,
                 max_tool_calls=settings.max_tool_calls_per_run,
                 observer=observer,
@@ -111,11 +144,11 @@ def run_review(
         findings = sort_findings(findings)
 
         run = ReviewRun(
-            id=store.new_id(),
+            id=run_id,
             session_id=session_id,
             status=_run_status(results),
             plan=plan,
-            plan_source="default",
+            plan_source=plan_source,
             check_results=results,
             input_manifest=manifest,
             created_at=created_at,

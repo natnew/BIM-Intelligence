@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from bim_intelligence import __version__
+from bim_intelligence.api.budget import router as budget_router
 from bim_intelligence.api.correlation import CORRELATION_HEADER, CorrelationIdMiddleware
 from bim_intelligence.api.deps import SESSIONS_DIR
 from bim_intelligence.api.documents import router as documents_router
@@ -36,6 +37,7 @@ API_PREFIX = "/api/v1"
 CORS_ALLOWED_HEADERS = ("Content-Type", CORRELATION_HEADER, IF_MATCH_HEADER, "If-None-Match")
 ROUTERS = (
     health_router,
+    budget_router,
     sessions_router,
     model_router,
     elements_router,
