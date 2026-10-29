@@ -15,10 +15,16 @@ from bim_intelligence.bim.indexer import build_index
 from bim_intelligence.bim.ingest import ingest_model, load_index, load_summary
 from bim_intelligence.bim.loader import SUPPORTED_SCHEMAS, open_ifc
 from bim_intelligence.bim.model_index import ModelIndex
+from bim_intelligence.bim.refs import (
+    ElementRefResolver,
+    element_ref_from_entity,
+    element_ref_resolver,
+)
 
 __all__ = [
     "SUPPORTED_SCHEMAS",
     "AmbiguousGlobalIdError",
+    "ElementRefResolver",
     "IfcLoadError",
     "InvalidGlobalIdError",
     "ModelIndex",
@@ -26,6 +32,8 @@ __all__ = [
     "UnsupportedSchemaError",
     "UnsupportedUploadError",
     "build_index",
+    "element_ref_from_entity",
+    "element_ref_resolver",
     "ingest_model",
     "load_index",
     "load_summary",

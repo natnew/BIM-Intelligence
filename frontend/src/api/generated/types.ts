@@ -16,6 +16,7 @@ export interface BimIntelligenceContracts {
   readonly checkResult?: CheckResult;
   readonly checkSpec?: CheckSpec;
   readonly classificationRef?: ClassificationRef;
+  readonly documentImport?: DocumentImport;
   readonly elementRecord?: ElementRecord;
   readonly elementRef?: ElementRef;
   readonly finding?: Finding;
@@ -92,6 +93,61 @@ export interface ClassificationRef {
    * Name of the IfcClassification, when resolvable.
    */
   readonly system: string | null;
+}
+/**
+ * Result of importing one document: its identity and the requirements it established.
+ */
+export interface DocumentImport {
+  readonly kind: 'ids';
+  /**
+   * Requirements derived from this document, in document order.
+   */
+  readonly requirements: Requirement[];
+  /**
+   * SHA-256 of the stored document bytes.
+   */
+  readonly sha256: string;
+  /**
+   * Document title as declared inside the file.
+   */
+  readonly title: string;
+}
+/**
+ * A single reviewable requirement bound to exactly one CheckSpec.
+ */
+export interface Requirement {
+  readonly check: CheckSpec;
+  /**
+   * Model self-report; a sorting aid only.
+   */
+  readonly confidence: number | null;
+  readonly confirmed_at: string | null;
+  readonly confirmed_by: string | null;
+  /**
+   * Revision the user confirmed, if any.
+   */
+  readonly confirmed_revision: number | null;
+  readonly id: string;
+  readonly origin: 'document' | 'ids' | 'builtin';
+  readonly revision: number;
+  readonly source: RequirementSource | null;
+  readonly statement: string;
+  readonly status: 'proposed' | 'confirmed' | 'edited' | 'rejected' | 'informational';
+  readonly title: string;
+}
+/**
+ * Where a document-derived requirement came from; the quote is verbatim (FR-REQ-02).
+ */
+export interface RequirementSource {
+  readonly document_id: string;
+  /**
+   * Paragraph or page identifier.
+   */
+  readonly location: string;
+  /**
+   * Exact substring of the extracted text.
+   */
+  readonly quote: string;
 }
 /**
  * Denormalised Model Index entry for one product, type object or spatial element.
@@ -274,43 +330,6 @@ export interface ProblemDetail {
    * URI identifying the problem type.
    */
   readonly type: string;
-}
-/**
- * A single reviewable requirement bound to exactly one CheckSpec.
- */
-export interface Requirement {
-  readonly check: CheckSpec;
-  /**
-   * Model self-report; a sorting aid only.
-   */
-  readonly confidence: number | null;
-  readonly confirmed_at: string | null;
-  readonly confirmed_by: string | null;
-  /**
-   * Revision the user confirmed, if any.
-   */
-  readonly confirmed_revision: number | null;
-  readonly id: string;
-  readonly origin: 'document' | 'ids' | 'builtin';
-  readonly revision: number;
-  readonly source: RequirementSource | null;
-  readonly statement: string;
-  readonly status: 'proposed' | 'confirmed' | 'edited' | 'rejected' | 'informational';
-  readonly title: string;
-}
-/**
- * Where a document-derived requirement came from; the quote is verbatim (FR-REQ-02).
- */
-export interface RequirementSource {
-  readonly document_id: string;
-  /**
-   * Paragraph or page identifier.
-   */
-  readonly location: string;
-  /**
-   * Exact substring of the extracted text.
-   */
-  readonly quote: string;
 }
 /**
  * The ordered set of checks a run intends to execute (plan-then-execute, C-01).

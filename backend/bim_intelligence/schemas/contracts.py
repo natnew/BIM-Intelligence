@@ -15,6 +15,7 @@ from pydantic_core import CoreSchema
 
 from bim_intelligence.schemas.canonical import canonical_json
 from bim_intelligence.schemas.checks import CheckSpec
+from bim_intelligence.schemas.documents import DocumentImport
 from bim_intelligence.schemas.elements import (
     ClassificationRef,
     ElementRecord,
@@ -51,6 +52,7 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     InputManifest,
     ReviewRun,
     ProblemDetail,
+    DocumentImport,
 )
 
 SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"

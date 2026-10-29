@@ -75,7 +75,8 @@ Verified versions and sources: [docs/ARCHITECTURE.md — Appendix B](./docs/ARCH
 | Repository skeleton: Python project, FastAPI app with `/api/v1/health`, validated configuration, Vite/React frontend with a health panel, CI | **Done (Day 2)** — no review functionality yet |
 | Domain schemas (`Finding`, `CheckSpec`, `Requirement`, `CheckResult`, `ReviewRun`, …), generated TypeScript contract, reproducible minimal IFC/IDS fixture | **Done (Day 2, T-0)** — see [ADR-015](./docs/DECISIONS.md#adr-015-contract-model-immutable-checkspec-content-addressed-finding-per-check-checkresult) |
 | IFC ingestion: session store, read-only IFC loading and Model Index, `sessions` / `model` / `elements` endpoints with RFC 9457 errors | **Done (Day 3, T-1)** — tested on the minimal fixture and in-memory variants only; see [ADR-016](./docs/DECISIONS.md#adr-016-ingestion-contract-staged-upload-content-hash-etag-and-identifier-handling) |
-| Validation rules, requirement extraction, orchestration, viewer, report | **Not started** |
+| Deterministic IDS validation: IDS 1.0 import as confirmed requirements, per-check IfcTester execution, `Finding` / `CheckResult` normalisation, synchronous review run, `documents` / `requirements` / `reviews` / `findings` endpoints | **Done (Day 4, T-2)** — produces the two expected findings on the minimal fixture with byte-identical `findings.json` across runs; see [ADR-018](./docs/DECISIONS.md#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock) |
+| Native rules, BEP requirement extraction, LLM planner and explanations, viewer, report | **Not started** |
 | Benchmark and measured accuracy | **Not started** — no metrics exist yet |
 | Hackathon rule verification | Outstanding (see [docs/REQUIREMENTS.md — Open items](./docs/REQUIREMENTS.md#7-open-items)) |
 
@@ -136,6 +137,34 @@ curl -sI $BASE/sessions/$SID/model/file | grep -i etag          # ETag: "<sha256
 ```
 
 Uploads are stored byte-for-byte under `DATA_DIR/sessions/<uuid>/models/<sha256>/model.ifc` (git-ignored) beside the index and summary built from those bytes, capped at `MAX_IFC_MB`, and made active by a single atomic write of the session record, so no read can mix two model versions ([ADR-017](./docs/DECISIONS.md#adr-017-content-addressed-model-versions-with-single-pointer-publication)). Every model read carries `ETag` = the version's quoted SHA-256 and honours `If-Match`. Errors are `application/problem+json`; the full surface is in [docs/ARCHITECTURE.md §11](./docs/ARCHITECTURE.md#11-api-architecture-and-principal-endpoints).
+
+### Import an IDS and run a deterministic review
+
+Continuing in the same session (run on 29 October 2026 against the committed fixtures):
+
+```bash
+curl -s -F "file=@tests/fixtures/minimal.ids" $BASE/sessions/$SID/documents
+# 201 {"sha256":"e602233d…","kind":"ids","title":"BIM Intelligence minimal fixture",
+#      "requirements":[{"id":"REQ-001","title":"External walls carry a fire rating","status":"confirmed",
+#                       "check":{"id":"bca0b103d592b6d2","kind":"ids","rule_id":"ids:External walls carry a fire rating",…}},
+#                      {"id":"REQ-002","title":"Walls carry a classification reference",…}]}
+RUN=$(curl -s -X POST $BASE/sessions/$SID/reviews | python -c "import json,sys; print(json.load(sys.stdin)['id'])")
+curl -s $BASE/sessions/$SID/reviews/$RUN
+# {"status":"completed","plan_source":"default",
+#  "check_results":[{"check_id":"bca0b103d592b6d2","requirement_id":"REQ-001","status":"failed","applicable_count":2,"finding_ids":["3473dbb1b87e93bd"],…},
+#                   {"check_id":"4f00f7fd6f41e4a6","requirement_id":"REQ-002","status":"failed","applicable_count":3,"finding_ids":["e062895b2cf67af1"],…}],
+#  "input_manifest":{"model_hash":"f2bd0007…","ids_hashes":["e602233d…"],"requirement_revisions":{"REQ-001":1,"REQ-002":1},…},…}
+curl -s "$BASE/sessions/$SID/findings?run_id=$RUN"
+# [{"id":"e062895b2cf67af1","requirement_id":"REQ-002","category":"classification_requirement",
+#   "elements":[{"global_id":"2qvnbd6oPPKR1ac5HegGTJ","express_id":79,"ifc_type":"IfcWall","name":"W-003","storey":"L00"}],
+#   "observed":"The entity has no classification","expected":"Shall be classified using Uniclass 2015","method":"ids",…},
+#  {"id":"3473dbb1b87e93bd","requirement_id":"REQ-001","category":"property_requirement",
+#   "elements":[{"global_id":"0QWMtUzsnUUONCUGc8Sqsa","express_id":59,"ifc_type":"IfcWall","name":"W-002","storey":"L00"}],
+#   "observed":"The property set does not contain the required property",
+#   "expected":"FireRating data shall be provided in the dataset Pset_WallCommon","method":"ids",…}]
+```
+
+Each `<specification>` of the IDS becomes a confirmed `Requirement` bound to an immutable, content-addressed `CheckSpec`; a review executes every confirmed check through IfcTester against one pinned model version and records a `CheckResult` per check (`passed`, `failed`, `error`, `skipped` or `not_applicable`) plus a `Finding` per verified failure. Findings have no timestamps, so `findings.json` is byte-identical across runs over the same inputs. Nothing in this path calls a language model or the network ([ADR-018](./docs/DECISIONS.md#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock)). IDS boolean values should be written in lower case (`true`/`false`); see [RISKS.md R-DEP-08](./docs/RISKS.md).
 
 ## Testing
 
@@ -198,6 +227,7 @@ Project code is released under the [MIT License](./LICENSE).
 | IfcOpenShell, IfcTester, IfcClash, bcf-client | LGPL-3.0-or-later | Used as installed packages; no source vendored (IfcTester classifier to be confirmed) |
 | That Open Components (`@thatopen/*`), `web-ifc`, Three.js | MIT | |
 | FastAPI, Pydantic, React, Vite | MIT | |
+| xmlschema | MIT | Loads IfcTester's bundled IDS 1.0 XSD with remote imports disabled ([ADR-018](./docs/DECISIONS.md#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock)) |
 | buildingSMART IDS schema | See [buildingSMART/IDS](https://github.com/buildingSMART/IDS) | Standard reference only |
 
 Meta, Muse and the Meta Model API are trademarks of Meta Platforms, Inc. Autodesk Revit, Navisworks, Solibri and BIMcollab are referenced as prior art only; no proprietary code or assets are used.

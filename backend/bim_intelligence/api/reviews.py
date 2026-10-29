@@ -1,0 +1,81 @@
+"""Review runs (FR-VAL-01, FR-REQ-07, ADR-015 §4, ADR-018).
+
+In this slice a review is the default plan — every confirmed requirement — executed
+synchronously against the active model version; the response is the terminal ``ReviewRun``.
+The handler is a synchronous ``def`` so IfcOpenShell and IfcTester work runs in FastAPI's
+threadpool rather than on the event loop.
+"""
+
+from __future__ import annotations
+
+import logging
+
+from fastapi import APIRouter, Depends, Request, Response
+
+from bim_intelligence.api.deps import get_store
+from bim_intelligence.api.errors import problem_responses
+from bim_intelligence.api.versioning import if_match_sha256
+from bim_intelligence.orchestration import run_review
+from bim_intelligence.schemas import CheckResult, ReviewRun
+from bim_intelligence.store import SessionStore
+
+router = APIRouter(tags=["reviews"])
+
+logger = logging.getLogger(__name__)
+
+
+@router.post(
+    "/sessions/{session_id}/reviews",
+    status_code=201,
+    response_model=ReviewRun,
+    summary="Run a deterministic review",
+    description=(
+        "Executes every confirmed requirement against the active model version and returns the "
+        "completed ``ReviewRun``: one ``CheckResult`` per check (``passed``, ``failed``, "
+        "``error``, ``skipped`` or ``not_applicable``) and the ``InputManifest`` naming the "
+        "model hash, IDS hashes, requirement revisions and rule versions it ran against. The "
+        "session's lock is held for the duration, so an upload or a second review in the "
+        "meantime is refused with 409 ``model-locked`` and the version can never change under "
+        "the run. ``If-Match`` pins the run to a model version; a different active version is "
+        "412 ``model-version-mismatch``. A session without a model is 404; one without "
+        "confirmed requirements is 409 ``no-executable-checks``. The run ends ``partial`` when "
+        "any check raised inside the engine; findings of the other checks are still recorded. "
+        "No language model is involved (``plan_source`` is always ``default`` here)."
+    ),
+    responses=problem_responses(400, 404, 409, 412),
+)
+def start_review(
+    session_id: str,
+    request: Request,
+    response: Response,
+    store: SessionStore = Depends(get_store),
+) -> ReviewRun:
+    outcome = run_review(
+        store, session_id, pinned_model_hash=if_match_sha256(request), observer=_log_check
+    )
+    response.headers["Location"] = request.url_for(
+        "get_review", session_id=session_id, run_id=outcome.run.id
+    ).path
+    return outcome.run
+
+
+@router.get(
+    "/sessions/{session_id}/reviews/{run_id}",
+    response_model=ReviewRun,
+    summary="Review run",
+    description="A published run exactly as recorded; runs are immutable once published.",
+    responses=problem_responses(400, 404),
+)
+def get_review(session_id: str, run_id: str, store: SessionStore = Depends(get_store)) -> ReviewRun:
+    return store.read_run(session_id, run_id)
+
+
+def _log_check(result: CheckResult) -> None:
+    logger.info(
+        "check %s (%s): %s, %d applicable, %d finding(s)",
+        result.check_id,
+        result.requirement_id,
+        result.status,
+        result.applicable_count,
+        len(result.finding_ids),
+    )

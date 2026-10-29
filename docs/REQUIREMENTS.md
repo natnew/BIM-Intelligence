@@ -1,6 +1,6 @@
 # Requirements
 
-**Status:** Draft v0.1 — architecture phase, no functionality implemented.
+**Status:** Draft v0.1 (26 October 2026). Requirement text is the design baseline; which requirements are implemented and tested is recorded per row in [ARCHITECTURE.md](./ARCHITECTURE.md) (§8, §10.2, §11) and summarised in the README's development status table — as of 29 October 2026 that covers FR-ING-01..04, FR-REQ-05, FR-VAL-01 and FR-VAL-07 on the minimal fixture only.
 **Scope:** The professional BIM review workflow defined in the project brief. Broader capabilities from the original hackathon application are recorded as future enhancements, not current requirements.
 
 ## 1. Source documents and provenance

@@ -1,6 +1,6 @@
 # BIM Intelligence — Technical Architecture
 
-**Version:** 0.2 (architecture baseline 26 October 2026; §8.1, §10.2, §11 and §14 updated 28 October 2026 for the implemented ingestion slice and its T-1.1 publication hardening)
+**Version:** 0.3 (architecture baseline 26 October 2026; §8.1, §10.2, §11 and §14 updated 28 October 2026 for the implemented ingestion slice and its T-1.1 publication hardening; §8.2, §10.2, §11 and §14 updated 29 October 2026 for the implemented IDS import and validation slice, T-2)
 **Status:** Partially implemented. Rows and paragraphs marked *Implemented* or ✓ are backed by unit tests; every other statement about behaviour describes design intent, not measured results.
 **Audience:** Engineers and coding agents implementing the MVP during the Meta Global AI Developer Hackathon (26 October – 4 November 2026).
 
@@ -206,10 +206,10 @@ flowchart LR
 | **schemas/** | Single source of truth for domain models (`Session`, `ModelSummary`, `ElementRef`, `Requirement`, `CheckSpec`, `Finding`, `Evidence`, `Explanation`, `Report`, `RunLog`). JSON Schema exported for tools and frontend types. | No | Pydantic v2 |
 | **store/** | `SessionStore` — create/read session directories; stage, validate and publish content-addressed model versions under a per-session file lock; activate a version with one atomic write of the session record; recover abandoned staging (ADR-017). | No | stdlib |
 | **bim/** | Open IFC with IfcOpenShell; build `ModelIndex` (elements, psets, classifications, containment, types, materials, storey elevations, bounding boxes where cheap); read-only inspection queries used as tools. | No | ifcopenshell 0.9 |
-| **requirements/** | Extract text from BEP (Markdown/TXT; PDF via `pypdf`); call LLM for `RequirementCandidate[]`; verify quotes; compile confirmed candidates to IDS 1.0 XML (via `ifctester.ids` authoring classes) or to native rule configurations. | Yes (extraction) | ifctester, pypdf |
-| **validation/** | Run IDS via IfcTester; run native rules; normalise to `Finding`. Pure functions of (ModelIndex, IFC file, CheckSpec). | No | ifctester |
+| **requirements/** | Extract text from BEP (Markdown/TXT; PDF via `pypdf`); call LLM for `RequirementCandidate[]`; verify quotes; turn confirmed candidates and imported IDS specifications into `Requirement` records. IDS compilation itself lives in `validation/` so this package never imports IfcTester (AGENTS.md §3; Bakeoff D-05). *Implemented (T-2): IDS import.* | Yes (extraction) | validation/, pypdf |
+| **validation/** | Compile IDS 1.0 documents to `CheckSpec`s and hydrate them back; run IDS via IfcTester; run native rules; normalise to `Finding`. Pure functions of (ModelIndex, IFC file, CheckSpec). *Implemented (T-2): IDS compiler, runner and normaliser.* | No | ifctester, xmlschema |
 | **investigation/** | Build `EvidenceBundle` per finding: element record, container, siblings and their status, property statistics, source requirement. | No | bim/ |
-| **orchestration/** | Interpret objective → `ReviewPlan`; execute the plan through the tool registry; run tool-call loop with caps; emit progress events; fall back to default plan. | Yes (planning) | llm/, Tool Registry |
+| **orchestration/** | Interpret objective → `ReviewPlan`; execute the plan through the tool registry; run tool-call loop with caps; emit progress events; fall back to default plan. *Implemented (T-2): default plan and the synchronous deterministic runner.* | Yes (planning) | llm/, Tool Registry |
 | **llm/** | `LLMClient` protocol: `complete_structured(messages, schema)`, `complete_with_tools(messages, tools)`. Implementations: Meta Model API (OpenAI SDK), Fake (tests), Recording/Replay (evaluation). Token accounting. | — | openai ≥ 1.x |
 | **reporting/** | Explain findings (LLM structured output) → grounding check → fallback template; assemble `Report`; render Markdown; optional BCF 3.0 via `bcf-client`. | Yes (prose) | bcf-client (P2) |
 | **frontend/** | Upload, requirement confirmation UI, objective input, progress, findings list and detail, 3D viewer with highlight sync, report view. | No | React, TS, @thatopen/* 3.6, three ≥ 0.182, web-ifc ≥ 0.0.77 |
@@ -340,12 +340,15 @@ The Model Index is a denormalised JSON snapshot built once per upload. It exists
 
 ### 8.2 IDS validation
 
-IfcTester is the reference IDS 1.0 implementation maintained alongside IfcOpenShell. The runner:
+IfcTester is the reference IDS 1.0 implementation maintained alongside IfcOpenShell. The design: load the IDS (`ifctester.ids.open`) or build it from confirmed requirements, call `specs.validate(ifc_file)`, walk specification → requirement → failed entities and emit one `Finding` per (requirement, entity), and keep IfcTester's JSON report available for cross-checking (FR-VAL-01 acceptance).
 
-1. Loads the IDS (`ifctester.ids.open`) or builds it from confirmed requirements (`ifctester.ids.Ids`, `Specification`, facet classes).
-2. Calls `specs.validate(ifc_file)`.
-3. Walks specification → requirement → failed entities and emits one `Finding` per (requirement, entity), carrying IfcTester's own `reason` text as `observed`.
-4. Optionally writes IfcTester's JSON report alongside for cross-checking (FR-VAL-01 acceptance).
+**Implemented (T-2, `validation/`, `requirements/`, `orchestration/`; [ADR-018](./DECISIONS.md#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock)).** The slice refines that design in three places:
+
+1. **Import compiles, it does not keep the document executable.** `validation.compile_ids` validates the upload against IfcTester's bundled IDS 1.0 XSD (loaded with remote schema imports disabled, so no outbound request is made) and turns every `<specification>` into one immutable `CheckSpec` whose payload is the element in XML Canonical Form with indentation removed; `rule_version` is the content hash of that payload and `rule_id` is `ids:<identifier or name>`. `requirements.import_ids_document` wraps each check in a `Requirement` with `origin="ids"`, `status="confirmed"`, `revision=confirmed_revision=1` and a `source` whose `quote` is the verbatim specification name, stores the document under `documents/{sha256}.ids`, and is idempotent on content (FR-REQ-05).
+2. **Each check is hydrated from its own payload and run in isolation.** `validation.run_ids_check` re-checks that the payload still hashes to `rule_version`, decodes it through the same XSD into a single-specification `ifctester.ids.Ids`, calls `Ids.validate(model)` (IfcTester's public entry point, which also resets its property caches) and normalises the result. A specification whose `ifcVersion` does not list the model's schema is `skipped`, not run; a required or optional specification with no applicable entity is `not_applicable`; a prohibited specification yields one `prohibited_entity` finding per matching entity; any exception raised inside the engine — or a check whose payload was altered after confirmation — is `error` with the message in `diagnostics`, and the next check still runs. Findings carry IfcTester's own `reason` as `observed`, the facet's rendered requirement text as `expected`, a `category` derived from the facet type (`property_requirement`, `classification_requirement`, …) and the element reference taken from the Model Index of the same version, so the viewer, `GET /elements/{globalId}` and `findings.json` agree by construction. The unit tests cross-check the normalised findings against `ifctester.reporter.Json` element for element.
+3. **A review pins one version for its whole duration.** `orchestration.run_review` takes the session's model lock (ADR-017 §4), resolves the active `ModelVersion` once, refuses a pinned `If-Match` hash that is not active (412), builds the default plan (every executable requirement, once per `CheckSpec`), records the `InputManifest`, opens the IFC read-only from the version directory, runs every check and publishes `runs/{runId}/run.json` and `findings.json` with one rename. An upload or a second review in the meantime is 409 `model-locked`; nothing can prune the version while the lock is held. The run is `completed` when every check executed and `partial` when any ended in `error`. The run is synchronous in this slice; ADR-013 (background task and SSE) remains the design once runs are long enough to need it.
+
+Verified on the committed fixture: `minimal.ids` imports as two confirmed requirements; a review produces two `CheckResult`s with status `failed` and exactly two findings — W-002 fails the FireRating specification, W-003 fails the classification specification and is not applicable to the first — and two consecutive runs write byte-identical `findings.json` ([tests/unit/validation](../tests/unit/validation), [tests/unit/orchestration](../tests/unit/orchestration), [tests/unit/api/test_reviews.py](../tests/unit/api/test_reviews.py)).
 
 ### 8.3 Native rules
 
@@ -443,12 +446,13 @@ Implemented models live in `backend/bim_intelligence/schemas/` and are exported 
 | `ElementRef` | `global_id` (nullable), `express_id`, `ifc_type`, `name`, `storey` | the only way to refer to an element; GlobalId is the viewer key, `express_id` the fallback identity |
 | `ElementRecord` | `ref`, `object_type`, `predefined_type`, `type_ref`, `container`, `psets{set: {name: {value, inherited}}}`, `classifications[] {system, identification, name, inherited}` | the Model Index entry served by `GET /elements/{globalId}`; `inherited=true` marks values that come from the type object (C-03) |
 | `ModelSummary` | `ifc_schema`, `model_hash`, `project_name`, `counts{IfcClass: n}`, `storeys[]` | produced once per upload; counts cover indexed `IfcProduct` and `IfcTypeObject` instances |
-| `Requirement` | `id`, `title`, `statement`, `origin` ∈ document/ids/builtin, `source`, `check`, `status`, `confidence`, `revision`, `confirmed_revision`, `confirmed_by`, `confirmed_at` | status ∈ proposed/confirmed/edited/rejected/informational; executable only when `confirmed_revision == revision` |
-| `CheckSpec` | `id` (content hash), `kind` (ids/native), `rule_id`, `rule_version`, `ids_specification` or `params` | immutable; plans reference it by `id` only |
-| `Finding` | `id` (content hash), `check_id`, `requirement_id`, `rule_id`, `rule_version`, `facet_index`, `severity`, `category`, `elements[]`, `observed`, `expected`, `method` ∈ {ids, native} | `method` can never be `llm` (FR-VAL-07); no timestamp or run id, so `findings.json` is byte-reproducible (NFR-01) |
-| `CheckResult` | `check_id`, `requirement_id`, `status` ∈ passed/failed/error/skipped/not_applicable, `applicable_count`, `finding_ids[]`, `diagnostics[]` | execution outcome, never a defect |
-| `ReviewPlan` | `checks[] {check_id, reason}` | the planner's output; no parameters |
-| `ReviewRun` | `id`, `session_id`, `status` ∈ queued/running/completed/partial/failed/interrupted, `plan`, `plan_source` ∈ llm/default, `check_results[]`, `input_manifest`, `created_at`, `finished_at` | the only record carrying timestamps |
+| `Requirement` | `id`, `title`, `statement`, `origin` ∈ document/ids/builtin, `source`, `check`, `status`, `confidence`, `revision`, `confirmed_revision`, `confirmed_by`, `confirmed_at` | status ∈ proposed/confirmed/edited/rejected/informational; executable only when `confirmed_revision == revision`. *Implemented (T-2)* for `origin="ids"`: confirmed at import, `source.document_id` = the IDS hash, `source.quote` = the verbatim specification name |
+| `CheckSpec` | `id` (content hash), `kind` (ids/native), `rule_id`, `rule_version`, `ids_specification` or `params` | immutable; plans reference it by `id` only. *Implemented (T-2)* for `kind="ids"`: `ids_specification` is the C14N `<specification>` element, `rule_version` its content hash |
+| `Finding` | `id` (content hash), `check_id`, `requirement_id`, `rule_id`, `rule_version`, `facet_index`, `severity`, `category`, `elements[]`, `observed`, `expected`, `method` ∈ {ids, native} | `method` can never be `llm` (FR-VAL-07); no timestamp or run id, so `findings.json` is byte-reproducible (NFR-01). *Implemented (T-2)* for `method="ids"`; `category` is `<facet>_requirement` or `prohibited_entity`, `severity` is `error` |
+| `CheckResult` | `check_id`, `requirement_id`, `status` ∈ passed/failed/error/skipped/not_applicable, `applicable_count`, `finding_ids[]`, `diagnostics[]` | execution outcome, never a defect. *Implemented (T-2)*: all five statuses are produced by the IDS runner |
+| `ReviewPlan` | `checks[] {check_id, reason}` | the planner's output; no parameters. *Implemented (T-2)* for the default plan |
+| `ReviewRun` | `id`, `session_id`, `status` ∈ queued/running/completed/partial/failed/interrupted, `plan`, `plan_source` ∈ llm/default, `check_results[]`, `input_manifest`, `created_at`, `finished_at` | the only record carrying timestamps. *Implemented (T-2)*: synchronous runs end `completed` or `partial`; `input_manifest` carries the model hash, IDS hashes, requirement revisions and rule versions |
+| `DocumentImport` | `sha256`, `kind` ∈ {ids}, `title`, `requirements[]` | what `POST /documents` returns: the stored document's identity and the requirements it established. *Implemented (T-2)* |
 | `ProblemDetail` | `type`, `title`, `status`, `detail`, `instance`, `correlation_id` | RFC 9457 body for every error response |
 | `EvidenceBundle` *(planned)* | `finding_id`, `element_records[]`, `container`, `siblings[]` with status, `property_stats`, `requirement_source` | everything an explanation may cite |
 | `Explanation` *(planned)* | `finding_group_id`, `summary`, `probable_cause`, `corrective_action`, `cited_global_ids[]`, `cited_properties[]`, `generated_by` {model id, prompt version}, `grounding` {status, violations[]} | labelled AI-generated (FR-EXP-05) |
@@ -488,20 +492,22 @@ Base path `/api/v1`. JSON everywhere; errors follow a single `ProblemDetail` sch
 | `GET` | `/sessions/{sid}/model/file` ✓ | Stored IFC bytes, `application/x-step`, `ETag` = quoted SHA-256 that always describes the body, `If-None-Match` → 304, `If-Match` mismatch → 412 (C-07); the viewer's geometry source | FR-VIS-01 |
 | `GET` | `/sessions/{sid}/elements/{globalId}` ✓ | `ElementRecord` from the active version's index; `ETag` = quoted SHA-256; 400 malformed id, 404 unknown, 409 when the GlobalId is duplicated, 412 on `If-Match` mismatch | FR-ING-04 |
 | `GET` | `/sessions/{sid}/elements?ifc_type=&storey=&limit=` | Element list | FR-ING-02 |
-| `POST` | `/sessions/{sid}/documents` | Upload BEP (md/txt/pdf) or IDS (xml) | FR-REQ-01, FR-REQ-05 |
+| `POST` | `/sessions/{sid}/documents` ✓ | Upload a requirements document. Implemented for IDS 1.0 (`.ids` only): XSD-validated, stored under its SHA-256, each specification becomes a confirmed `Requirement`; returns `DocumentImport` with 201, or 200 when the same bytes were imported before; 415 other extensions, 413 above `MAX_DOC_MB`, 422 `ids-invalid`, 409 `model-locked` while an upload or review holds the session lock. BEP (md/txt/pdf) is a later task | FR-REQ-05 (FR-REQ-01 planned) |
 | `POST` | `/sessions/{sid}/requirements/extract` | Run LLM extraction for a document; returns candidates | FR-REQ-02..03 |
-| `GET` | `/sessions/{sid}/requirements` | List requirements | — |
+| `GET` | `/sessions/{sid}/requirements` ✓ | List requirements with status, revision, source and `CheckSpec` | — |
 | `PATCH` | `/sessions/{sid}/requirements/{rid}` | Confirm / edit / reject | FR-REQ-04 |
-| `POST` | `/sessions/{sid}/reviews` | Start a review run `{objective, use_llm}`; returns `runId` | FR-REQ-06..07 |
+| `POST` | `/sessions/{sid}/reviews` ✓ | Start a review run. Implemented as the synchronous default plan (every confirmed requirement) over the active model version: 201 with the terminal `ReviewRun` and `Location`; `If-Match` pins the version (412 `model-version-mismatch`); 404 without a model; 409 `no-executable-checks` without confirmed requirements; 409 `model-locked` during an upload or another review. `{objective, use_llm}` and asynchronous execution arrive with the planner | FR-REQ-07 (FR-REQ-06 planned) |
 | `GET` | `/sessions/{sid}/reviews/{runId}/events` | SSE stream of progress events | FR-VIS-05 |
-| `GET` | `/sessions/{sid}/reviews/{runId}` | Run status, plan, counts | — |
-| `GET` | `/sessions/{sid}/findings?run_id=&severity=&rule_id=&storey=` | Findings list | FR-VIS-02 |
+| `GET` | `/sessions/{sid}/reviews/{runId}` ✓ | The published run: status, plan, per-check results, input manifest | — |
+| `GET` | `/sessions/{sid}/findings?run_id=&severity=&rule_id=&storey=` ✓ | Findings of one run in canonical order; `run_id` required, the other filters optional; 400 malformed run id, 404 unknown run | FR-VIS-02 |
 | `GET` | `/sessions/{sid}/findings/{fid}` | Finding with evidence and explanation | FR-VIS-04 |
 | `POST` | `/sessions/{sid}/findings/{fid}/explain` | (Re)generate explanation | FR-EXP-02 |
 | `GET` | `/sessions/{sid}/reviews/{runId}/report?format=json\|md` | Report | FR-REP-01 |
 | `GET` | `/sessions/{sid}/reviews/{runId}/report?format=bcf` | BCF 3.0 zip (P2) | FR-REP-03 |
 
-**Asynchrony.** Review runs execute as FastAPI `BackgroundTasks` in the same process; progress is pushed over Server-Sent Events. **DECISION:** no task queue in the MVP. **PROPOSAL:** if IFC indexing of large models blocks the event loop, move `bim/` work to a `ProcessPoolExecutor`.
+**Asynchrony.** Review runs are designed to execute as FastAPI `BackgroundTasks` in the same process with progress pushed over Server-Sent Events. **DECISION:** no task queue in the MVP. *Implemented (T-2):* the deterministic IDS review runs synchronously inside the request and returns the terminal run; the background-task and SSE path is added when the planner and explanations make runs long enough to need it. **PROPOSAL:** if IFC indexing of large models blocks the event loop, move `bim/` work to a `ProcessPoolExecutor`.
+
+**CORS.** The browser may send `If-Match` and `If-None-Match`; neither is a CORS-safelisted request header, so both are in the preflight allow-list alongside `Content-Type` and `X-Correlation-ID`, and `ETag` is exposed to scripts. *Implemented (T-2, regression test `tests/unit/api/test_cors.py`).*
 
 **Authentication.** None in the MVP (localhost only). The API must refuse to start bound to a non-loopback interface unless `ALLOW_REMOTE=true` is set, to prevent accidental exposure of uploaded project files.
 
@@ -577,17 +583,22 @@ Every panel renders loading, empty, error and success states. Degraded mode (LLM
 | Unsupported or unknown `FILE_SCHEMA` | 422 `unsupported-ifc-schema` naming the declared schema. IFC2X3, IFC4 and IFC4X3 are accepted; geometry support is a viewer concern (§12). *Implemented (T-1).* |
 | Upload too large / wrong extension / missing field | 413 `upload-too-large` / 415 `unsupported-upload` / 422 `request-validation`. The size cap is enforced while the staged file is written; nothing is published. *Implemented (T-1).* |
 | Failure while indexing, serialising or publishing an upload | The staging directory is removed and the previously active version remains whole; a failure between the version-directory rename and the pointer swap leaves a complete, inactive version that a later prune removes. No reader can observe a partial or mixed version (ADR-017). *Implemented (T-1.1).* |
-| Second upload while one is in progress | 409 `model-locked`; the request is refused immediately rather than queued, and readers are not blocked. *Implemented (T-1.1).* |
-| Client pinned to a replaced version (`If-Match`) | 412 `model-version-mismatch` naming the active hash; the client reloads the model rather than mixing versions. *Implemented (T-1.1).* |
+| Second upload while one is in progress | 409 `model-locked`; the request is refused immediately rather than queued, and readers are not blocked. *Implemented (T-1.1).* The same answer is given to an upload, an IDS import or a second review while a review holds the lock. *Implemented (T-2).* |
+| Client pinned to a replaced version (`If-Match`) | 412 `model-version-mismatch` naming the active hash; the client reloads the model rather than mixing versions. *Implemented (T-1.1; T-2 for `POST /reviews`, checked under the lock).* |
 | Process interrupted mid-upload | Abandoned staging directories are removed by the next upload to the session and by the startup sweep; they are never served. *Implemented (T-1.1).* |
 | Duplicate GlobalId in the model | Both records are indexed; `GET /elements/{globalId}` returns 409 `ambiguous-global-id` listing the express ids; a future `identity.unique_global_id` rule turns it into a `Finding` (FR-VAL-06). *Implemented (T-1).* |
 | Storage read/write failure | 500 `storage-failure` with a generic detail; the cause is logged server-side with the correlation id. *Implemented (T-1).* |
+| Uploaded IDS is malformed, not IDS 1.0 or has no specification | 422 `ids-invalid` naming the first violation (no source dump, no paths); nothing is stored and the session's requirements are unchanged. *Implemented (T-2).* |
+| Review requested without a model, or without a confirmed requirement | 404 `model-not-found` / 409 `no-executable-checks`; no run is recorded, so an empty run can never read as compliance. *Implemented (T-2).* |
+| Specification declares an IFC schema the model is not written in | That check's `CheckResult.status="skipped"` with the declared and actual schema in `diagnostics`; the check is not executed and nothing passes by default. *Implemented (T-2).* |
+| Required specification matches no entity | `CheckResult.status="not_applicable"`, `applicable_count=0`, no finding. *Implemented (T-2).* |
+| Confirmed check's stored payload no longer hashes to its `rule_version` | `CheckResult.status="error"` naming the check; it is never executed as a weaker check. *Implemented (T-2).* |
 | LLM unreachable / 401 / 429 / timeout | Planner → default plan; extractor → error surfaced to user, no candidates; explainer → templated explanation with `grounding.status="fallback"`. UI shows degraded banner. Retries: exponential backoff, max 2, only on 429/5xx. |
 | Plan references unknown tool or unconfirmed requirement | Item dropped, logged as `plan_violation`; if plan empty → default plan. |
 | Tool argument schema invalid | Rejected, one corrective re-prompt, then dropped. |
 | Tool-call cap reached | Remaining planned checks are recorded as `CheckResult.status="skipped"`; the run ends `partial`, never `completed`; log `cap_reached` (ADR-015). |
 | Grounding failure | Regenerate once, then template. Never ship ungrounded prose. |
-| IfcTester exception on a specification | That check's `CheckResult.status="error"` with the message in `diagnostics`; no finding is created; other specifications continue (ADR-015, superseding the earlier `check_error` finding category). |
+| IfcTester exception on a specification | That check's `CheckResult.status="error"` with the message in `diagnostics`; no finding is created; other specifications continue and the run ends `partial` (ADR-015, superseding the earlier `check_error` finding category). *Implemented (T-2).* |
 | Frontend fails to load IFC | Findings list and report remain usable; viewer shows error and retry. |
 
 All errors are structured (`ProblemDetail`) with `type = https://github.com/natnew/BIM-Intelligence/problems/<slug>` (the same non-resolving, project-scoped URI convention as the schema bundle's `$id`) and are written to the run log with correlation id = `runId` once runs exist.
@@ -704,8 +715,8 @@ BIM-Intelligence/
 │       ├── orchestration/    # planner, tool registry, tool loop, prompts/
 │       ├── llm/              # LLMClient protocol, Meta Model API client, fake, recording/replay
 │       ├── bim/              # IFC loading, ModelIndex, inspection queries
-│       ├── requirements/     # document text extraction, extractor, IDS compiler
-│       ├── validation/       # IDS runner, native rules, finding normaliser
+│       ├── requirements/     # document text extraction, extractor, IDS import → Requirement
+│       ├── validation/       # IDS compiler and runner, native rules, finding normaliser
 │       ├── investigation/    # evidence collector
 │       ├── reporting/        # explainer, grounding, report builder, BCF export
 │       ├── schemas/          # Pydantic domain models (single source of truth)

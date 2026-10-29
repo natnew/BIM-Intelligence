@@ -1,4 +1,4 @@
-"""API test fixtures: an app bound to a temporary data directory and a 1 MiB upload cap.
+"""API test fixtures: an app bound to a temporary data directory and 1 MiB upload caps.
 
 Registered from the root ``conftest.py`` via ``pytest_plugins`` so that no second module named
 ``conftest`` exists (mypy checks every test module under one namespace).
@@ -18,7 +18,7 @@ from support.api import FIXTURE_BYTES, upload
 
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
-    return Settings(data_dir=tmp_path / "data", max_ifc_mb=1)
+    return Settings(data_dir=tmp_path / "data", max_ifc_mb=1, max_doc_mb=1)
 
 
 @pytest.fixture

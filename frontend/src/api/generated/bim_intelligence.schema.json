@@ -164,6 +164,40 @@
       "title": "ClassificationRef",
       "type": "object"
     },
+    "DocumentImport": {
+      "additionalProperties": false,
+      "description": "Result of importing one document: its identity and the requirements it established.",
+      "properties": {
+        "kind": {
+          "const": "ids",
+          "type": "string"
+        },
+        "requirements": {
+          "description": "Requirements derived from this document, in document order.",
+          "items": {
+            "$ref": "#/$defs/Requirement"
+          },
+          "type": "array"
+        },
+        "sha256": {
+          "description": "SHA-256 of the stored document bytes.",
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "title": {
+          "description": "Document title as declared inside the file.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sha256",
+        "kind",
+        "title",
+        "requirements"
+      ],
+      "title": "DocumentImport",
+      "type": "object"
+    },
     "ElementRecord": {
       "additionalProperties": false,
       "description": "Denormalised Model Index entry for one product, type object or spatial element.",
@@ -910,6 +944,9 @@
     },
     "classificationRef": {
       "$ref": "#/$defs/ClassificationRef"
+    },
+    "documentImport": {
+      "$ref": "#/$defs/DocumentImport"
     },
     "elementRecord": {
       "$ref": "#/$defs/ElementRecord"
