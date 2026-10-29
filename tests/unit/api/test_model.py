@@ -41,12 +41,17 @@ class TestUpload:
         assert response.status_code == 201, response.text
         session_dir = settings.data_dir / "sessions" / session_id
         assert sorted(p.name for p in session_dir.iterdir()) == [
+            "model.lock",
+            "models",
+            "session.json",
+        ]
+        version_dir = session_dir / "models" / FIXTURE_HASH
+        assert sorted(p.name for p in version_dir.iterdir()) == [
             "model.ifc",
             "model_index.json",
             "model_summary.json",
-            "session.json",
         ]
-        assert (session_dir / "model.ifc").read_bytes() == FIXTURE_BYTES
+        assert (version_dir / "model.ifc").read_bytes() == FIXTURE_BYTES
         assert not any(settings.data_dir.parent.glob("Evil*"))
 
     def test_ifc2x3_upload_is_accepted(self, client: TestClient, session_id: str) -> None:
@@ -76,6 +81,7 @@ class TestUpload:
         assert_problem(response, 422, "ifc-unreadable")
         assert str(settings.data_dir) not in response.text
         assert ".part" not in response.text
+        assert ".staging" not in response.text
 
     def test_unsupported_schema_is_422(self, client: TestClient, session_id: str) -> None:
         future = IFC2X3_TEXT.replace("FILE_SCHEMA(('IFC2X3'))", "FILE_SCHEMA(('IFC9X9'))")
@@ -169,7 +175,8 @@ class TestModelFile:
     def test_stored_bytes_are_unchanged_on_disk(
         self, client: TestClient, loaded_session: str, settings: Settings
     ) -> None:
-        stored = settings.data_dir / "sessions" / loaded_session / "model.ifc"
+        stored = settings.data_dir / "sessions" / loaded_session / "models" / FIXTURE_HASH
+        stored /= "model.ifc"
         assert hashlib.sha256(stored.read_bytes()).hexdigest() == FIXTURE_HASH
         for _ in range(2):
             client.get(f"{API_PREFIX}/sessions/{loaded_session}/model/summary")
@@ -191,16 +198,21 @@ def test_openapi_documents_the_ingestion_surface(client: TestClient) -> None:
         assert path in paths, path
         assert methods <= set(paths[path]), path
     upload_op = paths[f"{API_PREFIX}/sessions/{{session_id}}/model"]["post"]
-    assert {"413", "415", "422"} <= set(upload_op["responses"])
+    assert {"409", "413", "415", "422"} <= set(upload_op["responses"])
+    for read_path in ("model/summary", "model/file", "elements/{global_id}"):
+        read_op = paths[f"{API_PREFIX}/sessions/{{session_id}}/{read_path}"]["get"]
+        assert "412" in read_op["responses"], read_path
 
 
 def test_data_dir_is_the_only_place_bytes_land(
     client: TestClient, loaded_session: str, settings: Settings, tmp_path: Path
 ) -> None:
     written = sorted(p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*") if p.is_file())
+    version = f"data/sessions/{loaded_session}/models/{FIXTURE_HASH}"
     assert written == [
-        f"data/sessions/{loaded_session}/model.ifc",
-        f"data/sessions/{loaded_session}/model_index.json",
-        f"data/sessions/{loaded_session}/model_summary.json",
+        f"data/sessions/{loaded_session}/model.lock",
+        f"{version}/model.ifc",
+        f"{version}/model_index.json",
+        f"{version}/model_summary.json",
         f"data/sessions/{loaded_session}/session.json",
     ]

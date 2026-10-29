@@ -38,3 +38,27 @@ class UploadTooLargeError(StorageError):
     def __init__(self, max_bytes: int) -> None:
         super().__init__(f"Upload exceeds the limit of {max_bytes} bytes.")
         self.max_bytes = max_bytes
+
+
+class ModelLockedError(StorageError):
+    """Another operation holds the session's model lock (an upload or, later, a review run)."""
+
+    def __init__(self, session_id: str) -> None:
+        super().__init__(
+            f"Session {session_id}: the model is locked by another operation in progress; "
+            "retry when it completes."
+        )
+        self.session_id = session_id
+
+
+class IncompleteModelVersionError(StorageError):
+    """A model version directory lacks one of its artefacts; it is never served or activated."""
+
+    def __init__(self, session_id: str, sha256: str, missing: list[str]) -> None:
+        super().__init__(
+            f"Session {session_id}: model version {sha256[:12]} is incomplete "
+            f"(missing {sorted(missing)})."
+        )
+        self.session_id = session_id
+        self.sha256 = sha256
+        self.missing = missing

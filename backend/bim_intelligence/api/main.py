@@ -7,19 +7,44 @@ Run locally with::
 
 from __future__ import annotations
 
+import logging
+from collections.abc import AsyncIterator, Callable
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from bim_intelligence import __version__
 from bim_intelligence.api.correlation import CORRELATION_HEADER, CorrelationIdMiddleware
+from bim_intelligence.api.deps import SESSIONS_DIR
 from bim_intelligence.api.elements import router as elements_router
 from bim_intelligence.api.errors import register_exception_handlers
 from bim_intelligence.api.health import router as health_router
 from bim_intelligence.api.model import router as model_router
 from bim_intelligence.api.sessions import router as sessions_router
 from bim_intelligence.config import Settings, get_settings
+from bim_intelligence.store import SessionStore, StorageError
 
 API_PREFIX = "/api/v1"
+
+logger = logging.getLogger(__name__)
+
+
+def _lifespan_for(settings: Settings) -> Callable[[FastAPI], AbstractAsyncContextManager[None]]:
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        # Recovery after an interrupted upload (ADR-017): staging directories belong to no
+        # live request once the process has restarted, so remove them before serving.
+        try:
+            removed = SessionStore(settings.data_dir / SESSIONS_DIR).sweep_all_staging()
+        except (StorageError, OSError) as exc:
+            logger.warning("startup staging sweep failed: %s", exc)
+        else:
+            if removed:
+                logger.info("removed %d abandoned staging director(ies)", removed)
+        yield
+
+    return lifespan
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -35,6 +60,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ),
         docs_url=f"{API_PREFIX}/docs",
         openapi_url=f"{API_PREFIX}/openapi.json",
+        lifespan=_lifespan_for(settings),
     )
     app.add_middleware(
         CORSMiddleware,
