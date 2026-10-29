@@ -4,6 +4,14 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### T-3 — Interactive 3D BIM Viewer
+
+- Add an on-demand browser-side That Open Components 3.6 viewer for the minimal IFC fixture, with GlobalId-to-fragment resolution, viewer-to-element selection and deterministic finding highlights.
+- Connect existing model, review-run, findings and element APIs. Reject runs whose session or model hash does not match the active model; pin model-file and element requests to the summary ETag and recheck the active version after loading.
+- Serve the pinned `web-ifc` WASM files and Fragments worker locally. Add finding evidence, element identity and property details, and loading, empty and error states.
+- Verify actual browser rendering and both selection directions on the minimal fixture; mocked frontend API and component tests pass. See the [T-3 implementation record](./docs/IMPLEMENTATION_PLAN.md#t-3--interactive-3d-bim-viewer) for evidence and exact validation results.
+- Correct the `web-ifc` licence disclosure: version 0.0.77 is MPL-2.0 and is documented as an exception to the repository's permissive-or-LGPL dependency preference; owner review remains required before public distribution.
+
 ### Delivery Framework Reconciliation — M0–M4 and T-0–T-8
 
 - Retain the original delivery milestones: M0 Foundations, M1 Deterministic Review, M2 AI-Native Review, M3 Demo-Ready Product and M4 Submission.

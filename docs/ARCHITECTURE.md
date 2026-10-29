@@ -1,6 +1,6 @@
 # BIM Intelligence — Technical Architecture
 
-**Version:** 0.3 (architecture baseline 26 October 2026; §8.1, §10.2, §11 and §14 updated 28 October 2026 for the implemented ingestion slice and its T-1.1 publication hardening; §8.2, §10.2, §11 and §14 updated 29 October 2026 for the implemented IDS import and validation slice, T-2)
+**Version:** 0.3 (architecture baseline 26 October 2026; §8.1, §10.2, §11 and §14 updated 28 October 2026 for the implemented ingestion slice and its T-1.1 publication hardening; §8.2, §10.2, §11 and §14 updated 29 October 2026 for the implemented IDS import and validation slice, T-2; §12 updated 29 October 2026 for the verified T-3 viewer)
 **Status:** Partially implemented. Rows and paragraphs marked *Implemented* or ✓ are backed by unit tests; every other statement about behaviour describes design intent, not measured results.
 **Audience:** Engineers and coding agents implementing the MVP during the Meta Global AI Developer Hackathon (26 October – 4 November 2026).
 
@@ -550,13 +550,23 @@ flowchart TB
 ### 12.1 Key decisions
 
 - **DECISION:** the browser loads the IFC itself using That Open Components' `IfcLoader` (web-ifc in a worker) and converts to Fragments. The backend does not serve geometry. This avoids a second geometry pipeline and keeps the backend free of mesh processing.
-- **DECISION:** the join key between backend findings and viewer objects is the **IFC GlobalId**. The viewer builds a `GlobalId → fragment/local id` map after load. **PROPOSAL (Day-1 spike):** confirm the exact 3.6 API for GlobalId lookup and `Highlighter` selection by id set; docs were unreachable from the research sandbox, so method names in this document are placeholders until verified.
-- **DECISION:** Vite + React 19 + TypeScript strict (as scaffolded by the current `create-vite` template, with `oxlint` and Prettier); Zustand for the small amount of shared state once more than one panel needs it; no router beyond a single page with panels.
+- **DECISION:** the join key between backend findings and viewer objects is the **IFC GlobalId**. `IfcViewer` resolves ids with `getLocalIdsByGuids` and `getGuidsByLocalIds`, and applies issue selection with `Highlighter.highlightByID`. These That Open Components 3.6 APIs were exercised against the minimal IFC in the browser (OQ-01).
+- **DECISION:** Vite + React 19 + TypeScript strict (as scaffolded by the current `create-vite` template, with `oxlint` and Prettier); the T-3 workspace shares selection through local React state, with no global store or router added for this single-page slice.
 - Frontend types are generated from the backend's Pydantic JSON Schema (`model_json_schema()` → `json-schema-to-typescript`) so that `Finding`, `Requirement` and `Explanation` are identical on both sides (C-07).
 
 ### 12.2 States to handle
 
 Every panel renders loading, empty, error and success states. Degraded mode (LLM unavailable) is shown as a persistent banner; AI explanations are labelled; deterministic findings carry a "verified by rule `<id> v<version>`" chip (FR-EXP-05).
+
+### 12.3 T-3 viewer implementation
+
+The T-3 workspace uses the existing model, review-run, findings and element endpoints; it adds no backend route. A review run is accepted only when its session and immutable `input_manifest.model_hash` match the active model summary. The model file and subsequent element lookups use that summary's `If-Match` ETag, and the summary is rechecked after loading the model and findings. A mismatch fails visibly instead of combining data from different model versions.
+
+The findings list highlights the finding's affected GlobalIds with a dedicated deterministic viewer style. Selecting a rendered object resolves its GlobalId, loads that element's record and selects the first matching finding in the API's canonical order. Element details show identity, storey and a bounded property list with inherited-value provenance. Empty findings, loading, API/version errors and viewer-load errors are exposed in the interface.
+
+Viewer-specific imports remain inside `frontend/src/viewer/`, and the viewer module is code-split and loaded when a review workspace opens. The Fragments worker is bundled from `@thatopen/fragments/worker?url`; `predev` and `prebuild` copy the pinned `web-ifc` WASM files into ignored `frontend/public/web-ifc/`, and the IFC loader is configured to read them from `/web-ifc/`. The IFC remains read-only. This verified slice loads an existing session and review run; it does not upload models or create/execute reviews.
+
+**Verification evidence (29 October 2026).** The minimal fixture rendered in the browser; selecting its W-002 finding highlighted the corresponding wall and displayed GlobalId `0QWMtUzsnUUONCUGc8Sqsa`. Clicking the model selected W-001 and then W-002, populated element details, and restored the matching finding when the affected wall was clicked. Frontend API and selection coordination tests are recorded in the T-3 task entry in `docs/IMPLEMENTATION_PLAN.md`.
 
 ---
 
@@ -670,7 +680,7 @@ Full register: [RISKS.md](./RISKS.md). Top architectural risks:
 
 | Risk | Mitigation in the architecture |
 |---|---|
-| That Open Components 3.6 selection/GlobalId API differs from assumptions | Day-1 spike; viewer isolated behind a `ViewerAdapter` interface so the join logic is replaceable. |
+| That Open Components 3.6 selection/GlobalId API differs from assumptions | T-3 verified the current lookup and highlighting APIs in the browser; isolate viewer-library imports in `frontend/src/viewer/` and repeat the browser check on upgrades. |
 | IfcOpenShell wheels only for Python ≤ 3.12 | Pin 3.12 in `pyproject.toml`, `.python-version`, CI and Dockerfile. |
 | LLM proposes invalid plans or fabricates facts | Plan filtering, schema validation, grounding checker, default plan, templated explanations. |
 | Requirement extraction quality on free-form BEP text | Verbatim quote check, human confirmation, IDS upload path as a bypass. |
@@ -758,7 +768,7 @@ BIM-Intelligence/
 
 The Python project is defined once at the repository root with `package-dir = {"" = "backend"}`, so `pip install -e .` from the root installs `bim_intelligence` and `pytest` discovers `tests/` without path manipulation. Directories under `backend/bim_intelligence/` beyond `api/` are created when their first module is implemented.
 
-## Appendix B — Verified technology facts (26 October 2026)
+## Appendix B — Verified technology facts (26 October 2026; viewer packages checked 29 October 2026)
 
 | Item | Fact | Source |
 |---|---|---|
@@ -773,5 +783,7 @@ The Python project is defined once at the repository root with `package-dir = {"
 | IDS | Schema 1.0.0; facets Entity, Attribute, Classification, Property, Material, PartOf | github.com/buildingSMART/IDS |
 | IfcClash | 0.9.0; depends only on ifcopenshell (+ scikit-learn optional) | pypi.org/project/ifcclash |
 | bcf-client | 0.9.0; `bcf.v3` module | pypi.org/project/bcf-client |
-| That Open Components | `@thatopen/components` 3.6.0, `components-front` 3.6.0, `fragments` 3.6.0, `ui` 3.4.17; MIT; peer `three >= 0.182.0`, `web-ifc >= 0.0.77` | registry.npmjs.org |
+| That Open Components | `@thatopen/components`, `components-front` and `fragments` 3.6.0; MIT; peer `three >= 0.182.0`, `web-ifc >= 0.0.77` | frontend package lock; registry.npmjs.org |
+| Three.js | 0.182.0; MIT | frontend package lock; registry.npmjs.org |
+| web-ifc | 0.0.77; MPL-2.0 | frontend package metadata; [upstream project](https://github.com/ThatOpen/engine_web-ifc) |
 | FastAPI / Pydantic | 0.162.0 / 2.14.1; `model_json_schema()` | pypi.org, docs.pydantic.dev |

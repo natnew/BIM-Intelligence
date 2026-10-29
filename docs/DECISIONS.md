@@ -12,7 +12,7 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 | [ADR-004](#adr-004-ifcopenshell--ifctester-for-model-access-and-ids-validation) | IfcOpenShell + IfcTester for model access and IDS validation | Adopted |
 | [ADR-005](#adr-005-python-312-pinned) | Python 3.12 pinned | Adopted |
 | [ADR-006](#adr-006-file-system-session-store-no-database) | File-system session store, no database | Adopted; layout refined by ADR-017 |
-| [ADR-007](#adr-007-browser-side-geometry-with-that-open-components) | Browser-side geometry with That Open Components | Adopted, API spike pending |
+| [ADR-007](#adr-007-browser-side-geometry-with-that-open-components) | Browser-side geometry with That Open Components | Adopted; API verified in T-3 |
 | [ADR-008](#adr-008-human-confirmation-of-extracted-requirements) | Human confirmation of extracted requirements | Adopted |
 | [ADR-009](#adr-009-deterministic-grounding-check-on-every-explanation) | Deterministic grounding check on every explanation | Adopted |
 | [ADR-010](#adr-010-standard-mode-model-ids-only) | Standard-mode model ids only | Adopted |
@@ -133,9 +133,13 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 
 **Trade-offs.** The IFC is parsed twice (backend for semantics, browser for geometry). The join relies on GlobalId being present in both; IFC guarantees it. The 3.x Fragments pipeline and exact `Highlighter` API are a known uncertainty.
 
-**Evidence.** registry.npmjs.org (`@thatopen/components` 3.6.0, MIT, peer `three >= 0.182.0`, `web-ifc >= 0.0.77`); thatopen.github.io/engine_components lists `core/IfcLoader`, `core/FragmentsManager`, `front/Highlighter`, `core/IDSSpecifications`, `core/BCFTopics` examples.
+**Evidence.** registry.npmjs.org (`@thatopen/components` 3.6.0, MIT, peer `three >= 0.182.0`, `web-ifc >= 0.0.77`); thatopen.github.io/engine_components lists `core/IfcLoader`, `core/FragmentsManager` and `front/Highlighter`.
 
-**Unresolved.** Exact GlobalId → fragment id lookup and highlight API in 3.6 — Day-1 spike (docs.thatopen.com unreachable from the research environment). Whether the `IDSSpecifications` component could run IDS in-browser as a cross-check (P2 curiosity, not planned).
+**Implementation evidence (T-3, 29 October 2026).** On the minimal IFC, browser verification exercised `getLocalIdsByGuids`, `getGuidsByLocalIds` and `Highlighter.highlightByID`; selecting a finding highlighted its wall, and clicking that wall resolved its GlobalId and selected the matching finding. See [the T-3 implementation record](./IMPLEMENTATION_PLAN.md#t-3--interactive-3d-bim-viewer).
+
+**Licence note.** `web-ifc` 0.0.77 is MPL-2.0, not MIT. It is installed unchanged because it is required by the selected viewer stack; this is a documented exception to the repository's permissive-or-LGPL dependency preference. Owner review of distribution obligations remains required before public distribution.
+
+**Out of scope.** Whether the `IDSSpecifications` component could run IDS in-browser as a cross-check remains a P2 curiosity, not planned work.
 
 ---
 
@@ -348,11 +352,16 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 
 ---
 
+## Resolved questions
+
+| ID | Question | Resolution |
+|---|---|---|
+| OQ-01 | Exact That Open Components 3.6 API for GlobalId lookup and highlighting | Resolved in T-3 by browser verification of GlobalId lookup and `Highlighter.highlightByID`; see [ADR-007](#adr-007-browser-side-geometry-with-that-open-components) and the [T-3 evidence](./IMPLEMENTATION_PLAN.md#t-3--interactive-3d-bim-viewer). |
+
 ## Open questions register
 
 | ID | Question | Related | Needed by |
 |---|---|---|---|
-| OQ-01 | Exact That Open Components 3.6 API for GlobalId lookup and highlighting | ADR-007 | Day 1 |
 | OQ-02 | Does Meta's strict JSON-schema mode accept nested Pydantic models with enums and optional fields as we define them? | ADR-002, ADR-012 | Day 1 |
 | OQ-03 | Benchmark base model choice and licence | ADR-011 | Day 2 |
 | OQ-04 | Does the planner add measurable value over the default plan? | ADR-003 | Day 7 evaluation |

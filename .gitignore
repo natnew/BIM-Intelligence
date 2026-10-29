@@ -61,6 +61,7 @@ htmlcov/
 node_modules/
 frontend/dist/
 frontend/.vite/
+frontend/public/web-ifc/
 *.tsbuildinfo
 npm-debug.log*
 yarn-error.log*
