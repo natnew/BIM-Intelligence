@@ -80,7 +80,7 @@ Verified versions and sources: [docs/ARCHITECTURE.md — Appendix B](./docs/ARCH
 | T-4 deterministic review workflow: bounded default plan, explicit native classification-consistency check, pinned run and viewer hand-off | **Verified on the minimal fixture** — no LLM calls; benchmark evaluation remains open under T-6 |
 | T-5 offline AI interfaces: quote-verified TXT/Markdown candidates, bounded objective planning, grounded explanations, Fake/Replay clients and persistent spend safeguards | **Implemented and offline-tested** — no live API call; only existing confirmed CheckSpecs can be selected; full BEP-to-IDS authoring is out of scope |
 | Meta API compatibility and integrated frontend AI panels | **Not verified / not implemented** — M0 API capability spike remains open; M2 is in progress |
-| Benchmark and measured accuracy | **Not started** — no metrics exist yet |
+| T-6 synthetic benchmark | **Measured locally** — 15 independently labelled P0 defects, seven clean controls; 1.000 precision/recall/F1 on this narrow IFC4 benchmark, byte-identical repeated findings and 14/14 IfcTester IDS entity agreement. This is not a general BIM accuracy or live model-quality result; see [docs/EVALUATION.md](./docs/EVALUATION.md). |
 | Hackathon rule verification | Outstanding (see [docs/REQUIREMENTS.md — Open items](./docs/REQUIREMENTS.md#7-open-items)) |
 
 ## Development roadmap
@@ -199,7 +199,11 @@ python scripts/export_schemas.py          # Pydantic schemas → frontend/src/ap
 (cd frontend && npm run types:generate)   # JSON Schema → frontend/src/api/generated/types.ts
 python tests/fixtures/make_minimal_ifc.py # tests/fixtures/minimal.ifc + minimal.ids (byte-reproducible)
 
-# Evaluation harness and benchmark remain a later task; see docs/EVALUATION.md
+# Offline synthetic benchmark (generates ignored data/results; no network or Meta API calls)
+python -c "import sys; sys.path.insert(0, 'tests'); from evaluation.run_eval import main; raise SystemExit(main())"
+python -m pytest tests/unit/evaluation tests/evaluation/test_run_eval.py -q
+
+# Evaluation results, scope and known gaps: docs/EVALUATION.md
 BIMI_LIVE_LLM=1 BIMI_LIVE_APPROVAL=T5-META-MUSE-SPARK-SMOKE pytest tests/live/test_meta_smoke.py -m live
 ```
 
@@ -226,7 +230,7 @@ Developed for the Meta Global AI Developer Hackathon, 26 October – 4 November 
 
 - The MVP targets one architectural IFC, one simplified BEP and one IDS; multidisciplinary clash detection, voice input and image analysis are future work.
 - Detection coverage is bounded by the rule library and IDS facets; the system does not "notice" defect types it has no rule for.
-- Accuracy targets (≥ 90 % precision and recall on the labelled benchmark) are goals, not results, until published in [docs/EVALUATION.md](./docs/EVALUATION.md).
+- The ≥ 90 % precision and recall target was met on the 15-instance synthetic IFC4 benchmark; this small result is scoped to its labelled defects and does not establish accuracy on other models or live Muse Spark quality. See [docs/EVALUATION.md](./docs/EVALUATION.md#8-results).
 - No authentication or hosted deployment; local use only.
 
 ## Attribution and licences
