@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
 import { ApiError } from '../api/client';
-import { fetchElement, loadReviewWorkspace, type ReviewWorkspaceData } from '../api/bim';
+import {
+  fetchElement,
+  loadReviewWorkspace,
+  startStandardReview,
+  type ReviewWorkspaceData,
+} from '../api/bim';
 import type { ElementRecord, Finding, PropertyValue } from '../api/generated/types';
 import { ViewerCanvas } from '../viewer/ViewerCanvas';
 
@@ -54,6 +59,41 @@ export function ModelWorkspace({ initialSessionId, initialRunId }: ModelWorkspac
     try {
       const loaded = await loadReviewWorkspace(sessionId.trim(), runId.trim(), controller.signal);
       if (!controller.signal.aborted) {
+        setWorkspace(loaded);
+      }
+    } catch (caught) {
+      if (!controller.signal.aborted) {
+        setError(messageForError(caught));
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
+    }
+  }
+
+  async function runStandardReview() {
+    const activeSessionId = sessionId.trim();
+    if (!activeSessionId) {
+      return;
+    }
+
+    loadRequestRef.current?.abort();
+    elementRequestRef.current?.abort();
+    const controller = new AbortController();
+    loadRequestRef.current = controller;
+    setLoading(true);
+    setError(null);
+    setWorkspace(null);
+    setSelectedFindingId(null);
+    setSelectedGlobalIds([]);
+    setSelectedElement(null);
+
+    try {
+      const run = await startStandardReview(activeSessionId, controller.signal);
+      const loaded = await loadReviewWorkspace(activeSessionId, run.id, controller.signal);
+      if (!controller.signal.aborted) {
+        setRunId(run.id);
         setWorkspace(loaded);
       }
     } catch (caught) {
@@ -129,7 +169,7 @@ export function ModelWorkspace({ initialSessionId, initialRunId }: ModelWorkspac
     <section className="workspace" aria-labelledby="model-heading">
       <div className="workspace__heading">
         <div>
-          <p className="eyebrow">T-3 · Interactive model review</p>
+          <p className="eyebrow">T-3/T-4 · Review workspace</p>
           <h2 id="model-heading">Model viewer</h2>
         </div>
         {workspace && <span className="version-badge">Version pinned</span>}
@@ -163,6 +203,13 @@ export function ModelWorkspace({ initialSessionId, initialRunId }: ModelWorkspac
         <button type="submit" disabled={loading}>
           {loading ? 'Loading review…' : 'Load review'}
         </button>
+        <button
+          type="button"
+          disabled={loading || !sessionId.trim()}
+          onClick={() => void runStandardReview()}
+        >
+          {loading ? 'Running review…' : 'Run standard review'}
+        </button>
       </form>
 
       {error && (
@@ -172,8 +219,8 @@ export function ModelWorkspace({ initialSessionId, initialRunId }: ModelWorkspac
       )}
       {!workspace && !loading && !error && (
         <p className="notice workspace__notice">
-          Connect to an existing session and review run. The viewer reads the model and findings
-          from version-aware API endpoints.
+          Load an existing review or run a standard review for a session. Model and findings are
+          read from version-aware API endpoints.
         </p>
       )}
       {loading && (
@@ -215,6 +262,20 @@ export function ModelWorkspace({ initialSessionId, initialRunId }: ModelWorkspac
           </div>
 
           <aside className="review-panel" aria-label="Findings and element details">
+            <p className="notice" role="status">
+              Review status: {workspace.run.status}
+            </p>
+            <section aria-labelledby="check-coverage-heading">
+              <h3 id="check-coverage-heading">Check coverage</h3>
+              <ul aria-label="Check coverage" className="check-result-list">
+                {workspace.run.check_results.map((result) => (
+                  <li key={result.check_id}>
+                    <code>{result.requirement_id}</code> · {result.status}
+                    {result.diagnostics.length > 0 && <p>{result.diagnostics.join(' ')}</p>}
+                  </li>
+                ))}
+              </ul>
+            </section>
             <section aria-labelledby="findings-heading">
               <div className="panel-heading">
                 <h3 id="findings-heading">Findings</h3>

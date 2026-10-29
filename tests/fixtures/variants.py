@@ -15,6 +15,7 @@ import ifcopenshell.api.classification
 import ifcopenshell.api.pset
 import ifcopenshell.api.root
 import ifcopenshell.api.type
+import ifcopenshell.util.classification
 
 from fixtures.make_minimal_ifc import build_minimal_ifc
 
@@ -75,6 +76,35 @@ def add_wall_type_with_inherited_properties(model: ifcopenshell.file) -> None:
     )
     ifcopenshell.api.type.assign_type(
         model, related_objects=[wall(model, "W-001"), wall(model, "W-002")], relating_type=wall_type
+    )
+
+
+def add_misclassified_w002_type(model: ifcopenshell.file) -> None:
+    """Type W-002 with one classification that conflicts with its classified type."""
+    target = wall(model, "W-002")
+    for reference in ifcopenshell.util.classification.get_references(target, should_inherit=False):
+        ifcopenshell.api.classification.remove_reference(
+            model, reference=reference, products=[target]
+        )
+
+    wall_type = ifcopenshell.api.root.create_entity(
+        model, ifc_class="IfcWallType", name="WT-CLASSIFIED"
+    )
+    system = model.by_type("IfcClassification")[0]
+    ifcopenshell.api.classification.add_reference(
+        model,
+        products=[wall_type],
+        identification="Ss_25_10_30",
+        name="Expected wall classification",
+        classification=system,
+    )
+    ifcopenshell.api.type.assign_type(model, related_objects=[target], relating_type=wall_type)
+    ifcopenshell.api.classification.add_reference(
+        model,
+        products=[target],
+        identification="WRONG-CODE",
+        name="Incorrect wall classification",
+        classification=system,
     )
 
 

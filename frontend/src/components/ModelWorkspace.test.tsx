@@ -2,7 +2,12 @@ import { createElement } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { fetchElement, loadReviewWorkspace, type ReviewWorkspaceData } from '../api/bim';
+import {
+  fetchElement,
+  loadReviewWorkspace,
+  startStandardReview,
+  type ReviewWorkspaceData,
+} from '../api/bim';
 import type { ElementRecord, Finding } from '../api/generated/types';
 import { ModelWorkspace } from './ModelWorkspace';
 
@@ -67,7 +72,16 @@ const workspace: ReviewWorkspaceData = {
     status: 'completed',
     plan: { checks: [] },
     plan_source: 'default',
-    check_results: [],
+    check_results: [
+      {
+        check_id: 'check-id',
+        requirement_id: 'REQ-001',
+        status: 'passed',
+        applicable_count: 1,
+        finding_ids: [],
+        diagnostics: [],
+      },
+    ],
     input_manifest: {
       model_hash: 'a'.repeat(64),
       ids_hashes: [],
@@ -83,6 +97,7 @@ const workspace: ReviewWorkspaceData = {
 vi.mock('../api/bim', () => ({
   fetchElement: vi.fn(),
   loadReviewWorkspace: vi.fn(),
+  startStandardReview: vi.fn(),
 }));
 
 vi.mock('../viewer/ViewerCanvas', () => ({
@@ -110,6 +125,7 @@ describe('ModelWorkspace selection coordination', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(loadReviewWorkspace).mockResolvedValue(workspace);
+    vi.mocked(startStandardReview).mockResolvedValue(workspace.run);
     vi.mocked(fetchElement).mockResolvedValue(element);
   });
 
@@ -178,6 +194,24 @@ describe('ModelWorkspace selection coordination', () => {
     expect(
       await screen.findByText('No findings were returned for this review run.'),
     ).toBeInTheDocument();
+  });
+
+  it('starts a standard review and shows truthful check coverage', async () => {
+    render(<ModelWorkspace initialSessionId="session-id" initialRunId="" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run standard review' }));
+
+    expect(await screen.findByRole('heading', { name: 'Findings' })).toBeInTheDocument();
+    expect(startStandardReview).toHaveBeenCalledWith('session-id', expect.any(AbortSignal));
+    expect(loadReviewWorkspace).toHaveBeenCalledWith(
+      'session-id',
+      'run-id',
+      expect.any(AbortSignal),
+    );
+    expect(screen.getByText('Review status: completed')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Check coverage' })).toHaveTextContent(
+      'REQ-001 · passed',
+    );
   });
 
   it('shows backend or version errors without presenting an empty review as success', async () => {

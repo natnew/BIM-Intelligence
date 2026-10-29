@@ -18,6 +18,7 @@ import ifctester.ids
 import pytest
 
 from bim_intelligence.bim import ingest_model
+from bim_intelligence.config import Settings
 from bim_intelligence.orchestration import NoExecutableChecksError, ReviewOutcome, run_review
 from bim_intelligence.requirements import import_ids_document
 from bim_intelligence.schemas import CheckResult, findings_to_json
@@ -29,7 +30,13 @@ from bim_intelligence.store import (
 )
 from fixtures.make_minimal_ifc import GLOBAL_IDS, SPEC_FIRE_RATING
 from support.api import FIXTURE_BYTES
-from support.ids import FIXTURE_IDS_BYTES
+from support.ids import (
+    ENTITY_WALL,
+    FIXTURE_IDS_BYTES,
+    REQUIRE_FIRE_RATING,
+    ids_document,
+    specification,
+)
 from support.store import tree_digest
 
 MAX_BYTES = 1 << 20
@@ -272,3 +279,60 @@ def test_observer_sees_each_check_result_in_plan_order(
     seen: list[str] = []
     outcome = run_review(store, ready_session, observer=lambda r: seen.append(r.requirement_id))
     assert seen == [r.requirement_id for r in outcome.run.check_results] == ["REQ-001", "REQ-002"]
+
+
+def _import_cap_checks(store: SessionStore, session_id: str) -> None:
+    document = ids_document(
+        *(
+            specification(f"Cap check {index}", ENTITY_WALL, REQUIRE_FIRE_RATING)
+            for index in range(3)
+        )
+    )
+    import_ids_document(store, session_id, document, max_bytes=MAX_BYTES)
+
+
+def test_plan_cap_records_unplanned_confirmed_checks_as_skipped(
+    store: SessionStore, ready_session: str
+) -> None:
+    _import_cap_checks(store, ready_session)
+
+    outcome = run_review(
+        store,
+        ready_session,
+        settings=Settings(max_plan_checks=2, max_tool_calls_per_run=12),
+    )
+
+    assert len(outcome.run.plan.checks) == 2
+    assert len(outcome.run.check_results) == 5
+    assert [result.status for result in outcome.run.check_results[:2]] == ["failed", "failed"]
+    assert [result.status for result in outcome.run.check_results[2:]] == ["skipped"] * 3
+    assert all(
+        "MAX_PLAN_CHECKS" in result.diagnostics[0] for result in outcome.run.check_results[2:]
+    )
+    assert outcome.run.status == "partial"
+
+
+def test_tool_call_cap_records_remaining_planned_checks_as_skipped(
+    store: SessionStore, ready_session: str
+) -> None:
+    _import_cap_checks(store, ready_session)
+
+    outcome = run_review(
+        store,
+        ready_session,
+        settings=Settings(max_plan_checks=10, max_tool_calls_per_run=1),
+    )
+
+    assert len(outcome.run.plan.checks) == 5
+    assert [result.status for result in outcome.run.check_results] == [
+        "failed",
+        "skipped",
+        "skipped",
+        "skipped",
+        "skipped",
+    ]
+    assert all(
+        "MAX_TOOL_CALLS_PER_RUN" in result.diagnostics[0]
+        for result in outcome.run.check_results[1:]
+    )
+    assert outcome.run.status == "partial"

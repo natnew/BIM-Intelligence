@@ -152,6 +152,21 @@ export async function fetchReviewRun(
   return (await response.json()) as ReviewRun;
 }
 
+export async function startStandardReview(
+  sessionId: string,
+  signal?: AbortSignal,
+): Promise<ReviewRun> {
+  const { etag } = await getModelSummary(sessionId, undefined, signal);
+  const options = requestOptions(signal, { 'If-Match': etag });
+  options.method = 'POST';
+  const response = await request(`${sessionPath(sessionId)}/reviews`, options);
+  const run = (await response.json()) as ReviewRun;
+  if (run.session_id !== sessionId) {
+    throw new ApiError('The started review does not match the requested session.');
+  }
+  return run;
+}
+
 export async function fetchElement(
   sessionId: string,
   globalId: string,
