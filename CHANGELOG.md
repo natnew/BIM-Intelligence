@@ -4,6 +4,14 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### T-6 — Benchmark and Evaluation
+
+- Add a deterministic IFC4 benchmark generator with a clean model, defective model, versioned injection manifest, independently checked ground truth, matching IDS, synthetic BEP and objective examples. Keep generated IFC/results ignored and leave the existing minimal fixtures untouched.
+- Reconcile the original D01–D14 count with the target of 15–20 positive P0 instances by adding D19; retain D15–D17 as unimplemented P1 exclusions and D18 plus six explicit cases as zero-finding controls.
+- Add one-to-one matching by rule id, immutable check id and exact GlobalId set; report duplicates, unmatched predictions, misses, undefined metrics, clean-control false positives and execution coverage separately.
+- Add an offline runner for LLM-disabled reviews, byte-identical persisted findings, IfcTester JSON agreement, SHA-256/version metadata and Fake/Replay safety-contract checks. No live Meta request or spend was made.
+- Record the 29 October 2026 local result in [docs/EVALUATION.md](./docs/EVALUATION.md): 15/15 TP, 0 FP, 0 FN; precision/recall/F1 1.000; seven clean controls with no false positives; deterministic findings; 14/14 IDS entity agreement; and 9/9 offline AI contract checks. This measures only the labelled synthetic benchmark, not live model performance or general BIM accuracy. Hosted CI evidence remains outstanding.
+
 ### T-5 — Meta Muse Spark Integration (offline implementation)
 
 - Add a typed `LLMClient` boundary with network-isolated Fake and Replay clients, response-only recordings, and a Meta Model API `LiveClient` using the existing OpenAI SDK. Live remains off by default and requires an explicit configuration gate.
