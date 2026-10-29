@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from bim_intelligence.api.correlation import correlation_id_from_scope
+from bim_intelligence.api.versioning import ModelVersionMismatchError
 from bim_intelligence.bim import (
     AmbiguousGlobalIdError,
     IfcLoadError,
@@ -30,6 +31,7 @@ from bim_intelligence.schemas import ProblemDetail
 from bim_intelligence.store import (
     ArtefactNotFoundError,
     InvalidSessionIdError,
+    ModelLockedError,
     SessionNotFoundError,
     StorageError,
     UploadTooLargeError,
@@ -61,6 +63,7 @@ DOMAIN_PROBLEMS: dict[type[Exception], ProblemSpec] = {
     InvalidSessionIdError: ProblemSpec(400, "invalid-session-id", "Invalid session id"),
     SessionNotFoundError: ProblemSpec(404, "session-not-found", "Session not found"),
     ArtefactNotFoundError: ProblemSpec(404, "model-not-found", "Model not uploaded"),
+    ModelLockedError: ProblemSpec(409, "model-locked", "Model locked by another operation"),
     UploadTooLargeError: ProblemSpec(413, "upload-too-large", "Upload too large"),
     UnsupportedUploadError: ProblemSpec(415, "unsupported-upload", "Unsupported upload"),
     UnsupportedSchemaError: ProblemSpec(422, "unsupported-ifc-schema", "Unsupported IFC schema"),
@@ -68,6 +71,7 @@ DOMAIN_PROBLEMS: dict[type[Exception], ProblemSpec] = {
     InvalidGlobalIdError: ProblemSpec(400, "invalid-global-id", "Invalid GlobalId"),
     UnknownElementError: ProblemSpec(404, "element-not-found", "Element not found"),
     AmbiguousGlobalIdError: ProblemSpec(409, "ambiguous-global-id", "Ambiguous GlobalId"),
+    ModelVersionMismatchError: ProblemSpec(412, "model-version-mismatch", "Model version mismatch"),
     StorageError: ProblemSpec(500, "storage-failure", "Storage failure", expose_detail=False),
 }
 REQUEST_VALIDATION = ProblemSpec(422, "request-validation", "Request validation failed")

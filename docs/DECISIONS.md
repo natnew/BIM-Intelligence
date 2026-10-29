@@ -11,7 +11,7 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 | [ADR-003](#adr-003-single-orchestrator-with-typed-tool-registry) | Single orchestrator with typed tool registry | Adopted |
 | [ADR-004](#adr-004-ifcopenshell--ifctester-for-model-access-and-ids-validation) | IfcOpenShell + IfcTester for model access and IDS validation | Adopted |
 | [ADR-005](#adr-005-python-312-pinned) | Python 3.12 pinned | Adopted |
-| [ADR-006](#adr-006-file-system-session-store-no-database) | File-system session store, no database | Adopted |
+| [ADR-006](#adr-006-file-system-session-store-no-database) | File-system session store, no database | Adopted; layout refined by ADR-017 |
 | [ADR-007](#adr-007-browser-side-geometry-with-that-open-components) | Browser-side geometry with That Open Components | Adopted, API spike pending |
 | [ADR-008](#adr-008-human-confirmation-of-extracted-requirements) | Human confirmation of extracted requirements | Adopted |
 | [ADR-009](#adr-009-deterministic-grounding-check-on-every-explanation) | Deterministic grounding check on every explanation | Adopted |
@@ -21,6 +21,8 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 | [ADR-013](#adr-013-fastapi-background-tasks-and-sse-no-task-queue) | FastAPI background tasks and SSE, no task queue | Adopted |
 | [ADR-014](#adr-014-frontend-types-generated-from-pydantic-json-schema) | Frontend types generated from Pydantic JSON Schema | Adopted |
 | [ADR-015](#adr-015-contract-model-immutable-checkspec-content-addressed-finding-per-check-checkresult) | Contract model: immutable `CheckSpec`, content-addressed `Finding`, per-check `CheckResult` | Adopted |
+| [ADR-016](#adr-016-ingestion-contract-staged-upload-content-hash-etag-and-identifier-handling) | Ingestion contract: staged upload, content-hash ETag and identifier handling | Adopted; §1 superseded by ADR-017 |
+| [ADR-017](#adr-017-content-addressed-model-versions-with-single-pointer-publication) | Content-addressed model versions with single-pointer publication | Adopted |
 
 ---
 
@@ -104,6 +106,8 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 ---
 
 ## ADR-006 File-system session store, no database
+
+**Status note (28 October 2026).** The on-disk layout of the model artefacts is refined by [ADR-017](#adr-017-content-addressed-model-versions-with-single-pointer-publication): model bytes, index and summary live together under `models/{sha256}/` rather than directly in the session directory. The decision not to use a database stands.
 
 **Decision.** Each session is a directory under `data/sessions/{uuid}/` containing the original IFC, documents, `model_index.json`, `requirements.json`, `runs/{runId}/findings.json`, explanations, report and run log. Writes are atomic (write-to-temp then rename).
 
@@ -249,7 +253,7 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 
 ## ADR-016 Ingestion contract: staged upload, content-hash ETag and identifier handling
 
-**Status.** Adopted 28 October 2026 with the T-1 implementation (`store/`, `bim/`, `api/`). Records assumptions the earlier documents did not cover; the owner may revise any point before T-2 builds on it.
+**Status.** Adopted 28 October 2026 with the T-1 implementation (`store/`, `bim/`, `api/`). Records assumptions the earlier documents did not cover; the owner may revise any point before T-2 builds on it. **§1 is superseded by [ADR-017](#adr-017-content-addressed-model-versions-with-single-pointer-publication)** (T-1.1), which replaces the four-step publication with a single-pointer transaction; §2–§6 stand.
 
 **Decision.**
 
@@ -267,6 +271,43 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 **Evidence.** `tests/unit/store/`, `tests/unit/bim/`, `tests/unit/api/` (171 tests, 28 October 2026): fixture SHA-256 equals the stored hash and the `ETag`; AC-01, AC-02, AC-03, AC-04 and AC-11 of the Bakeoff review are covered; a `curl` round trip against `uvicorn` reproduced the test results.
 
 **Unresolved.** Materials and storey elevations are not indexed (FR-ING-02 partial, FR-VAL-05); `409` on model re-upload during an active run (AC-12) awaits the run lifecycle in T-3; whether IFC4X3 should remain accepted once a benchmark exists for it (FR-ING-05 is P3).
+
+---
+
+## ADR-017 Content-addressed model versions with single-pointer publication
+
+**Status.** Adopted 28 October 2026 (T-1.1, hardening review of the T-1 ingestion slice). Supersedes ADR-016 §1 and refines the ADR-006 layout. Implemented in `store/session_store.py`, `store/locking.py`, `bim/ingest.py`, `api/versioning.py`, `api/model.py`, `api/elements.py`, `api/main.py`.
+
+**Context.** The T-1 sequence published an upload in four independent steps — rename `model.ifc`, write `model_index.json`, write `model_summary.json`, update `session.json` — each atomic on its own but not as a set. A failure after the first step left a session whose bytes, index, summary and hash described different models, permanently; a reader between steps saw the same; two concurrent uploads could interleave the steps and finish in a mixed state; and `GET /model/file` read the hash before opening a file that could have been replaced in between. ADR-016 recorded the gap ("three separate atomic writes, not one transaction"). The invariant this record establishes: *a client can never observe a committed session whose IFC file, indexed elements, summary and model hash refer to different model versions.*
+
+**Decision.**
+
+1. **A model version is an immutable, content-addressed directory.** `models/{sha256}/` holds `model.ifc`, `model_index.json` and `model_summary.json`, all built from exactly those bytes. The directory is assembled in a private `models/.staging-{hex}/`, validated (every artefact present, the model file's size equals the bytes written, the summary parses and its `model_hash` equals the upload's SHA-256), fsynced and moved into place with **one rename**. A version directory therefore exists complete or not at all and is never modified afterwards. Re-uploading bytes already present as a complete version discards the staging directory and reuses the existing version; a damaged copy is replaced.
+2. **Activation is one atomic write.** `Session.model_hash` is the pointer to the active version; `SessionStore.set_model()` refuses a hash whose directory is incomplete and publishes the pointer with the existing atomic replace of `session.json`. Publication is therefore a two-step transaction (commit directory, swap pointer); a crash between the steps leaves a complete but inactive version, which is harmless and prunable.
+3. **Readers resolve the version once.** `SessionStore.active_model()` returns a `ModelVersion`; bytes, index and summary are read only through it, so a single request cannot mix versions. Every model read (`/model/summary`, `/model/file`, `/elements/{globalId}`) carries `ETag` = the quoted SHA-256 of the version it was answered from, and the upload response carries the new version's. Clients may send `If-Match` to pin a sequence of reads to one version; a mismatch is **412 `model-version-mismatch`** naming the active hash. `If-None-Match` on the file keeps its 304 behaviour. `/model/file` streams from the version directory, so its ETag always describes its body.
+4. **Publication is serialised by a per-session advisory file lock** (`model.lock`; `fcntl.flock` on POSIX, `msvcrt.locking` on Windows — both conflict between threads of one process and between processes). The lock object is the capability required to stage, commit, activate, prune or discard staging, so none of those can be reached without it. Acquisition does not wait: a second upload while one is in progress is **409 `model-locked`**. Readers never take the lock. The same lock is the seam T-3 holds for the duration of a review run so that an upload mid-run is refused (AC-12), or, equivalently, a run may pin `input_manifest.model_hash` and read `store.model_version(sid, hash)`, which survives replacement.
+5. **Superseded versions are retained until pruned.** A re-upload makes a new version active and leaves the previous directory intact, so an in-flight download or a run pinned to the old hash keeps a consistent snapshot. `SessionStore.prune_model_versions(lock, keep=…)` removes complete versions other than the active and kept ones, best-effort per directory; nothing calls it automatically yet (see Trade-offs).
+6. **Abandoned staging is recovered, never served.** Staging directories are invisible to readers by construction. `ingest_model` discards any present once it holds the lock (with the lock held they can only be abandoned), and the application lifespan runs `sweep_all_staging()` at startup, skipping sessions whose lock is busy.
+7. **Windows sharing violations are retried, not surfaced.** `session.json` is the only file ever replaced in place; its write and its read retry a bounded number of times on `PermissionError`, which is how Windows reports a replace racing a concurrent open. All other files are written once into a directory nobody else reads.
+
+**Alternatives.**
+- *Keep the flat layout and order the writes carefully.* No ordering of four independent files yields an atomic set; a crash after any step is a mixed state.
+- *A manifest file listing hash-suffixed flat files.* Equivalent to version directories with a worse pruning story.
+- *SQLite with a transaction.* Would resolve the atomicity but adds a database for a single pointer swap (ADR-006, C-08).
+- *Blocking lock (queue the second upload).* Friendlier for a single user but makes the response time of an upload depend on another and the tests timing-dependent; a non-blocking 409 is explicit and retryable.
+- *Prune superseded versions on publish.* Simplest for disk, but breaks any reader or run that resolved the old version; rejected until runs can declare what they pin.
+- *Expose `/models/{hash}/…` routes.* Clean version addressing, but a new API surface; `If-Match` is the HTTP-native way to pin and changes no contract.
+
+**Trade-offs.**
+- Disk usage grows by one version per distinct re-upload per session until `prune_model_versions` is called. Acceptable for a localhost MVP whose `data/` is disposable; the retention policy (prune on run completion, on session delete, or keep the last *n*) is for T-3 to decide once runs exist (R-PER-05).
+- Index and summary are not re-parsed as `ModelIndex`/`ModelSummary` at commit beyond the summary hash check: they were serialised moments earlier from validated objects via canonical JSON and fsynced, and `ingest_model` asserts `index.summary.model_hash` equals the staged hash before writing. A full re-parse would double the memory cost of large indexes for no additional guarantee.
+- Reusing an existing version for identical bytes means an index built by an older indexer is served again until `data/` is cleared; the index format is not versioned yet.
+- `If-Match` protects a client that asks for protection; a client that ignores ETags can still read version B after loading version A, which is inherent to a multi-request protocol.
+- The directory rename and pointer swap are durable on POSIX (directory fsync) and best-effort on Windows, which cannot fsync directories.
+
+**Evidence.** `tests/unit/store/test_session_store.py`, `tests/unit/store/test_locking.py`, `tests/unit/bim/test_ingest_publication.py`, `tests/unit/api/test_model_versioning.py` (51 new tests; `pytest` 334 passed, 28 October 2026, Windows/Python 3.12): failure injected before publication, while writing the index, while writing the summary, during the directory rename and during the pointer swap each leave the session byte-identical or with only a complete inactive version; two concurrent uploads yield one 201 and one 409 with no interleaving; three HTTP reader threads observe no mixed artefact across five replacements and four store-level reader threads across seven; a restart removes abandoned staging; upload response, session, summary, file ETag, body hash and element ETag all agree.
+
+**Unresolved.** Retention policy for superseded versions (T-3); whether to version the index format so a stale reused version is rebuilt; `session.json` is also the future home of `document_hashes`, whose writers must take the same lock or a sibling to avoid a lost update.
 
 ---
 

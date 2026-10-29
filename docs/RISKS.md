@@ -45,6 +45,7 @@ Likelihood and impact: **L** low · **M** medium · **H** high. Score = likeliho
 | R-DAT-03 | Public sample IFC used as benchmark has an incompatible or unclear licence. | M | M | 4 | Synthetic benchmark (ADR-011); licence-check any secondary dataset before committing. | Approval pending. |
 | R-DAT-04 | LGPL dependency misunderstood as incompatible with MIT project licence. | L | L | 1 | Licence table in README explains dynamic use; no IfcOpenShell source is vendored. | — |
 | R-DAT-05 | API key leaked via logs, screenshots or committed `.env`. | M | H | 6 | `.env` git-ignored; key never logged; `/health` does not echo config; demo recording avoids terminal with env visible. | — |
+| R-DAT-06 | A session's stored IFC, Model Index, summary and `model_hash` describe different model versions after a failed, interrupted or concurrent upload, so findings or the viewer refer to bytes that were never indexed. | M | H | 6 | Content-addressed version directories published with one rename and activated by one atomic write; per-session upload lock (409 on a concurrent upload); `If-Match`/`ETag` binding on every read; failure-injection and concurrency tests ([ADR-017](./DECISIONS.md#adr-017-content-addressed-model-versions-with-single-pointer-publication)). | **Closed** 28 Oct 2026 (T-1.1); re-open if `session.json` gains writers that bypass the model lock. |
 
 ## 5. Performance risks
 
@@ -54,6 +55,7 @@ Likelihood and impact: **L** low · **M** medium · **H** high. Score = likeliho
 | R-PER-02 | Browser IFC → Fragments conversion slow or memory-heavy on demo laptop. | M | M | 4 | Small benchmark model; test on demo hardware by Day 7; pre-converted fragments as fallback if API allows. | — |
 | R-PER-03 | Explanation calls multiply with findings; cost and latency grow. | M | M | 4 | Grouping (FR-EXP-04), cache, token budget per run, explanations generated lazily on selection if needed. | — |
 | R-PER-04 | SSE connection drops in the browser during long runs. | L | L | 1 | Client reconnects and polls run status endpoint. | — |
+| R-PER-05 | Retained superseded model versions (ADR-017 §5) grow `data/` by one copy of the IFC and its index per distinct re-upload. | M | L | 2 | `SessionStore.prune_model_versions()` exists and is tested; T-3 decides when to call it (run completion, session delete or keep-last-*n*) once runs can declare the versions they pin. `data/` is disposable. | Open; decide with the run lifecycle. |
 
 ## 6. Delivery risks
 
