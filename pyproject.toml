@@ -30,6 +30,8 @@ dependencies = [
   "python-multipart>=0.0.9",
   "ifcopenshell>=0.8.0,<0.10",
   "ifctester>=0.8.0,<0.10",
+  # Loads IfcTester's bundled ids.xsd with remote schema imports disabled (ADR-018).
+  "xmlschema>=3.0,<5.0",
   "openai>=1.40,<3.0",
   "pypdf>=4.2,<7.0",
 ]

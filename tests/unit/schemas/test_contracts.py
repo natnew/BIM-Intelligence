@@ -30,6 +30,7 @@ EXPECTED_NAMES = {
     "InputManifest",
     "ReviewRun",
     "ProblemDetail",
+    "DocumentImport",
 }
 
 

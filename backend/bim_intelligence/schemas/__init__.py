@@ -2,7 +2,7 @@
 
 Terminology is fixed here: *Session*, *ElementRef*, *ElementRecord*, *ModelSummary*,
 *Requirement*, *CheckSpec*, *Finding*, *CheckResult*, *ReviewPlan*, *ReviewRun*,
-*ProblemDetail*. Changing a model means regenerating
+*DocumentImport*, *ProblemDetail*. Changing a model means regenerating
 the TypeScript contract (``python scripts/export_schemas.py``) and updating the tests.
 """
 
@@ -13,6 +13,7 @@ from bim_intelligence.schemas.contracts import (
     build_contract_schema,
     contract_schema_json,
 )
+from bim_intelligence.schemas.documents import DocumentImport, DocumentKind
 from bim_intelligence.schemas.elements import (
     ClassificationRef,
     ElementRecord,
@@ -57,6 +58,8 @@ __all__ = [
     "CheckSpec",
     "CheckStatus",
     "ClassificationRef",
+    "DocumentImport",
+    "DocumentKind",
     "ElementRecord",
     "ElementRef",
     "Finding",

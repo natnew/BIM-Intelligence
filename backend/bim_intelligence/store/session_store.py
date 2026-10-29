@@ -1,16 +1,24 @@
-"""File-system session store (ADR-006, ADR-017).
+"""File-system session store (ADR-006, ADR-017, ADR-018).
 
 Layout::
 
     {root}/{session_id}/
         session.json              Session record; ``model_hash`` names the active model version
-        model.lock                advisory lock that serialises model publication
+        model.lock                advisory lock that serialises every mutation of the session
         models/
             {sha256}/             one immutable, content-addressed model version
                 model.ifc         uploaded IFC, byte-for-byte (C-04: never rewritten)
                 model_index.json  ModelIndex built from exactly those bytes
                 model_summary.json
             .staging-{hex}/       a version under construction; nothing else ever reads it
+        documents/
+            {sha256}.ids          uploaded requirement document, byte-for-byte, write-once
+        requirements.json         every Requirement of the session, canonical JSON
+        runs/
+            {run_id}/             one published review run, complete or absent
+                run.json          ReviewRun (the only record with timestamps)
+                findings.json     canonical findings.json (byte-reproducible, NFR-01)
+            .staging-{hex}/       a run being published
 
 Publication is a two-step transaction under the session's model lock:
 
@@ -23,6 +31,11 @@ Readers resolve the active version once (:meth:`SessionStore.active_model`) and 
 index and summary from that single directory, so no reader can observe artefacts from two
 versions in one request. Superseded versions stay on disk until pruned, which is what makes a
 review pinned to a hash safe across a re-upload.
+
+The same lock guards every other write to the session: registering a document, replacing
+``requirements.json`` and, for the duration of a review run, the active version itself. There
+is therefore exactly one writer per session at any time, and a run can never observe a model
+replaced underneath it (ADR-017 §4, ADR-018).
 
 Three further properties make the store safe to expose through an HTTP API: a session id must
 match ``SESSION_ID_PATTERN`` before it is joined to a path; only fixed artefact names are
@@ -40,22 +53,34 @@ import re
 import shutil
 import time
 import uuid
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from types import TracebackType
-from typing import IO, Any, TypeVar
+from typing import IO, Any, TypeVar, get_args
 
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
-from bim_intelligence.schemas import SESSION_ID_PATTERN, ModelSummary, Session
+from bim_intelligence.schemas import (
+    SESSION_ID_PATTERN,
+    DocumentKind,
+    Finding,
+    ModelSummary,
+    Requirement,
+    ReviewRun,
+    Session,
+    findings_to_json,
+)
 from bim_intelligence.schemas.canonical import canonical_json
 from bim_intelligence.store.errors import (
     ArtefactNotFoundError,
+    DocumentNotFoundError,
     IncompleteModelVersionError,
+    InvalidRunIdError,
     InvalidSessionIdError,
     ModelLockedError,
+    RunNotFoundError,
     SessionNotFoundError,
     StorageError,
     UploadTooLargeError,
@@ -70,16 +95,26 @@ MODELS_DIR = "models"
 MODEL_FILE = "model.ifc"
 MODEL_INDEX_FILE = "model_index.json"
 MODEL_SUMMARY_FILE = "model_summary.json"
+DOCUMENTS_DIR = "documents"
+REQUIREMENTS_FILE = "requirements.json"
+RUNS_DIR = "runs"
+RUN_FILE = "run.json"
+FINDINGS_FILE = "findings.json"
 
 MODEL_ARTEFACTS: frozenset[str] = frozenset({MODEL_FILE, MODEL_INDEX_FILE, MODEL_SUMMARY_FILE})
 DERIVED_ARTEFACTS: frozenset[str] = frozenset({MODEL_INDEX_FILE, MODEL_SUMMARY_FILE})
+DOCUMENT_KINDS: frozenset[str] = frozenset(get_args(DocumentKind))
 STAGING_PREFIX = ".staging-"
 
 _SESSION_ID_RE = re.compile(SESSION_ID_PATTERN)
+_RUN_ID_RE = _SESSION_ID_RE  # run ids are UUID4 too; the pattern is what makes them path-safe
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _TEMP_SUFFIX = ".part"
 _REPLACE_ATTEMPTS = 20
 _REPLACE_BACKOFF_SECONDS = 0.01
+
+_REQUIREMENTS_ADAPTER: TypeAdapter[list[Requirement]] = TypeAdapter(list[Requirement])
+_FINDINGS_ADAPTER: TypeAdapter[list[Finding]] = TypeAdapter(list[Finding])
 
 T = TypeVar("T")
 
@@ -407,6 +442,14 @@ class SessionStore:
         self._clock = clock
         self._id_factory = id_factory
 
+    def now(self) -> datetime:
+        """The store's clock; the single time source for every timestamp it persists."""
+        return self._clock()
+
+    def new_id(self) -> str:
+        """A fresh UUID4 from the store's id factory (sessions and runs share it)."""
+        return self._id_factory()
+
     # -- sessions -----------------------------------------------------------------------
 
     def create(self) -> Session:
@@ -590,7 +633,157 @@ class SessionStore:
             return []
         return sorted(p for p in models_dir.iterdir() if p.name.startswith(STAGING_PREFIX))
 
+    # -- documents (under the model lock for writes) ------------------------------------
+
+    def add_document(self, lock: ModelLock, data: bytes, kind: DocumentKind) -> str:
+        """Store ``data`` as ``documents/{sha256}.{kind}`` and register the hash; returns it.
+
+        Write-once and idempotent: bytes already present are not rewritten and a hash already
+        registered is not duplicated. The lock is required because the session record is
+        rewritten, and that record has exactly one writer at a time.
+        """
+        self._require_lock(lock)
+        sha256 = hashlib.sha256(data).hexdigest()
+        path = self._document_path(lock.session_id, sha256, kind)
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise StorageError("Could not create the session's documents directory.") from exc
+        if not path.is_file():
+            self._write_once(path, data)
+        session = self.get(lock.session_id)
+        if sha256 not in session.document_hashes:
+            updated = session.model_copy(
+                update={"document_hashes": [*session.document_hashes, sha256]}
+            )
+            self._write_session(Session.model_validate(updated.model_dump()))
+        return sha256
+
+    def read_document(self, session_id: str, sha256: str, kind: DocumentKind) -> bytes:
+        path = self._document_path(session_id, sha256, kind)
+        if not path.is_file():
+            raise DocumentNotFoundError(session_id, sha256, kind)
+        try:
+            return path.read_bytes()
+        except OSError as exc:
+            raise StorageError(
+                f"Session {session_id}: {kind} document {sha256[:12]} is unreadable."
+            ) from exc
+
+    # -- requirements -------------------------------------------------------------------
+
+    def read_requirements(self, session_id: str) -> list[Requirement]:
+        """Every requirement of the session in stored order; empty before the first import."""
+        path = self.session_dir(session_id) / REQUIREMENTS_FILE
+        self._require_session(session_id)
+        if not path.is_file():
+            return []
+        try:
+            return _REQUIREMENTS_ADAPTER.validate_json(path.read_text(encoding="utf-8"))
+        except (OSError, ValidationError, ValueError) as exc:
+            raise StorageError(f"Session {session_id}: requirements are unreadable.") from exc
+
+    def write_requirements(self, lock: ModelLock, requirements: Sequence[Requirement]) -> None:
+        """Replace ``requirements.json`` atomically. The lock serialises read-modify-write."""
+        self._require_lock(lock)
+        payload = [requirement.model_dump(mode="json") for requirement in requirements]
+        self._atomic_write_text(
+            self.session_dir(lock.session_id) / REQUIREMENTS_FILE, canonical_json(payload)
+        )
+
+    # -- review runs --------------------------------------------------------------------
+
+    def publish_run(self, run: ReviewRun, findings: Sequence[Finding]) -> None:
+        """Write ``run.json`` and ``findings.json`` into ``runs/{run_id}/`` with one rename.
+
+        The findings must be exactly those the run's check results list; a run therefore
+        never points at a finding that does not exist, nor ships one it did not record.
+        """
+        self._require_session(run.session_id)
+        if not _RUN_ID_RE.fullmatch(run.id):
+            raise InvalidRunIdError(run.id)
+        listed = sorted(run.finding_ids)
+        supplied = sorted(finding.id for finding in findings)
+        if listed != supplied:
+            raise StorageError(
+                f"Run {run.id}: the supplied findings do not match the run's finding_ids "
+                f"({len(supplied)} supplied, {len(listed)} listed)."
+            )
+        runs_dir = self.session_dir(run.session_id) / RUNS_DIR
+        target = runs_dir / run.id
+        if target.exists():
+            raise StorageError(f"Run {run.id} is already published.")
+        staging = runs_dir / f"{STAGING_PREFIX}{uuid.uuid4().hex}"
+        try:
+            staging.mkdir(parents=True, exist_ok=False)
+            _write_file(staging / RUN_FILE, canonical_json(run.model_dump(mode="json")).encode())
+            _write_file(staging / FINDINGS_FILE, findings_to_json(findings).encode("utf-8"))
+            _fsync_dir(staging)
+            _replace(staging, target)
+            _fsync_dir(runs_dir)
+        except OSError as exc:
+            shutil.rmtree(staging, ignore_errors=True)
+            raise StorageError(f"Could not publish run {run.id}.") from exc
+
+    def read_run(self, session_id: str, run_id: str) -> ReviewRun:
+        path = self._run_dir(session_id, run_id) / RUN_FILE
+        if not path.is_file():
+            raise RunNotFoundError(session_id, run_id)
+        try:
+            return ReviewRun.model_validate_json(path.read_text(encoding="utf-8"))
+        except (OSError, ValidationError, ValueError) as exc:
+            raise StorageError(f"Session {session_id}: run {run_id} is unreadable.") from exc
+
+    def read_findings(self, session_id: str, run_id: str) -> list[Finding]:
+        path = self._run_dir(session_id, run_id) / FINDINGS_FILE
+        if not path.is_file():
+            raise RunNotFoundError(session_id, run_id)
+        try:
+            return _FINDINGS_ADAPTER.validate_json(path.read_text(encoding="utf-8"))
+        except (OSError, ValidationError, ValueError) as exc:
+            raise StorageError(
+                f"Session {session_id}: findings of run {run_id} are unreadable."
+            ) from exc
+
+    def list_runs(self, session_id: str) -> list[str]:
+        """Ids of the published runs, sorted; staging directories are never listed."""
+        runs_dir = self.session_dir(session_id) / RUNS_DIR
+        self._require_session(session_id)
+        if not runs_dir.is_dir():
+            return []
+        return sorted(
+            child.name
+            for child in runs_dir.iterdir()
+            if _RUN_ID_RE.fullmatch(child.name) and (child / RUN_FILE).is_file()
+        )
+
     # -- internals ----------------------------------------------------------------------
+
+    def _document_path(self, session_id: str, sha256: str, kind: str) -> Path:
+        directory = self.session_dir(session_id)
+        self._require_session(session_id)
+        if not _SHA256_RE.fullmatch(sha256):
+            raise ValueError("A document is addressed by its lower-case SHA-256 hex digest.")
+        if kind not in DOCUMENT_KINDS:
+            raise ValueError(f"Unknown document kind {kind!r}; expected {sorted(DOCUMENT_KINDS)}.")
+        return directory / DOCUMENTS_DIR / f"{sha256}.{kind}"
+
+    def _run_dir(self, session_id: str, run_id: str) -> Path:
+        directory = self.session_dir(session_id)
+        self._require_session(session_id)
+        if not _RUN_ID_RE.fullmatch(run_id):
+            raise InvalidRunIdError(run_id)
+        return directory / RUNS_DIR / run_id
+
+    @staticmethod
+    def _write_once(path: Path, data: bytes) -> None:
+        temp = path.with_name(f"{path.name}.{uuid.uuid4().hex}{_TEMP_SUFFIX}")
+        try:
+            _write_file(temp, data)
+            _replace(temp, path)
+        except OSError as exc:
+            temp.unlink(missing_ok=True)
+            raise StorageError(f"Could not write {path.name!r}.") from exc
 
     def _models_dir(self, session_id: str) -> Path:
         directory = self.session_dir(session_id)

@@ -62,3 +62,43 @@ class IncompleteModelVersionError(StorageError):
         self.session_id = session_id
         self.sha256 = sha256
         self.missing = missing
+
+
+class ModelVersionMismatchError(Exception):
+    """The caller asserted a model version (``If-Match`` or a pinned run) that is not active."""
+
+    def __init__(self, session_id: str, expected: str, active: str) -> None:
+        super().__init__(
+            f"Session {session_id}: the request requires model version {expected} but the "
+            f"active model is {active}. Reload the model before retrying."
+        )
+        self.session_id = session_id
+        self.expected = expected
+        self.active = active
+
+
+class DocumentNotFoundError(StorageError, LookupError):
+    """No stored document with this hash and kind exists in the session."""
+
+    def __init__(self, session_id: str, sha256: str, kind: str) -> None:
+        super().__init__(f"Session {session_id} has no {kind} document {sha256[:12]}.")
+        self.session_id = session_id
+        self.sha256 = sha256
+        self.kind = kind
+
+
+class InvalidRunIdError(StorageError, ValueError):
+    """The supplied run id is not a lower-case UUID4."""
+
+    def __init__(self, run_id: str) -> None:
+        super().__init__(f"Invalid run id {run_id!r}: expected a lower-case UUID4.")
+        self.run_id = run_id
+
+
+class RunNotFoundError(StorageError, LookupError):
+    """No published review run with this id exists in the session."""
+
+    def __init__(self, session_id: str, run_id: str) -> None:
+        super().__init__(f"Session {session_id} has no review run {run_id}.")
+        self.session_id = session_id
+        self.run_id = run_id

@@ -1,8 +1,9 @@
 """RFC 9457 error envelope for every endpoint (ARCHITECTURE §14).
 
-Domain exceptions from ``store/`` and ``bim/`` are mapped here, once, to a status code and a
-stable problem type. Handlers never echo file-system paths: domain messages are written
-without them, and storage failures are reported generically and logged server-side.
+Domain exceptions from ``store/``, ``bim/``, ``requirements/`` and ``orchestration/`` are mapped
+here, once, to a status code and a stable problem type. Handlers never echo file-system paths:
+domain messages are written without them, and storage failures are reported generically and
+logged server-side.
 """
 
 from __future__ import annotations
@@ -18,7 +19,6 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from bim_intelligence.api.correlation import correlation_id_from_scope
-from bim_intelligence.api.versioning import ModelVersionMismatchError
 from bim_intelligence.bim import (
     AmbiguousGlobalIdError,
     IfcLoadError,
@@ -27,11 +27,17 @@ from bim_intelligence.bim import (
     UnsupportedSchemaError,
     UnsupportedUploadError,
 )
+from bim_intelligence.orchestration import NoExecutableChecksError
+from bim_intelligence.requirements import InvalidIdsError
 from bim_intelligence.schemas import ProblemDetail
 from bim_intelligence.store import (
     ArtefactNotFoundError,
+    DocumentNotFoundError,
+    InvalidRunIdError,
     InvalidSessionIdError,
     ModelLockedError,
+    ModelVersionMismatchError,
+    RunNotFoundError,
     SessionNotFoundError,
     StorageError,
     UploadTooLargeError,
@@ -72,6 +78,13 @@ DOMAIN_PROBLEMS: dict[type[Exception], ProblemSpec] = {
     UnknownElementError: ProblemSpec(404, "element-not-found", "Element not found"),
     AmbiguousGlobalIdError: ProblemSpec(409, "ambiguous-global-id", "Ambiguous GlobalId"),
     ModelVersionMismatchError: ProblemSpec(412, "model-version-mismatch", "Model version mismatch"),
+    InvalidIdsError: ProblemSpec(422, "ids-invalid", "IDS document invalid"),
+    InvalidRunIdError: ProblemSpec(400, "invalid-run-id", "Invalid run id"),
+    RunNotFoundError: ProblemSpec(404, "run-not-found", "Review run not found"),
+    DocumentNotFoundError: ProblemSpec(404, "document-not-found", "Document not found"),
+    NoExecutableChecksError: ProblemSpec(
+        409, "no-executable-checks", "No confirmed requirements to review"
+    ),
     StorageError: ProblemSpec(500, "storage-failure", "Storage failure", expose_detail=False),
 }
 REQUEST_VALIDATION = ProblemSpec(422, "request-validation", "Request validation failed")
