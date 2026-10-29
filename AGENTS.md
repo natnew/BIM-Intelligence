@@ -6,7 +6,7 @@ This file governs every contributor, human or AI coding agent, working in this r
 
 BIM Intelligence is an AI-native architectural BIM review application built for the Meta Global AI Developer Hackathon (26 October – 4 November 2026). It ingests IFC models and project requirement documents, runs deterministic checks, and uses Meta Muse Spark (via the Meta Model API) to interpret requirements, plan reviews and explain findings.
 
-Current phase: **architecture complete, implementation not started.** Authoritative design documents:
+Current phase: **implementation in progress.** Verified slices include the domain contracts and fixture (T-0), IFC ingestion and indexing (T-1), atomic model publication (T-1.1), and deterministic IDS import and review (T-2). The viewer, native rules, Meta integration, benchmark, reporting and complete user workflow remain outstanding. See the delivery task register before starting work.
 
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) — how the system is built
 - [docs/REQUIREMENTS.md](./docs/REQUIREMENTS.md) — what it must do (`FR-*`, `NFR-*`, `C-*` ids)
@@ -137,3 +137,34 @@ When blocked by any of these, stop, explain the constraint, and ask.
 4. Run `ruff check . && ruff format --check . && mypy && pytest` (backend, from the repository root) or `npm run lint && npm run format:check && npm run typecheck && npm test` (frontend).
 5. Update docs per §7.
 6. Summarise: what changed, which requirement ids it serves, what was validated, what needs the owner's decision.
+
+## 11. Delivery Milestones, Engineering Tasks and Progress Tracking
+
+This section applies to every human and AI contributor, including Codex, Claude Code, Gemini and GitHub Copilot.
+
+1. `docs/IMPLEMENTATION_PLAN.md` is the authoritative delivery schedule, milestone-to-task mapping and engineering task register.
+2. `CHANGELOG.md` records significant implementation, architectural and delivery-framework changes.
+3. Read the task-to-milestone mapping before starting work.
+4. Task IDs and milestone IDs are not interchangeable. Milestones describe delivery capabilities; tasks describe engineering work.
+5. Every implementation task, pull request and completion report must reference its T-ID and contributing M-ID or M-IDs.
+6. Do not independently renumber, rename or reinterpret existing tasks.
+7. Do not mark a task complete without implementation and verification evidence. A plan entry, code presence or agent assertion alone is not evidence.
+8. Do not infer milestone completion from a task's completion alone; apply that milestone's exit criteria.
+9. A task scope change requires corresponding updates to `docs/IMPLEMENTATION_PLAN.md` and `CHANGELOG.md`.
+10. New corrective subtasks use decimal identifiers such as T-1.1; do not shift subsequent task numbers.
+11. Record all substantive completed work in `CHANGELOG.md`.
+12. If documentation and repository evidence disagree, report the discrepancy rather than inventing a resolution.
+13. Preserve the current delivery schedule and accepted architecture unless the project owner explicitly approves a change. Do not move the 4 November 2026 submission deadline.
+
+Every implementation completion report must use this format:
+
+- Task ID:
+- Associated milestone(s):
+- Implementation status:
+- Files changed:
+- Acceptance criteria passed:
+- Test evidence:
+- Changelog updated:
+- Implementation plan updated:
+- Remaining blockers:
+- Recommended next task:
