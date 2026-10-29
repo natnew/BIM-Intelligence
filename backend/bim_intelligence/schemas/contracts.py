@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from pydantic.json_schema import GenerateJsonSchema, models_json_schema
 from pydantic_core import CoreSchema
 
+from bim_intelligence.schemas.ai import BudgetStatus, EvidenceCitation, Explanation
 from bim_intelligence.schemas.canonical import canonical_json
 from bim_intelligence.schemas.checks import CheckSpec
 from bim_intelligence.schemas.documents import DocumentImport
@@ -25,12 +26,20 @@ from bim_intelligence.schemas.elements import (
 )
 from bim_intelligence.schemas.findings import Finding
 from bim_intelligence.schemas.problems import ProblemDetail
-from bim_intelligence.schemas.requirements import Requirement, RequirementSource
+from bim_intelligence.schemas.requirements import (
+    Requirement,
+    RequirementCandidate,
+    RequirementCandidateBatch,
+    RequirementCandidateConfirmation,
+    RequirementExtractionRequest,
+    RequirementSource,
+)
 from bim_intelligence.schemas.runs import (
     CheckResult,
     InputManifest,
     PlannedCheck,
     ReviewPlan,
+    ReviewRequest,
     ReviewRun,
 )
 from bim_intelligence.schemas.sessions import Session
@@ -53,6 +62,14 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     ReviewRun,
     ProblemDetail,
     DocumentImport,
+    RequirementCandidate,
+    RequirementCandidateBatch,
+    RequirementCandidateConfirmation,
+    RequirementExtractionRequest,
+    ReviewRequest,
+    Explanation,
+    EvidenceCitation,
+    BudgetStatus,
 )
 
 SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"

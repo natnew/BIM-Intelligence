@@ -1,5 +1,40 @@
 {
   "$defs": {
+    "BudgetStatus": {
+      "additionalProperties": false,
+      "description": "Non-sensitive application-level accounting summary; never includes prompt content.",
+      "properties": {
+        "project_budget_usd": {
+          "minimum": 0,
+          "type": "number"
+        },
+        "remaining_usd": {
+          "minimum": 0,
+          "type": "number"
+        },
+        "request_count": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "reserved_usd": {
+          "minimum": 0,
+          "type": "number"
+        },
+        "spent_usd": {
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "project_budget_usd",
+        "spent_usd",
+        "reserved_usd",
+        "remaining_usd",
+        "request_count"
+      ],
+      "title": "BudgetStatus",
+      "type": "object"
+    },
     "CheckResult": {
       "additionalProperties": false,
       "description": "Execution outcome of one planned check.",
@@ -169,7 +204,11 @@
       "description": "Result of importing one document: its identity and the requirements it established.",
       "properties": {
         "kind": {
-          "const": "ids",
+          "enum": [
+            "ids",
+            "text",
+            "markdown"
+          ],
           "type": "string"
         },
         "requirements": {
@@ -344,6 +383,109 @@
         "storey"
       ],
       "title": "ElementRef",
+      "type": "object"
+    },
+    "EvidenceCitation": {
+      "additionalProperties": false,
+      "description": "Exact deterministic provenance cited by one explanation.",
+      "properties": {
+        "expected": {
+          "type": "string"
+        },
+        "finding_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "global_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "observed": {
+          "type": "string"
+        },
+        "requirement_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "rule_id": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "finding_id",
+        "global_id",
+        "requirement_id",
+        "rule_id",
+        "expected",
+        "observed"
+      ],
+      "title": "EvidenceCitation",
+      "type": "object"
+    },
+    "Explanation": {
+      "additionalProperties": false,
+      "description": "Interpretation kept separate from immutable deterministic Finding records.",
+      "properties": {
+        "citations": {
+          "items": {
+            "$ref": "#/$defs/EvidenceCitation"
+          },
+          "type": "array"
+        },
+        "corrective_action": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "finding_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "grounding_status": {
+          "enum": [
+            "passed",
+            "fallback"
+          ],
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "probable_cause": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "ai_generated",
+            "deterministic_template"
+          ],
+          "type": "string"
+        },
+        "summary": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "finding_id",
+        "summary",
+        "probable_cause",
+        "corrective_action",
+        "citations",
+        "source",
+        "grounding_status",
+        "model"
+      ],
+      "title": "Explanation",
       "type": "object"
     },
     "Finding": {
@@ -758,12 +900,169 @@
       "title": "Requirement",
       "type": "object"
     },
+    "RequirementCandidate": {
+      "additionalProperties": false,
+      "description": "Unconfirmed narrative candidate; it can only reference an existing immutable check.",
+      "properties": {
+        "check_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Existing confirmed CheckSpec id; null when no safe mapping is available."
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "document_kind": {
+          "enum": [
+            "text",
+            "markdown"
+          ],
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/RequirementSource"
+        },
+        "statement": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "proposed",
+            "informational"
+          ],
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "statement",
+        "source",
+        "document_kind",
+        "check_id",
+        "confidence",
+        "status"
+      ],
+      "title": "RequirementCandidate",
+      "type": "object"
+    },
+    "RequirementCandidateBatch": {
+      "additionalProperties": false,
+      "description": "Unconfirmed candidates returned for one narrative document.",
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/RequirementCandidate"
+          },
+          "type": "array"
+        },
+        "document_id": {
+          "description": "Lower-case SHA-256 hex.",
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "document_kind": {
+          "enum": [
+            "text",
+            "markdown"
+          ],
+          "type": "string"
+        },
+        "rejected_count": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "document_id",
+        "document_kind",
+        "candidates",
+        "rejected_count"
+      ],
+      "title": "RequirementCandidateBatch",
+      "type": "object"
+    },
+    "RequirementCandidateConfirmation": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate": {
+          "$ref": "#/$defs/RequirementCandidate"
+        },
+        "check_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "confirmed_by": {
+          "default": "user",
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "candidate",
+        "check_id",
+        "confirmed_by"
+      ],
+      "title": "RequirementCandidateConfirmation",
+      "type": "object"
+    },
+    "RequirementExtractionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "document_id": {
+          "description": "Lower-case SHA-256 hex.",
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "document_kind": {
+          "enum": [
+            "text",
+            "markdown"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "document_kind"
+      ],
+      "title": "RequirementExtractionRequest",
+      "type": "object"
+    },
     "RequirementSource": {
       "additionalProperties": false,
       "description": "Where a document-derived requirement came from; the quote is verbatim (FR-REQ-02).",
       "properties": {
         "document_id": {
-          "minLength": 1,
+          "description": "Lower-case SHA-256 hex.",
+          "pattern": "^[0-9a-f]{64}$",
           "type": "string"
         },
         "location": {
@@ -800,6 +1099,30 @@
         "checks"
       ],
       "title": "ReviewPlan",
+      "type": "object"
+    },
+    "ReviewRequest": {
+      "additionalProperties": false,
+      "description": "Optional objective for a bounded AI-selected plan; omitted means deterministic default.",
+      "properties": {
+        "objective": {
+          "anyOf": [
+            {
+              "maxLength": 4000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "objective"
+      ],
+      "title": "ReviewRequest",
       "type": "object"
     },
     "ReviewRun": {
@@ -936,6 +1259,9 @@
   "additionalProperties": false,
   "description": "Generated from backend/bim_intelligence/schemas by scripts/export_schemas.py. Do not edit by hand.",
   "properties": {
+    "budgetStatus": {
+      "$ref": "#/$defs/BudgetStatus"
+    },
     "checkResult": {
       "$ref": "#/$defs/CheckResult"
     },
@@ -953,6 +1279,12 @@
     },
     "elementRef": {
       "$ref": "#/$defs/ElementRef"
+    },
+    "evidenceCitation": {
+      "$ref": "#/$defs/EvidenceCitation"
+    },
+    "explanation": {
+      "$ref": "#/$defs/Explanation"
     },
     "finding": {
       "$ref": "#/$defs/Finding"
@@ -975,11 +1307,26 @@
     "requirement": {
       "$ref": "#/$defs/Requirement"
     },
+    "requirementCandidate": {
+      "$ref": "#/$defs/RequirementCandidate"
+    },
+    "requirementCandidateBatch": {
+      "$ref": "#/$defs/RequirementCandidateBatch"
+    },
+    "requirementCandidateConfirmation": {
+      "$ref": "#/$defs/RequirementCandidateConfirmation"
+    },
+    "requirementExtractionRequest": {
+      "$ref": "#/$defs/RequirementExtractionRequest"
+    },
     "requirementSource": {
       "$ref": "#/$defs/RequirementSource"
     },
     "reviewPlan": {
       "$ref": "#/$defs/ReviewPlan"
+    },
+    "reviewRequest": {
+      "$ref": "#/$defs/ReviewRequest"
     },
     "reviewRun": {
       "$ref": "#/$defs/ReviewRun"

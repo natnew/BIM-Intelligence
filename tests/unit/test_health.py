@@ -27,7 +27,11 @@ def test_health_ok_with_defaults() -> None:
 
 
 def test_health_reports_key_presence_but_never_value() -> None:
-    response = _client(model_api_key=PLACEHOLDER_KEY, llm_mode="live").get(f"{API_PREFIX}/health")
+    response = _client(
+        model_api_key=PLACEHOLDER_KEY,
+        llm_mode="live",
+        allow_live_llm=True,
+    ).get(f"{API_PREFIX}/health")
     assert response.status_code == 200
     assert response.json()["llm_configured"] is True
     assert PLACEHOLDER_KEY not in response.text

@@ -91,7 +91,7 @@ Reported as a confusion matrix per rule family plus the aggregate. P1 defects (D
 
 ## 5. Agent reliability evaluation
 
-Run over `benchmark_objectives.json` with the live model once (recorded) and replayed thereafter.
+**Proposed only; not run.** Any first live evaluation request requires explicit project-owner approval for that session and a bounded cost plan. Offline tests and Replay must be used by default. A connectivity smoke test does not establish planner quality or complete M0/M2.
 
 | Metric | Definition | Threshold |
 |---|---|---|
@@ -115,19 +115,11 @@ Comparisons with commercial checkers are **not** made; no claim of superiority i
 
 ## 7. Reproduction
 
-```bash
-# from repository root, Python 3.12 virtual environment active
-pip install -e ".[dev]"
-python datasets/generate.py                           # writes datasets/synthetic/ (committed)
-python tests/evaluation/run_eval.py --replay          # deterministic, no API calls
-python tests/evaluation/run_eval.py --live            # requires MODEL_API_KEY and approval; records new fixtures
-```
-
-Outputs: `tests/evaluation/runs/<timestamp>/metrics.json`, `confusion.md`, `run.log.jsonl` (git-ignored). Results are copied into §8 of this document by hand with the commit hash.
+The evaluation runner and benchmark artefacts have not been implemented; the proposed commands and output paths are therefore not yet executable. The T-5 offline verification commands and results are recorded in [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md#t-5--meta-muse-spark-integration). The default test suite must remain offline. Any future live evaluation requires explicit project-owner approval for the specific session, model, endpoint, call count and estimated cost; it must not be used to create recordings containing private prompts.
 
 ## 8. Results
 
-_No results yet. This section will contain the measured confusion matrix, per-rule metrics, grounding rates, planner metrics and token usage, with the commit hash and date of the run._
+_No evaluation results yet. This section will contain measured benchmark metrics and token usage only after the evaluation harness is implemented and a run is explicitly authorised and executed. The T-5 implementation and offline tests are not measured model results._
 
 ## 9. Known limitations
 

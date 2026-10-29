@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+
+if [ -x ".venv/Scripts/python.exe" ]; then
+    exec .venv/Scripts/python.exe scripts/secret_scan.py --staged
+fi
+
+if command -v python3 >/dev/null 2>&1; then
+    exec python3 scripts/secret_scan.py --staged
+fi
+
+exec python scripts/secret_scan.py --staged

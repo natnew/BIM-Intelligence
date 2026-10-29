@@ -27,6 +27,7 @@ reports/
 # Generated benchmark outputs are rebuilt by datasets/generate.py
 datasets/**/generated/
 tests/evaluation/runs/
+tests/evaluation/recordings/
 
 # Binary BIM inputs are allowed only in curated fixture and dataset locations
 *.ifc

@@ -12,6 +12,7 @@ from pydantic import AwareDatetime, Field, model_validator
 
 from bim_intelligence.schemas.base import ContractModel, FrozenContractModel
 from bim_intelligence.schemas.checks import CheckSpec
+from bim_intelligence.schemas.elements import Sha256Hex
 
 RequirementStatus = Literal["proposed", "confirmed", "edited", "rejected", "informational"]
 RequirementOrigin = Literal["document", "ids", "builtin"]
@@ -20,7 +21,7 @@ RequirementOrigin = Literal["document", "ids", "builtin"]
 class RequirementSource(FrozenContractModel):
     """Where a document-derived requirement came from; the quote is verbatim (FR-REQ-02)."""
 
-    document_id: str = Field(min_length=1)
+    document_id: Sha256Hex
     location: str = Field(min_length=1, description="Paragraph or page identifier.")
     quote: str = Field(min_length=1, description="Exact substring of the extracted text.")
 
@@ -65,3 +66,39 @@ class Requirement(ContractModel):
     def is_executable(self) -> bool:
         """True only for a confirmed requirement at its confirmed revision (FR-REQ-04)."""
         return self.status == "confirmed" and self.confirmed_revision == self.revision
+
+
+class RequirementCandidate(FrozenContractModel):
+    """Unconfirmed narrative candidate; it can only reference an existing immutable check."""
+
+    id: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    statement: str = Field(min_length=1)
+    source: RequirementSource
+    document_kind: Literal["text", "markdown"]
+    check_id: str | None = Field(
+        default=None,
+        description="Existing confirmed CheckSpec id; null when no safe mapping is available.",
+    )
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    status: Literal["proposed", "informational"]
+
+
+class RequirementCandidateBatch(FrozenContractModel):
+    """Unconfirmed candidates returned for one narrative document."""
+
+    document_id: Sha256Hex
+    document_kind: Literal["text", "markdown"]
+    candidates: list[RequirementCandidate] = Field(default_factory=list)
+    rejected_count: int = Field(ge=0)
+
+
+class RequirementExtractionRequest(FrozenContractModel):
+    document_id: Sha256Hex
+    document_kind: Literal["text", "markdown"]
+
+
+class RequirementCandidateConfirmation(FrozenContractModel):
+    candidate: RequirementCandidate
+    check_id: str = Field(min_length=1)
+    confirmed_by: str = Field(default="user", min_length=1, max_length=100)

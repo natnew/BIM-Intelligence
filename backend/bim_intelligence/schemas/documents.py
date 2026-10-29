@@ -1,7 +1,8 @@
 """Uploaded requirement documents (FR-REQ-01, FR-REQ-05).
 
-A document is stored content-addressed and never modified. In this slice the only supported
-kind is an IDS 1.0 file, whose specifications become confirmed requirements on import.
+Documents are stored content-addressed and never modified. IDS specifications become
+confirmed requirements on import; narrative text remains untrusted source material until
+interpretation and explicit human confirmation.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from bim_intelligence.schemas.base import FrozenContractModel
 from bim_intelligence.schemas.elements import Sha256Hex
 from bim_intelligence.schemas.requirements import Requirement
 
-DocumentKind = Literal["ids"]
+DocumentKind = Literal["ids", "text", "markdown"]
 
 
 class DocumentImport(FrozenContractModel):

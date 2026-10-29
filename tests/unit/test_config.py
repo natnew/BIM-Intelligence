@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 from pydantic import ValidationError
 
@@ -18,6 +20,13 @@ class TestDefaults:
         assert settings.llm_mode is LLMMode.OFF
         assert settings.llm_model == "muse-spark-1.3"
         assert settings.allow_contributor_models is False
+        assert settings.allow_live_llm is False
+        assert settings.llm_max_retries == 0
+        assert settings.llm_max_input_tokens_per_call == 8_000
+        assert settings.llm_max_output_tokens_per_call == 500
+        assert settings.llm_max_calls_per_run == 2
+        assert settings.llm_max_run_budget_usd == Decimal("0.10")
+        assert settings.llm_project_budget_usd == Decimal("5.00")
         assert settings.bimi_host == "127.0.0.1"
         assert settings.allow_remote is False
         assert settings.has_api_key is False
@@ -66,11 +75,39 @@ class TestLiveMode:
         assert "MODEL_API_KEY" in _error_text(exc_info.value)
 
     def test_live_mode_with_key(self) -> None:
-        settings = Settings(llm_mode="live", model_api_key="LLM_0_" + "x" * 16)
+        settings = Settings(
+            llm_mode="live",
+            allow_live_llm=True,
+            model_api_key="LLM_0_" + "x" * 16,
+        )
         assert settings.llm_enabled is True
 
     def test_replay_mode_needs_no_key(self) -> None:
         assert Settings(llm_mode="replay").llm_enabled is True
+
+    def test_live_mode_requires_explicit_enablement(self) -> None:
+        with pytest.raises(ValidationError) as exc_info:
+            Settings(llm_mode="live", model_api_key="LLM_0_" + "x" * 16)
+        assert "ALLOW_LIVE_LLM" in _error_text(exc_info.value)
+
+    def test_live_mode_requires_pricing(self) -> None:
+        with pytest.raises(ValidationError) as exc_info:
+            Settings(
+                llm_mode="live",
+                allow_live_llm=True,
+                model_api_key="LLM_0_" + "x" * 16,
+                llm_price_input_per_m=None,
+            )
+        assert "pricing" in _error_text(exc_info.value).lower()
+
+    def test_meta_base_url_cannot_be_overridden(self) -> None:
+        with pytest.raises(ValidationError) as exc_info:
+            Settings(llm_base_url="https://attacker.example/v1")
+        assert "api.meta.ai" in _error_text(exc_info.value)
+
+    def test_budget_limits_cannot_exceed_t5_caps(self) -> None:
+        with pytest.raises(ValidationError):
+            Settings(llm_project_budget_usd=5.01)
 
 
 class TestRemoteBindingGuard:

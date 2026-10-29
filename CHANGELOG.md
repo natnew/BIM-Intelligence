@@ -4,6 +4,15 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### T-5 — Meta Muse Spark Integration (offline implementation)
+
+- Add a typed `LLMClient` boundary with network-isolated Fake and Replay clients, response-only recordings, and a Meta Model API `LiveClient` using the existing OpenAI SDK. Live remains off by default and requires an explicit configuration gate.
+- Add persistent, cross-process budget reservations and usage reconciliation with configurable Muse Spark Standard prices, USD 0.10 per-call/per-review and USD 5 cumulative application limits, a two-call review cap, 8,000 estimated input tokens, 500 output tokens and zero default retries. These are application controls, not provider billing caps.
+- Add objective-based plan selection constrained to unique confirmed immutable check ids; invalid or unavailable AI plans keep the deterministic default.
+- Accept Markdown/TXT source documents, produce unconfirmed quote-verified candidates, and require explicit confirmation against an existing confirmed CheckSpec. New IDS criteria are not generated.
+- Add grounded per-finding explanations with exact evidence citations and deterministic fallback; explanations remain separate from `findings.json`.
+- Add a safe budget-status endpoint, schema exports, offline API/client/budget tests, a gated one-call live smoke test definition and redacted Gitleaks scan tooling. No live request was made and no API spend was measured; M0 capability verification and M2 completion remain open.
+
 ### T-4 — End-to-End Deterministic Review Workflow
 
 - Add the versioned native `classification.consistent_by_type` v1.0.0 rule as an explicitly confirmed, parameter-free built-in check, without duplicating IDS 1.0 property, naming or classification-presence checks.

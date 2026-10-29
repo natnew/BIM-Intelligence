@@ -25,6 +25,7 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 | [ADR-017](#adr-017-content-addressed-model-versions-with-single-pointer-publication) | Content-addressed model versions with single-pointer publication | Adopted |
 | [ADR-018](#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock) | IDS import establishes confirmed requirements; checks are hydrated per run; reviews run under the session lock | Adopted |
 | [ADR-019](#adr-019-t-4-native-rule-scope-and-bounded-deterministic-execution) | T-4 native rule scope and bounded deterministic execution | Adopted |
+| [ADR-020](#adr-020-t-5-meta-client-spend-ledger-and-human-gates) | T-5 Meta client, spend ledger and human gates | Adopted |
 
 ---
 
@@ -369,6 +370,26 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 **Trade-offs.** The current native registry contains one rule, not a general-purpose plugin system. Its parameter-free contract avoids exposing unverified configuration that could weaken a confirmed requirement. A `partial` run is intentionally conservative: `not_applicable` is not a defect, but it does not demonstrate coverage. Benchmark precision/recall and clean-control results are not available until T-6.
 
 **Evidence.** Native rule positive, mismatch, applicability and invalid-spec tests; explicit confirmation API tests; bounded-plan/error tests; and the LLM-off fixture scenario in `tests/unit/validation/test_native_rules.py`, `tests/unit/api/test_native_requirements.py`, `tests/unit/orchestration/test_review_runner.py` and `tests/scenario/test_deterministic_review.py`. Exact commands and results are recorded in [T-4](./IMPLEMENTATION_PLAN.md#t-4--end-to-end-deterministic-review-workflow).
+
+---
+
+## ADR-020 T-5 Meta client, spend ledger and human gates
+
+**Status: Adopted.**
+
+**Decision.** Keep the T-5 integration behind the existing process boundary and OpenAI SDK. `LLMClient.complete` returns a Pydantic-validated response and typed usage. `LiveClient` alone can perform network requests; Fake, Recording and Replay are offline-capable, and Replay/Off never fall back to Live. The default mode is `off`. Live requires a configured `MODEL_API_KEY`, Standard-mode model id and the additional `ALLOW_LIVE_LLM=true` opt-in. The endpoint is restricted to `https://api.meta.ai/v1`; retries default to zero.
+
+Before each live call, reserve application budget using configured per-million token rates, estimated input and the full output cap. Persist reservations, usage, actual calculated costs and outcomes in a lock-protected JSON ledger under `DATA_DIR/llm/`. Unknown usage is charged at the reserved amount; unreadable ledger state or unavailable locks disable Live. Defaults are 8,000 estimated input tokens, 500 output tokens, two live calls per review, USD 0.10 per call and per review, and USD 5.00 cumulative project allowance. These are local application safeguards, not provider-enforced account caps or guarantees against external spending.
+
+**Requirement workflow.** Narrative Markdown/TXT candidates preserve a source hash, paragraph id and verbatim quote; the quote, paragraph, hash and candidate identity are checked again on confirmation. The model may only map a candidate to an already confirmed immutable `CheckSpec`. Human confirmation is mandatory. T-5 does not generate or compile new IDS criteria.
+
+**Explanation workflow.** An AI explanation is a separate response contract, grounded against the deterministic finding, matching requirement revision and model index. Every citation binds finding, GlobalId, requirement, rule, expected and observed values. Multi-element findings and any grounding failure use a deterministic template. Explanation output never enters `findings.json`.
+
+**Alternatives.** Provider-side billing alerts were rejected as hard limits because they are not reliable spending caps. Automatically enabling Live when a key is present was rejected because it creates an implicit cost path. Persisting prompts in recordings was rejected because it retains private project text unnecessarily. Letting the model create CheckSpecs was rejected because free-form output could invent validation semantics.
+
+**Trade-offs and remaining risks.** A byte-based input estimate plus message overhead is conservative for ordinary UTF-8 prompts but is not provider tokenisation. Provider usage is reconciled after a request; if returned usage exceeds the reservation, the actual amount is recorded and further requests are blocked, but the provider may already have billed more than the reservation. Deleting the local ledger or spending outside this application is outside the safeguard. Meta endpoint, model access and structured-output compatibility have not been verified by a live call; each live test requires explicit owner approval.
+
+**Evidence.** Offline tests cover Fake/Replay, schema validation, quote verification, plan filtering, grounding fallback, API routes, timeout/error sanitisation, reservation persistence and concurrent accounting. Muse Spark Standard price defaults are configurable and sourced from [Meta's published pricing](https://dev.meta.ai/docs/pricing-rate-limits). The exact smoke-test plan and offline validation results are recorded in [T-5](./IMPLEMENTATION_PLAN.md#t-5--meta-muse-spark-integration); no API usage has been measured.
 
 ---
 

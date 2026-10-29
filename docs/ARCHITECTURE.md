@@ -1,6 +1,6 @@
 # BIM Intelligence — Technical Architecture
 
-**Version:** 0.3 (architecture baseline 26 October 2026; §8.1, §10.2, §11 and §14 updated 28 October 2026 for the implemented ingestion slice and its T-1.1 publication hardening; §8.2, §10.2, §11 and §14 updated 29 October 2026 for the implemented IDS import and validation slice, T-2; §12 updated 29 October 2026 for the verified T-3 viewer)
+**Version:** 0.4 (architecture baseline 26 October 2026; §8.1, §10.2, §11 and §14 updated 28 October 2026 for T-1.1; §8.2, §10.2, §11, §12 and §14 updated 29 October 2026 for T-2–T-4; §7, §9–§11 and §13–§17 updated for the T-5 offline implementation)
 **Status:** Partially implemented. Rows and paragraphs marked *Implemented* or ✓ are backed by unit tests; every other statement about behaviour describes design intent, not measured results.
 **Audience:** Engineers and coding agents implementing the MVP during the Meta Global AI Developer Hackathon (26 October – 4 November 2026).
 
@@ -206,12 +206,12 @@ flowchart LR
 | **schemas/** | Single source of truth for domain models (`Session`, `ModelSummary`, `ElementRef`, `Requirement`, `CheckSpec`, `Finding`, `Evidence`, `Explanation`, `Report`, `RunLog`). JSON Schema exported for tools and frontend types. | No | Pydantic v2 |
 | **store/** | `SessionStore` — create/read session directories; stage, validate and publish content-addressed model versions under a per-session file lock; activate a version with one atomic write of the session record; recover abandoned staging (ADR-017). | No | stdlib |
 | **bim/** | Open IFC with IfcOpenShell; build `ModelIndex` (elements, psets, classifications, containment, types, materials, storey elevations, bounding boxes where cheap); read-only inspection queries used as tools. | No | ifcopenshell 0.9 |
-| **requirements/** | Extract text from BEP (Markdown/TXT; PDF via `pypdf`); call LLM for `RequirementCandidate[]`; verify quotes; turn confirmed candidates, imported IDS specifications and explicitly selected built-in checks into `Requirement` records. IDS compilation itself lives in `validation/` so this package never imports IfcTester (AGENTS.md §3; Bakeoff D-05). *Implemented (T-2): IDS import; T-4: native check confirmation.* | Yes (extraction) | validation/, pypdf |
+| **requirements/** | Store IDS, Markdown and TXT sources; import IDS as confirmed requirements; propose quote-verified narrative candidates and bind only human-confirmed candidates to an existing confirmed `CheckSpec`. New narrative criteria are not authored. *Implemented (T-2/T-4/T-5 offline path).* | Yes (extraction) | validation/ |
 | **validation/** | Compile IDS 1.0 documents to `CheckSpec`s and hydrate them back; run IDS via IfcTester; run registered native rules; normalise to `Finding`. Pure functions of (ModelIndex, IFC file, CheckSpec). *Implemented (T-2): IDS compiler, runner and normaliser; T-4: `classification.consistent_by_type` v1.0.0.* | No | ifctester, xmlschema |
 | **investigation/** | Build `EvidenceBundle` per finding: element record, container, siblings and their status, property statistics, source requirement. | No | bim/ |
-| **orchestration/** | Interpret objective → `ReviewPlan`; execute confirmed checks through the tool registry; apply plan/execution caps; emit progress events; fall back to the default plan. *Implemented (T-2): default plan and synchronous deterministic runner; T-4: bounded execution and truthful partial coverage.* | Yes (planning) | llm/, Tool Registry |
-| **llm/** | `LLMClient` protocol: `complete_structured(messages, schema)`, `complete_with_tools(messages, tools)`. Implementations: Meta Model API (OpenAI SDK), Fake (tests), Recording/Replay (evaluation). Token accounting. | — | openai ≥ 1.x |
-| **reporting/** | Explain findings (LLM structured output) → grounding check → fallback template; assemble `Report`; render Markdown; optional BCF 3.0 via `bcf-client`. | Yes (prose) | bcf-client (P2) |
+| **orchestration/** | Filter optional objective plans to confirmed immutable check ids; execute synchronously with a deterministic default fallback and bounded checks. *Implemented (T-4/T-5 offline path); no free-running tool loop.* | Yes (planning) | llm/ |
+| **llm/** | `LLMClient.complete(messages, response_model, max_output_tokens, purpose, run_id) -> Completion[T]`; `LiveClient` alone uses OpenAI SDK networking, `FakeClient` is in-memory, `RecordingClient` stores response data and a request hash (not prompts), `ReplayClient` is offline. Persistent spend ledger and token usage accounting. | — | openai ≥ 1.x |
+| **reporting/** | Produce separately labelled explanations from a verified `Finding`, matching requirement and pinned Model Index; validate element citations and values or return a deterministic template. Explanations are not stored in `findings.json`. *Implemented (T-5 offline path).* | Yes (prose) | schemas/ |
 | **frontend/** | Upload, requirement confirmation UI, objective input, progress, findings list and detail, 3D viewer with highlight sync, report view. | No | React, TS, @thatopen/* 3.6, three ≥ 0.182, web-ifc ≥ 0.0.77 |
 | **tests/evaluation/** and **datasets/** | Benchmark generator (defect injection), ground truth, metrics runner, LLM replay fixtures. | Replay only | ifcopenshell.api |
 
@@ -302,7 +302,19 @@ The orchestrator then **filters** the plan: tools must exist; `requirement_ids` 
 
 ### 7.5 Protocol choice
 
-**DECISION:** use the Chat Completions protocol (`POST /v1/chat/completions`) through the `openai` Python SDK with `base_url="https://api.meta.ai/v1"`, because it is the most widely tested OpenAI-compatible surface and supports tool calling and `response_format={"type": "json_schema"}`. **PROPOSAL:** evaluate the Responses API if cross-turn reasoning replay proves useful for multi-step planning. Model default: `muse-spark-1.3`; `muse-wonder-1.0` available behind a configuration flag but not used in the MVP (cost ×3–5, preview status).
+**DECISION:** use the Chat Completions protocol (`POST /v1/chat/completions`) through the `openai` Python SDK with `base_url="https://api.meta.ai/v1"`, because it is the most widely tested OpenAI-compatible surface and supports structured output. **PROPOSAL:** evaluate the Responses API if cross-turn reasoning replay proves useful for multi-step planning. Model default: `muse-spark-1.3`; configuration may select other non-Contributor ids, subject to owner approval and current pricing. Live compatibility remains unverified.
+
+### 7.6 T-5 implementation boundary
+
+The implemented T-5 client is offline-first. `LLMClient` defines one generic, schema-validated `complete` method returning `Completion[T]` with typed usage and model metadata. `FakeClient` validates in-memory responses, `ReplayClient` reads matching response fixtures, and `RecordingClient` stores only the validated response, request hash, purpose, schema name and usage. Neither Fake nor Replay can issue network requests. `LiveClient` alone constructs the OpenAI client; configuration pins its base URL to `https://api.meta.ai/v1` and model id to the Standard-mode default `muse-spark-1.3`.
+
+The default `LLM_MODE=off` constructs no client. Live mode additionally requires `ALLOW_LIVE_LLM=true` and `MODEL_API_KEY`; the key remains a backend `SecretStr`. Retries default to zero and one process-wide file lock prevents concurrent live calls. Prompts are versioned files; model output is schema-validated before application logic sees it. The model receives no tool executor, file-system access, shell or arbitrary network capability.
+
+Planning takes an optional review objective and may return only unique confirmed `CheckSpec` ids with explanations. The runner validates that proposal again against current confirmed requirements and the execution cap; client, output, or plan errors leave the deterministic default plan in force. Requirements extraction and explanations use separate structured requests, not calls in a model-directed tool loop.
+
+Muse Spark Standard prices are configurable in `Settings` (input, cached input and output USD per million tokens). Before each request the application estimates input from UTF-8 bytes plus message overhead and reserves the full output cap. The default input target is 8,000 tokens, output cap 500, per-review call cap two, per-call and per-review budget USD 0.10, and cumulative project ledger USD 5. The ledger persists under `DATA_DIR/llm/`, uses a cross-process file lock, charges the full reservation when usage is unavailable, and reconciles provider usage when returned. Corrupt or unavailable accounting fails closed. These are **application-level safeguards**, not provider-enforced account spending caps; deleting runtime data or using another application is outside this control. Safe aggregate status is available at `GET /api/v1/llm/budget`; prompts and credentials are not returned.
+
+The currently implemented request size at the configured ceiling estimates to USD 0.012125 uncached at the default published rates. No live call has been made, so Meta compatibility with this model, endpoint and structured-output schema remains unverified. An owner-approved one-request smoke test is required to resolve that risk; see [ADR-020](./DECISIONS.md#adr-020-t-5-meta-client-spend-ledger-and-human-gates) and OQ-02/OQ-07.
 
 ---
 
@@ -366,29 +378,29 @@ This is the only native rule shipped in T-4. IDS remains responsible for require
 
 ```mermaid
 flowchart LR
-    D["BEP upload<br/>md · txt · pdf"] --> T["Text extraction<br/>paragraph ids p-001…"]
-    T --> C["LLM extraction<br/>structured output RequirementCandidate[]"]
-    C --> Q["Quote verification<br/>exact substring match"]
-    Q -->|"fail"| X["Discard candidate · log"]
-    Q -->|"pass"| M["Map to CheckSpec<br/>IDS facets or native rule"]
-    M --> K["Compile IDS 1.0 XML<br/>xmlschema validate"]
-    K --> U["User confirms · edits · rejects"]
-    U --> R["Confirmed requirements<br/>eligible for execution"]
+    D["Upload .md or .txt<br/>immutable untrusted source"] --> T["Paragraph segmentation<br/>stable p-001… identifiers"]
+    T --> C["LLM proposes candidates<br/>existing confirmed check ids only"]
+    C --> Q["Verify exact quote<br/>and paragraph against source"]
+    Q -->|"fail"| X["Reject candidate"]
+    Q -->|"pass"| H["Human reviews candidate"]
+    H -->|"explicit confirmation"| R["Requirement bound to existing CheckSpec"]
+    H -->|"informational / unsupported"| I["Not executable"]
 ```
 
 ### 9.1 Requirement candidate schema (abridged)
 
 ```json
 {
-  "id": "REQ-007",
-  "title": "External walls carry fire rating",
-  "statement": "All external walls shall have Pset_WallCommon.FireRating populated.",
-  "source": {"document_id": "bep-01", "location": "p-034", "quote": "…verbatim…"},
-  "check": {
-    "kind": "ids",
-    "applicability": [{"facet": "entity", "name": "IFCWALL"}, {"facet": "property", "pset": "Pset_WallCommon", "name": "IsExternal", "value": "TRUE"}],
-    "requirements": [{"facet": "property", "pset": "Pset_WallCommon", "name": "FireRating", "cardinality": "required"}]
+  "id": "content-derived-candidate-id",
+  "title": "Classification consistency",
+  "statement": "Classifications shall remain consistent.",
+  "source": {
+    "document_id": "64-lowercase-hex-sha256",
+    "location": "p-002",
+    "quote": "Classifications shall remain consistent."
   },
+  "document_kind": "markdown",
+  "check_id": "existing-confirmed-check-id",
   "confidence": 0.82,
   "status": "proposed"
 }
@@ -396,10 +408,11 @@ flowchart LR
 
 ### 9.2 Safeguards
 
-- **Verbatim quote check** (FR-REQ-02) is deterministic and rejects any candidate whose quote is not an exact substring of the extracted text. This blocks fabricated requirements at source.
-- **IDS compilation** validates against the IDS 1.0 XSD; uncompilable candidates are downgraded to `informational`.
-- **Human confirmation** (FR-REQ-04) is mandatory. The confirmation UI shows the quote next to the compiled check.
-- **Confidence** is the model's self-report and is displayed only as a sorting aid; it is never used to auto-confirm.
+- **T-5 supported source formats:** `.txt` and `.md` are stored byte-for-byte; the current API does not parse PDF. IDS import remains its separate, schema-validated path.
+- **Verbatim quote check** is deterministic: the quote must occur in the full stored source and in the named paragraph. Candidate ids are derived from document hash, paragraph id and quote; confirmation repeats source-hash, quote and paragraph checks.
+- **Existing CheckSpec only:** the model cannot return criteria, parameters or IDS facets. Candidates with no confirmed check mapping are `informational`; unknown check ids and unsupported quotations are rejected. T-5 does not author or compile new IDS criteria, so full FR-REQ-03 remains open.
+- **Human confirmation** is a distinct API request. It can only bind a proposed candidate to the same already-confirmed check id; review execution still requires the resulting confirmed `Requirement`.
+- **Confidence** is model self-report only and never auto-confirms a candidate.
 
 **PROPOSAL:** chunked extraction for long BEPs is unnecessary given the 1M-token context of Muse Spark, but token cost scales with document length; the extractor should accept a page/section range filter.
 
@@ -445,10 +458,10 @@ Implemented models live in `backend/bim_intelligence/schemas/` and are exported 
 | `CheckResult` | `check_id`, `requirement_id`, `status` ∈ passed/failed/error/skipped/not_applicable, `applicable_count`, `finding_ids[]`, `diagnostics[]` | execution outcome, never a defect. *Implemented (T-2/T-4)*: IDS and native checks produce outcomes; the runner also records skipped checks at either configured cap and continues after per-check errors |
 | `ReviewPlan` | `checks[] {check_id, reason}` | the planner's output; no parameters. *Implemented (T-2)* for the default plan |
 | `ReviewRun` | `id`, `session_id`, `status` ∈ queued/running/completed/partial/failed/interrupted, `plan`, `plan_source` ∈ llm/default, `check_results[]`, `input_manifest`, `created_at`, `finished_at` | the only record carrying timestamps. *Implemented (T-2/T-4)*: synchronous runs end `completed` or `partial`; `input_manifest` carries the model hash, IDS hashes, confirmed requirement revisions and rule versions |
-| `DocumentImport` | `sha256`, `kind` ∈ {ids}, `title`, `requirements[]` | what `POST /documents` returns: the stored document's identity and the requirements it established. *Implemented (T-2)* |
+| `DocumentImport` | `sha256`, `kind` ∈ {ids, text, markdown}, `title`, `requirements[]` | what `POST /documents` returns: identity and any requirements established. Narrative uploads return an empty list; candidate extraction is separate. *Implemented (T-2/T-5)* |
 | `ProblemDetail` | `type`, `title`, `status`, `detail`, `instance`, `correlation_id` | RFC 9457 body for every error response |
 | `EvidenceBundle` *(planned)* | `finding_id`, `element_records[]`, `container`, `siblings[]` with status, `property_stats`, `requirement_source` | everything an explanation may cite |
-| `Explanation` *(planned)* | `finding_group_id`, `summary`, `probable_cause`, `corrective_action`, `cited_global_ids[]`, `cited_properties[]`, `generated_by` {model id, prompt version}, `grounding` {status, violations[]} | labelled AI-generated (FR-EXP-05) |
+| `Explanation` | `finding_id`, `summary`, `probable_cause`, `corrective_action`, `citations[]`, `source`, `grounding_status`, optional `model` | separately labelled interpretation; each citation binds the finding, GlobalId, requirement, rule, expected and observed values. Never persisted with deterministic findings. *Implemented (T-5).* |
 | `Report` *(planned)* | session metadata, model summary, requirements table, findings with evidence and explanations, traceability matrix, provenance | canonical JSON; Markdown rendered from it |
 | `RunLog` *(planned)* | plan, tool calls (name, args, duration, result size), token usage, grounding results, errors, timings | one per run (NFR-09) |
 
@@ -462,12 +475,7 @@ The report's traceability matrix is generated from these links; nothing in the r
 
 ### 10.4 Grounding check
 
-The grounding checker is deterministic and runs on every explanation:
-
-1. Every `cited_global_ids` entry must be in the evidence bundle's element set.
-2. Every `cited_properties` entry (`Pset.Name`) must appear in the evidence bundle's element records or requirement.
-3. Numeric values quoted in the summary are matched against evidence values (tolerant string match); unmatched numbers fail.
-4. On failure: regenerate once with the violations appended to the prompt; on second failure, emit the templated explanation and record `grounding.status = "fallback"`.
+The T-5 implementation grounds one element per AI-generated explanation. Every citation must match the deterministic finding id, element GlobalId, requirement id, rule id, expected value and observed value; the GlobalId must resolve in the model index. The prose is rejected if it mentions an unsupported GlobalId, requirement id or numeric value. Multi-element findings use the deterministic template rather than permitting evidence to be mixed between elements. There is no regeneration loop: invalid output, unavailable clients or grounding failure immediately use the deterministic fallback. Explanations remain separate from the immutable finding artifact.
 
 ---
 
@@ -485,15 +493,18 @@ Base path `/api/v1`. JSON everywhere; errors follow a single `ProblemDetail` sch
 | `GET` | `/sessions/{sid}/model/file` ✓ | Stored IFC bytes, `application/x-step`, `ETag` = quoted SHA-256 that always describes the body, `If-None-Match` → 304, `If-Match` mismatch → 412 (C-07); the viewer's geometry source | FR-VIS-01 |
 | `GET` | `/sessions/{sid}/elements/{globalId}` ✓ | `ElementRecord` from the active version's index; `ETag` = quoted SHA-256; 400 malformed id, 404 unknown, 409 when the GlobalId is duplicated, 412 on `If-Match` mismatch | FR-ING-04 |
 | `GET` | `/sessions/{sid}/elements?ifc_type=&storey=&limit=` | Element list | FR-ING-02 |
-| `POST` | `/sessions/{sid}/documents` ✓ | Upload a requirements document. Implemented for IDS 1.0 (`.ids` only): XSD-validated, stored under its SHA-256, each specification becomes a confirmed `Requirement`; returns `DocumentImport` with 201, or 200 when the same bytes were imported before; 415 other extensions, 413 above `MAX_DOC_MB`, 422 `ids-invalid`, 409 `model-locked` while an upload or review holds the session lock. BEP (md/txt/pdf) is a later task | FR-REQ-05 (FR-REQ-01 planned) |
-| `POST` | `/sessions/{sid}/requirements/extract` | Run LLM extraction for a document; returns candidates | FR-REQ-02..03 |
+| `POST` | `/sessions/{sid}/documents` ✓ | Upload IDS 1.0 (`.ids`), Markdown (`.md`) or UTF-8 text (`.txt`); IDS creates confirmed requirements, narrative input is stored as source only. Narrative parsing errors return 422; other extensions 415; size limit 413; session lock 409 | FR-REQ-01, FR-REQ-05 |
+| `POST` | `/sessions/{sid}/requirements/extract` ✓ | Extract narrative candidates from a stored text/Markdown document; exact quotes and paragraph ids are verified; 503 when LLM mode is off or unavailable. Creates no requirements | FR-REQ-02..03 |
+| `POST` | `/sessions/{sid}/requirements/confirm-candidate` ✓ | Explicitly confirm a proposed candidate bound to the same existing confirmed CheckSpec; revalidate content hash and quote; informational candidates are rejected | FR-REQ-04 |
 | `GET` | `/sessions/{sid}/requirements` ✓ | List requirements with status, revision, source and `CheckSpec` | — |
 | `POST` | `/sessions/{sid}/requirements/native/classification-consistency` ✓ | Explicitly confirm and register the parameter-free P0 native rule as a built-in requirement; 201 when added, 200 when already present; 409 while the session is locked | FR-VAL-04 |
 | `PATCH` | `/sessions/{sid}/requirements/{rid}` | Confirm / edit / reject | FR-REQ-04 |
-| `POST` | `/sessions/{sid}/reviews` ✓ | Start a synchronous default-plan run over confirmed requirements. `MAX_PLAN_CHECKS` and `MAX_TOOL_CALLS_PER_RUN` cap planning/execution; every confirmed unique check receives one result in stable order. 201 with terminal `ReviewRun`; `If-Match` pins the model; 409 with no executable checks or while locked; incomplete coverage is `partial` | FR-REQ-07 (FR-REQ-06 planned) |
+| `POST` | `/sessions/{sid}/reviews` ✓ | Start a synchronous run over confirmed requirements. Optional objective allows a bounded model plan; invalid/unavailable plans use the deterministic default. `MAX_PLAN_CHECKS` and `MAX_TOOL_CALLS_PER_RUN` cap execution; 201 with terminal `ReviewRun`; `If-Match` pins the model | FR-REQ-06..07 |
 | `GET` | `/sessions/{sid}/reviews/{runId}/events` | SSE stream of progress events | FR-VIS-05 |
 | `GET` | `/sessions/{sid}/reviews/{runId}` ✓ | The published run: status, plan, per-check results, input manifest | — |
 | `GET` | `/sessions/{sid}/findings?run_id=&severity=&rule_id=&storey=` ✓ | Findings of one run in canonical order; `run_id` required, the other filters optional; 400 malformed run id, 404 unknown run | FR-VIS-02 |
+| `POST` | `/sessions/{sid}/reviews/{runId}/findings/{fid}/explanation` ✓ | Return separately labelled, grounded explanation or deterministic fallback; no write to `findings.json` | FR-EXP-02..05 |
+| `GET` | `/llm/budget` ✓ | Safe aggregate application-level ledger status only; no prompts or secrets. 503 when pricing or ledger state is unavailable | NFR-05 |
 | `GET` | `/sessions/{sid}/findings/{fid}` | Finding with evidence and explanation | FR-VIS-04 |
 | `POST` | `/sessions/{sid}/findings/{fid}/explain` | (Re)generate explanation | FR-EXP-02 |
 | `GET` | `/sessions/{sid}/reviews/{runId}/report?format=json\|md` | Report | FR-REP-01 |
@@ -570,12 +581,14 @@ Viewer-specific imports remain inside `frontend/src/viewer/`, and the viewer mod
 
 | Area | Design |
 |---|---|
-| Secrets | `MODEL_API_KEY` from environment only (`.env` is git-ignored; `.env.example` lists names). Never logged; `/health` reports only `llm_configured: true/false`. |
-| Model data privacy | Only Standard-mode model ids permitted by default (NFR-08). Configuration rejects ids ending `-contributor` unless `ALLOW_CONTRIBUTOR_MODELS=true`. The LLM receives summaries, bounded element lists and document text — never the raw IFC file. |
-| Uploads | Extension allow-list (`.ifc`, `.ids`, `.md`, `.txt`, `.pdf`), size limits (`MAX_IFC_MB`, `MAX_DOC_MB`), stored under `data/sessions/{uuid}/models/{sha256}/` with the original hash as the directory name; path traversal impossible because filenames are replaced by fixed names and versions are addressed only by a validated SHA-256. |
-| Least privilege | Tool registry is read-only against the model; no shell, no file-system tools exposed to the LLM. |
-| Network | Outbound calls only to `LLM_BASE_URL`. No telemetry. Server binds to `127.0.0.1` unless explicitly overridden. |
-| Prompt injection | BEP text is untrusted input. Extraction prompts instruct the model to treat document content as data; outputs are validated by schema and verbatim-quote check; nothing in the document can cause a tool call because extraction runs outside the tool loop. |
+| Secrets | `MODEL_API_KEY` is a backend `SecretStr`, loaded only at runtime. `.env` and private configuration remain ignored; `/health`, budget diagnostics, errors and recordings do not expose the key. Live requires `LLM_MODE=live`, the key and `ALLOW_LIVE_LLM=true`. |
+| Model data privacy | Standard-mode ids are accepted by default; `-contributor` is rejected unless explicitly overridden. The model receives summaries, confirmed requirements, narrative source text or evidence for the requested operation — never raw IFC bytes. |
+| Uploads | IFC `.ifc`; IDS `.ids`; narrative `.md` and `.txt` only. Upload size limits use `MAX_IFC_MB` and `MAX_DOC_MB`. Session model paths are fixed and content-addressed. |
+| Least privilege | No model-exposed tools are implemented in T-5; plans contain check IDs only. The model cannot access a file system, shell or arbitrary network. |
+| Network | Only `LiveClient` can call the OpenAI SDK; `LLM_BASE_URL` is restricted to `https://api.meta.ai/v1`. No telemetry. Server binds to `127.0.0.1` unless explicitly overridden. |
+| Prompt injection | BEP/TXT/Markdown content is untrusted. Extraction runs outside a tool loop; output is schema-validated and quoted text/paragraph ids are checked against the stored document. Candidate confirmation is required before execution. |
+| Spending | Persistent, lock-protected application ledger reserves cost before requests and reconciles usage. Default `LLM_MODE=off`, retries zero, at most two live calls per review. These safeguards cannot cap provider account billing; the project owner must separately approve each live test. |
+| Secret scanning | Gitleaks workflow in CI plus repository scripts and a staged pre-commit hook. Scanner output is redacted; one narrowly scoped allowlist covers a known synthetic GlobalId false positive. |
 | Confidential material | `hackathon-private/` is git-ignored; public docs summarise rather than copy it (brief §10). |
 | Dependencies | Pinned in `pyproject.toml` and `package-lock.json`; licence table in README (NFR-15). |
 
@@ -599,11 +612,16 @@ Viewer-specific imports remain inside `frontend/src/viewer/`, and the viewer mod
 | Specification declares an IFC schema the model is not written in | That check's `CheckResult.status="skipped"` with the declared and actual schema in `diagnostics`; the check is not executed and nothing passes by default. *Implemented (T-2).* |
 | Required specification matches no entity | `CheckResult.status="not_applicable"`, `applicable_count=0`, no finding. *Implemented (T-2).* |
 | Confirmed check's stored payload no longer hashes to its `rule_version` | `CheckResult.status="error"` naming the check; it is never executed as a weaker check. *Implemented (T-2).* |
-| LLM unreachable / 401 / 429 / timeout | Planner → default plan; extractor → error surfaced to user, no candidates; explainer → templated explanation with `grounding.status="fallback"`. UI shows degraded banner. Retries: exponential backoff, max 2, only on 429/5xx. |
-| Plan references unknown tool or unconfirmed requirement | Item dropped, logged as `plan_violation`; if plan empty → default plan. |
-| Tool argument schema invalid | Rejected, one corrective re-prompt, then dropped. |
+| Narrative document invalid UTF-8 or empty | 422 response; no narrative document is stored. |
+| Narrative extraction unavailable / malformed output | The extraction endpoint returns a sanitized 503 or rejects the invalid candidate output; it creates no `Requirement`. |
+| LLM unavailable, output invalid, or plan rejected | Planner keeps the deterministic default plan; explanation returns its deterministic template. Retry count defaults to zero. |
+| Plan contains unknown, duplicate, unconfirmed or excess check | The entire proposal is rejected and the deterministic default plan is used; execution still resolves check ids server-side. |
 | `MAX_PLAN_CHECKS` or `MAX_TOOL_CALLS_PER_RUN` reached | Every confirmed check not executed within a cap is recorded as `CheckResult.status="skipped"`; the run ends `partial`, never `completed`. *Implemented (T-4).* |
-| Grounding failure | Regenerate once, then template. Never ship ungrounded prose. |
+| Grounding failure or multi-element finding | AI text is discarded and a deterministic explanation template is returned; explanations are not written to `findings.json`. *Implemented (T-5).* |
+| Live request exceeds a budget or input/output cap | Reject before network access. The persistent ledger prevents concurrent reservations from reusing allowance. |
+| Provider usage is missing | Charge the maximum reservation and fail closed for the request. |
+| Budget ledger is corrupt, unavailable or locked | Live requests and budget-status diagnostics fail closed; no implicit fresh ledger is created over unreadable state. |
+| Live provider error or timeout | SDK retries default to zero; only a sanitized error type is surfaced. A reservation is conservatively charged if usage is unavailable. |
 | IDS or native check exception | That check's `CheckResult.status="error"` with the message in `diagnostics`; no finding is created; later checks continue and the run ends `partial`. *Implemented (T-2/T-4).* |
 | Frontend fails to load IFC | Findings list and report remain usable; viewer shows error and retry. |
 
@@ -613,11 +631,10 @@ All errors are structured (`ProblemDetail`) with `type = https://github.com/natn
 
 ## 15. Observability and diagnostics
 
-- **Structured logging** (JSON lines) with `session_id`, `run_id`, component, event. Default sink: `data/sessions/{sid}/runs/{runId}/run.log.jsonl`.
-- **Run log** (NFR-09): plan, every tool call with arguments and durations, token usage per LLM call (from API `usage`), grounding outcomes, errors.
-- **Cost estimate** per run computed from token usage and configured price table (`LLM_PRICE_INPUT_PER_M`, `LLM_PRICE_OUTPUT_PER_M`), shown in UI and report.
-- **Replay** — the `RecordingClient` stores every LLM request/response pair; `ReplayClient` serves them back, making evaluation runs deterministic and free.
-- **Health endpoint** reports library versions (ifcopenshell, ifctester), configured model id, and LLM reachability (cached, non-billable `GET /v1/models` if available; otherwise configuration presence only).
+- **Budget ledger** (`DATA_DIR/llm/budget.json`) records request ids, run ids, input/output/cached token counts when reported, estimates, actual calculated costs, model and outcome. It stores no prompts or API key. Writes and reservations are lock-protected.
+- **Safe diagnostics** (`GET /api/v1/llm/budget`) expose only project budget, spend, active reservation total, remaining amount and request count. They do not expose prompts, model output or key state.
+- **Replay** — recordings store a request hash rather than raw prompts and a validated/scrubbed response. Recordings live under an ignored runtime path; Replay reads them offline.
+- **Health endpoint** reports configuration presence only; it performs no model network call and never returns `MODEL_API_KEY`.
 - **PROPOSAL:** OpenTelemetry tracing is unnecessary for the MVP; the run log is sufficient and inspectable.
 
 ---
@@ -643,7 +660,7 @@ flowchart LR
 | Agent reliability | recorded live runs, replayed | Plan validity rate, tool-call schema validity, grounding pass rate, token cost per run. |
 | Frontend | Vitest + React Testing Library; Playwright smoke | Findings panel states; viewer loads benchmark and highlights a known GlobalId. |
 
-Live LLM calls in tests are opt-in (`BIMI_LIVE_LLM=1`) and require authorisation (C-06).
+Default pytest and CI must not make live requests. The smoke test is marked `live` and requires both `-m live`, `BIMI_LIVE_LLM=1` and the per-session approval token `BIMI_LIVE_APPROVAL=T5-META-MUSE-SPARK-SMOKE`, plus valid live settings. None of those authorisations has been supplied or exercised for this implementation.
 
 ---
 
@@ -653,10 +670,11 @@ Live LLM calls in tests are opt-in (`BIMI_LIVE_LLM=1`) and require authorisation
 |---|---|
 | IFC indexing time | Single pass over `by_type("IfcProduct")`; psets via `get_psets`; cache `model_index.json`. Target < 60 s for ~50 MB (NFR-04, ASSUMPTION). Geometry excluded from MVP. |
 | Browser rendering | Fragments conversion in worker; large models may need `web-ifc` coordinate-to-origin and LOD settings; benchmark model is small by design. |
-| LLM calls per run | 1 planner + ⌈groups⌉ explanations (grouped by rule × type × storey, FR-EXP-04) ≈ ≤ 10 for the benchmark. |
-| Token budget | Planner input: model summary (~2k tokens) + requirement titles. Explanation input: evidence bundle (~1–3k tokens). Document extraction: full BEP text (simplified BEP ~5–20k tokens). Default budget 150k input tokens/run (NFR-05). |
-| Indicative cost | At published Standard pricing for Muse Spark ($1.25/M input, $4.25/M output), a benchmark run is of the order of a few cents; a BEP extraction a fraction of a cent to a few cents. Figures are indicative from the pricing page and must be re-checked. |
-| Caching | Explanations cached by `(finding_group_hash, prompt_version, model_id)`; re-runs on an unchanged model reuse them. |
+| LLM calls per review | At most two live calls, enforced by the persistent ledger; extraction calls are bounded by the cumulative project budget and per-request caps. No model-directed loop or parallel live call. |
+| Token caps | Input target ≤ 8,000 estimated tokens and output ≤ 500 tokens per request. Input is estimated from UTF-8 bytes plus message overhead; exceeding the target is rejected before the request. |
+| Configured pricing | Muse Spark Standard defaults: $1.25/M uncached input, $0.15/M cached input and $4.25/M output. Recheck [Meta's published pricing](https://dev.meta.ai/docs/pricing-rate-limits) before enabling live mode. Values are configuration, not constants in the accounting engine. |
+| Worst-case request estimate | 8,000 uncached input tokens plus 500 output tokens = **$0.012125**. Default per-call/per-review application limit is $0.10; cumulative project ledger is $5.00. Actual provider usage is reconciled; if usage is missing, the reserved estimate is charged. |
+| Safeguard limitation | The ledger is an application control, not a provider-enforced account cap or billing guarantee. It cannot constrain spend made outside this application or after local runtime data is deliberately removed. No live usage has been measured. |
 
 ---
 

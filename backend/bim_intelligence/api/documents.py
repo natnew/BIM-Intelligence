@@ -6,21 +6,27 @@ Narrative documents (BEP as Markdown, text or PDF) are a later task and will sha
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import PurePosixPath, PureWindowsPath
 
-from fastapi import APIRouter, Depends, File, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
 
 from bim_intelligence.api.deps import get_store
 from bim_intelligence.api.errors import problem_responses
 from bim_intelligence.bim import UnsupportedUploadError
 from bim_intelligence.config import Settings, get_settings
 from bim_intelligence.requirements import import_ids_document
-from bim_intelligence.schemas import DocumentImport
-from bim_intelligence.store import SessionStore, UploadTooLargeError
+from bim_intelligence.schemas import DocumentImport, DocumentKind
+from bim_intelligence.store import (
+    DocumentNotFoundError,
+    SessionStore,
+    StorageError,
+    UploadTooLargeError,
+)
 
 router = APIRouter(tags=["requirements"])
 
-ALLOWED_DOCUMENT_EXTENSIONS: frozenset[str] = frozenset({".ids"})
+ALLOWED_DOCUMENT_EXTENSIONS: frozenset[str] = frozenset({".ids", ".md", ".txt"})
 
 
 @router.post(
@@ -29,14 +35,14 @@ ALLOWED_DOCUMENT_EXTENSIONS: frozenset[str] = frozenset({".ids"})
     response_model=DocumentImport,
     summary="Upload a requirements document",
     description=(
-        "Accepts one IDS 1.0 file (``.ids``) as multipart form data. The document is validated "
-        "against the IDS 1.0 XML Schema, stored byte-for-byte under its SHA-256 and registered "
-        "on the session; every ``<specification>`` becomes a confirmed ``Requirement`` bound to "
-        "an immutable ``CheckSpec``. Uploading the same bytes again returns the requirements "
-        "created the first time with status 200 instead of 201. Invalid or malformed IDS "
-        "content is 422 ``ids-invalid``; other file types are 415; files above ``MAX_DOC_MB`` "
-        "are 413. While an upload or a review holds the session's lock the request is refused "
-        "with 409 ``model-locked``. The client filename is used only for the extension check."
+        "Accepts IDS 1.0 (``.ids``), UTF-8 text (``.txt``) or Markdown (``.md``). IDS is "
+        "validated and its specifications become confirmed requirements. Narrative text is "
+        "stored byte-for-byte as an untrusted source only; it creates no requirements until "
+        "separate interpretation and explicit confirmation. Uploading the same bytes again is "
+        "idempotent. Invalid content is 422, other file types are 415, and files above "
+        "``MAX_DOC_MB`` are 413. While an upload or review holds the session lock, the request "
+        "is refused with 409 ``model-locked``. The client filename is used only for extension "
+        "validation."
     ),
     responses={
         200: {"model": DocumentImport, "description": "Document already imported; unchanged."},
@@ -47,26 +53,67 @@ def upload_document(
     session_id: str,
     request: Request,
     response: Response,
-    file: UploadFile = File(description="The IDS file. Only the .ids extension is accepted."),
+    file: UploadFile = File(description="The requirements document: .ids, .md or .txt."),
     store: SessionStore = Depends(get_store),
     settings: Settings = Depends(get_settings),
 ) -> DocumentImport:
     store.get(session_id)
-    _require_allowed_extension(file.filename)
+    kind = _document_kind(file.filename)
     max_bytes = settings.max_doc_mb * 1024 * 1024
     data = _read_capped(file, max_bytes)
-    result = import_ids_document(store, session_id, data, max_bytes=max_bytes)
-    response.status_code = 201 if result.created else 200
+    if kind == "ids":
+        result = import_ids_document(store, session_id, data, max_bytes=max_bytes)
+        document = result.document
+        created = result.created
+    else:
+        try:
+            text = data.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            raise HTTPException(
+                status_code=422,
+                detail="Narrative requirements documents must be valid UTF-8 text.",
+            ) from None
+        if not text.strip() or "\x00" in text:
+            raise HTTPException(
+                status_code=422,
+                detail="Narrative requirements documents must contain non-empty plain text.",
+            )
+        with store.lock_model(session_id) as lock:
+            expected_hash = hashlib.sha256(data).hexdigest()
+            try:
+                previous = store.read_document(session_id, expected_hash, kind)
+            except DocumentNotFoundError:
+                already_registered = False
+            else:
+                if previous != data:
+                    raise StorageError("Stored narrative document failed integrity check.")
+                already_registered = True
+            document_id = store.add_document(lock, data, kind)
+        document = DocumentImport(
+            sha256=document_id,
+            kind=kind,
+            title="Narrative requirements document",
+            requirements=[],
+        )
+        created = not already_registered
+    response.status_code = 201 if created else 200
     response.headers["Location"] = request.url_for("list_requirements", session_id=session_id).path
-    return result.document
+    return document
 
 
-def _require_allowed_extension(filename: str | None) -> None:
+def _document_kind(filename: str | None) -> DocumentKind:
     if filename is None:
         raise UnsupportedUploadError(filename, ALLOWED_DOCUMENT_EXTENSIONS)
     leaf = PurePosixPath(PureWindowsPath(filename).name).name
-    if PurePosixPath(leaf).suffix.lower() not in ALLOWED_DOCUMENT_EXTENSIONS:
+    extension = PurePosixPath(leaf).suffix.lower()
+    if extension not in ALLOWED_DOCUMENT_EXTENSIONS:
         raise UnsupportedUploadError(filename, ALLOWED_DOCUMENT_EXTENSIONS)
+    kinds: dict[str, DocumentKind] = {
+        ".ids": "ids",
+        ".txt": "text",
+        ".md": "markdown",
+    }
+    return kinds[extension]
 
 
 def _read_capped(upload: UploadFile, max_bytes: int) -> bytes:
