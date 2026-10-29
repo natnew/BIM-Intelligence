@@ -37,6 +37,10 @@ See [ARCHITECTURE.md Appendix A](./docs/ARCHITECTURE.md#appendix-a--recommended-
 - `tests/unit/` mirrors the backend package layout; `tests/scenario/` holds end-to-end tests; small hand-built IFC/IDS fixtures go in `tests/fixtures/`.
 - `tests/evaluation/` holds the metrics runner and LLM recordings; it is not part of the default `pytest` run and may import the backend as a library. Benchmark inputs live in `datasets/` (see its README for the synthetic/permitted policy).
 - `frontend/src/viewer/` is the only place that imports `@thatopen/*`, `web-ifc` or `three`.
+- For any frontend UI change, also read [`frontend/AGENTS.md`](./frontend/AGENTS.md) and
+  [`docs/UI_SPEC.md`](./docs/UI_SPEC.md) before editing. The owner-directed UI reference and
+  iteration records are [`docs/UI_REFERENCES.md`](./docs/UI_REFERENCES.md) and
+  [`docs/UI_CHANGELOG.md`](./docs/UI_CHANGELOG.md).
 - `docs/` holds engineering documentation only. No planning notes, scratch files or meeting logs.
 - `data/` is runtime storage and is git-ignored.
 - `hackathon-private/` is confidential and git-ignored. Never copy its contents into tracked files; summarise.
