@@ -2,7 +2,7 @@
 
 **AI-native architectural BIM model review.** Upload an IFC model and your project's BIM Execution Plan, state what you want reviewed in plain language, and get deterministic, traceable findings — explained in context, highlighted in 3D, and exported as a review report.
 
-> **Development status: implementation in progress.** Verified slices cover domain contracts and a reproducible fixture, IFC ingestion and version-consistent storage, and deterministic IDS import and review. The complete AI-assisted workflow, viewer, native rules, benchmark and reporting are not yet implemented; no benchmark metrics have been measured. See [Development status](#development-status).
+> **Development status: implementation in progress.** Verified slices cover domain contracts and a reproducible fixture, IFC ingestion and version-consistent storage, deterministic IDS import and review, and the T-3 interactive viewer on the minimal fixture. The complete AI-assisted workflow, native rules, benchmark and reporting are not yet implemented; no benchmark metrics have been measured. See [Development status](#development-status).
 
 Built for the Meta Global AI Developer Hackathon (26 October – 4 November 2026) using Meta Muse Spark via the Meta Model API.
 
@@ -53,10 +53,10 @@ A single Python (FastAPI) backend and a single-page TypeScript frontend; no micr
 | LLM | Meta **Muse Spark** (`muse-spark-1.3`) via the **Meta Model API**, called with the OpenAI Python SDK (`base_url=https://api.meta.ai/v1`) | Tool calling, JSON-schema structured output, 1M-token context; Standard mode does not train on submitted content |
 | BIM processing | **IfcOpenShell** 0.9, **IfcTester** 0.9 (IDS 1.0), optional `ifcclash`, `bcf-client` | Reference openBIM tooling, pip-installable |
 | Backend | **Python 3.12**, **FastAPI**, **Pydantic v2**, **pytest** | Typed schemas shared with the frontend; simple async API with SSE progress |
-| Frontend | **React**, **TypeScript**, **Three.js**, **That Open Components** 3.6 (`web-ifc`) | MIT-licensed IFC viewer with Fragments pipeline and highlighting |
+| Frontend | **React**, **TypeScript**, **Three.js**, **That Open Components** 3.6 (`web-ifc`) | Browser-side IFC Fragments viewer with GlobalId selection and deterministic finding highlights |
 | Evaluation | Synthetic benchmark generated with `ifcopenshell.api`, defect injection, replayable LLM recordings | Reproducible precision/recall and grounding metrics without API spend |
 
-Verified versions and sources: [docs/ARCHITECTURE.md — Appendix B](./docs/ARCHITECTURE.md#appendix-b--verified-technology-facts-26-october-2026).
+Verified versions and sources: [docs/ARCHITECTURE.md — Appendix B](./docs/ARCHITECTURE.md#appendix-b--verified-technology-facts-26-october-2026-viewer-packages-checked-29-october-2026).
 
 ## Intended user workflow
 
@@ -72,11 +72,12 @@ Verified versions and sources: [docs/ARCHITECTURE.md — Appendix B](./docs/ARCH
 | Area | Status |
 |---|---|
 | Architecture, requirements, decisions, delivery plan, evaluation design, risks, demo plan | Written — see [docs/](./docs) |
-| Repository skeleton: Python project, FastAPI app with `/api/v1/health`, validated configuration, Vite/React frontend with a health panel, CI | **Done (Day 2)** — no review functionality yet |
+| Repository foundation: Python/FastAPI, Vite/React frontend, health panel and CI | **Done (Day 2)** — end-to-end review and AI-assisted workflows remain in progress |
 | Domain schemas (`Finding`, `CheckSpec`, `Requirement`, `CheckResult`, `ReviewRun`, …), generated TypeScript contract, reproducible minimal IFC/IDS fixture | **Done (Day 2, T-0)** — see [ADR-015](./docs/DECISIONS.md#adr-015-contract-model-immutable-checkspec-content-addressed-finding-per-check-checkresult) |
 | IFC ingestion: session store, read-only IFC loading and Model Index, `sessions` / `model` / `elements` endpoints with RFC 9457 errors | **Done (Day 3, T-1)** — tested on the minimal fixture and in-memory variants only; see [ADR-016](./docs/DECISIONS.md#adr-016-ingestion-contract-staged-upload-content-hash-etag-and-identifier-handling) |
 | Deterministic IDS validation: IDS 1.0 import as confirmed requirements, per-check IfcTester execution, `Finding` / `CheckResult` normalisation, synchronous review run, `documents` / `requirements` / `reviews` / `findings` endpoints | **Done (Day 4, T-2)** — produces the two expected findings on the minimal fixture with byte-identical `findings.json` across runs; see [ADR-018](./docs/DECISIONS.md#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock) |
-| Native rules, BEP requirement extraction, LLM planner and explanations, viewer, report | **Not started** |
+| T-3 viewer: local IFC rendering, GlobalId selection, version-pinned findings and element details | **Verified on the minimal fixture** — see [T-3 evidence](./docs/IMPLEMENTATION_PLAN.md#t-3--interactive-3d-bim-viewer) |
+| Native rules, BEP requirement extraction, LLM planner and explanations, report | **Not started** |
 | Benchmark and measured accuracy | **Not started** — no metrics exist yet |
 | Hackathon rule verification | Outstanding (see [docs/REQUIREMENTS.md — Open items](./docs/REQUIREMENTS.md#7-open-items)) |
 
@@ -227,7 +228,9 @@ Project code is released under the [MIT License](./LICENSE).
 | Dependency | Licence | Note |
 |---|---|---|
 | IfcOpenShell, IfcTester, IfcClash, bcf-client | LGPL-3.0-or-later | Used as installed packages; no source vendored (IfcTester classifier to be confirmed) |
-| That Open Components (`@thatopen/*`), `web-ifc`, Three.js | MIT | |
+| That Open Components (`@thatopen/*`) | MIT | |
+| Three.js | MIT | |
+| `web-ifc` 0.0.77 | MPL-2.0 | Required by the selected IFC viewer stack. This is an exception to the repository's permissive-or-LGPL dependency preference; no source is vendored. Review the [upstream project](https://github.com/ThatOpen/engine_web-ifc) before distributing builds. |
 | FastAPI, Pydantic, React, Vite | MIT | |
 | xmlschema | MIT | Loads IfcTester's bundled IDS 1.0 XSD with remote imports disabled ([ADR-018](./docs/DECISIONS.md#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock)) |
 | buildingSMART IDS schema | See [buildingSMART/IDS](https://github.com/buildingSMART/IDS) | Standard reference only |
