@@ -1,6 +1,6 @@
 # Architectural Decisions
 
-**Status:** v0.3, 29 October 2026. Decisions are numbered and immutable once adopted; superseding decisions reference the original.
+**Status:** v0.4, 29 October 2026. Decisions are numbered and immutable once adopted; superseding decisions reference the original.
 
 Each record states the decision, the alternatives considered, the trade-offs, the evidence relied upon, and anything still unresolved. Evidence URLs were verified on 26 October 2026 unless stated otherwise.
 
@@ -24,6 +24,7 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 | [ADR-016](#adr-016-ingestion-contract-staged-upload-content-hash-etag-and-identifier-handling) | Ingestion contract: staged upload, content-hash ETag and identifier handling | Adopted; §1 superseded by ADR-017 |
 | [ADR-017](#adr-017-content-addressed-model-versions-with-single-pointer-publication) | Content-addressed model versions with single-pointer publication | Adopted |
 | [ADR-018](#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock) | IDS import establishes confirmed requirements; checks are hydrated per run; reviews run under the session lock | Adopted |
+| [ADR-019](#adr-019-t-4-native-rule-scope-and-bounded-deterministic-execution) | T-4 native rule scope and bounded deterministic execution | Adopted |
 
 ---
 
@@ -349,6 +350,25 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 **Evidence.** `tests/unit/validation/` (32), `tests/unit/requirements/` (9), `tests/unit/orchestration/` (19), `tests/unit/store/test_session_store_runs.py` (14), `tests/unit/api/test_documents.py`, `test_reviews.py`, `test_cors.py` (31), `tests/unit/schemas/test_document_import.py` (2); `pytest` 461 passed, `ruff`, `mypy --strict` on `schemas/`, `validation/`, `orchestration/` clean, 29 October 2026, Windows/Python 3.12.12, ifcopenshell 0.9.0.post1, ifctester 0.9.0, xmlschema 4.3.2. On the committed fixture: two confirmed requirements, two `failed` check results, exactly two findings (W-002 `0QWMtUzsnUUONCUGc8Sqsa` for the FireRating specification, W-003 `2qvnbd6oPPKR1ac5HegGTJ` for the classification specification), W-003 outside the first specification's two applicable entities, findings equal to `ifctester.reporter.Json` element for element, three consecutive HTTP runs with identical `findings.json` SHA-256, model version directory byte-identical before and after, an upload attempted from inside a run refused with 409, and no socket opened during compile, hydrate or run.
 
 **Unresolved.** When the review becomes asynchronous (T-3), whether the lock is held for the run or replaced by hash pinning plus a retention rule; whether `POST /documents` should accept a batch; how a later `PATCH /requirements/{rid}` edit of an IDS-origin requirement re-compiles its payload (the current contract makes it `edited`, non-executable, until re-confirmed).
+
+## ADR-019 — T-4 native rule scope and bounded deterministic execution
+
+**Status:** Adopted 29 October 2026 with the T-4 implementation.
+
+**Context.** T-2 already executes IDS 1.0 checks as confirmed, immutable `CheckSpec`s. T-4 must add the minimum P0 native capability without creating duplicate checks for requirements IDS already expresses, and must ensure execution limits or recoverable failures cannot be reported as full coverage.
+
+**Decision.** This ADR supersedes ADR-018's earlier all-checks-execute plan description and its run-status condition where execution caps and `not_applicable` coverage are concerned; model locking, input manifests and atomic publication remain unchanged.
+
+1. Ship only `classification.consistent_by_type` v1.0.0 as a native P0 rule. It compares effective `(system, identification-or-name)` classification references on a classified type and each occurrence, emits a deterministic finding for a mismatch, and reports `not_applicable` when no classified type occurrence exists. Its immutable `CheckSpec` is parameter-free; invalid parameters, rule ids or versions are execution errors.
+2. Keep IDS 1.0 as the implementation for required-property checks, expressible naming patterns, classification presence and classification-system checks. Do not register native duplicates for those checks. Do not implement P1/P2 rules in T-4.
+3. Make the native rule an explicit built-in confirmed requirement through the classification-consistency endpoint. Repeated confirmation is idempotent; the model-version lock protects requirement persistence from an active review.
+4. Build the default plan from confirmed executable requirements, deduplicate by immutable check id and preserve requirement order. Apply `MAX_PLAN_CHECKS` and `MAX_TOOL_CALLS_PER_RUN`; report unexecuted checks as `skipped`, continue after a per-check `error`, and mark any run with `error`, `skipped` or `not_applicable` results `partial`.
+
+**Alternatives.** Implement overlapping native property/classification-presence/naming rules; rejected because IDS 1.0 already expresses them and duplicate execution would create conflicting or repeated findings. Automatically add the native rule to every session; rejected because this is an additional confirmed check and should be explicitly selected. Stop the review after a check error or cap; rejected because later checks should still execute and every omitted check should remain visible in coverage.
+
+**Trade-offs.** The current native registry contains one rule, not a general-purpose plugin system. Its parameter-free contract avoids exposing unverified configuration that could weaken a confirmed requirement. A `partial` run is intentionally conservative: `not_applicable` is not a defect, but it does not demonstrate coverage. Benchmark precision/recall and clean-control results are not available until T-6.
+
+**Evidence.** Native rule positive, mismatch, applicability and invalid-spec tests; explicit confirmation API tests; bounded-plan/error tests; and the LLM-off fixture scenario in `tests/unit/validation/test_native_rules.py`, `tests/unit/api/test_native_requirements.py`, `tests/unit/orchestration/test_review_runner.py` and `tests/scenario/test_deterministic_review.py`. Exact commands and results are recorded in [T-4](./IMPLEMENTATION_PLAN.md#t-4--end-to-end-deterministic-review-workflow).
 
 ---
 

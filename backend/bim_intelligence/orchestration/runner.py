@@ -12,8 +12,10 @@ Lifecycle of :func:`run_review`:
    model hash, the IDS documents, the requirement revisions and the rule versions.
 4. Open the IFC read-only from the version directory and run each planned check through
    ``validation``; a check that errors is recorded and the next one still runs.
-5. Publish ``run.json`` and ``findings.json`` together. The run is ``completed`` when every
-   check executed, ``partial`` when any check ended in ``error``.
+5. Apply ``MAX_PLAN_CHECKS`` and ``MAX_TOOL_CALLS_PER_RUN`` in stable check order. Record
+   unplanned or capped checks as ``skipped``; per-check errors do not stop later checks.
+6. Publish ``run.json`` and ``findings.json`` together. The run is ``partial`` when coverage is
+   incomplete because a check was skipped, errored or not applicable.
 
 The run is synchronous: the caller receives the terminal ``ReviewRun``. No network access, no
 language model, no background task (ADR-013 remains the design for longer runs).
@@ -21,16 +23,19 @@ language model, no background task (ADR-013 remains the design for longer runs).
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from bim_intelligence.bim import load_index
+from bim_intelligence.config import Settings, get_settings
 from bim_intelligence.orchestration.default_plan import default_plan
 from bim_intelligence.schemas import (
     CheckResult,
     Finding,
     InputManifest,
     Requirement,
+    ReviewPlan,
     ReviewRun,
     RunStatus,
     sort_findings,
@@ -44,6 +49,7 @@ from bim_intelligence.store import (
 from bim_intelligence.validation import ValidationTarget
 
 CheckObserver = Callable[[CheckResult], None]
+logger = logging.getLogger(__name__)
 
 
 class NoExecutableChecksError(Exception):
@@ -52,7 +58,7 @@ class NoExecutableChecksError(Exception):
     def __init__(self, session_id: str) -> None:
         super().__init__(
             f"Session {session_id} has no confirmed requirements to review; upload an IDS "
-            "document first."
+            "document or explicitly confirm a registered native check first."
         )
         self.session_id = session_id
 
@@ -71,6 +77,7 @@ def run_review(
     *,
     pinned_model_hash: str | None = None,
     observer: CheckObserver | None = None,
+    settings: Settings | None = None,
 ) -> ReviewOutcome:
     """Run the default plan against the session's active model and publish the result.
 
@@ -78,19 +85,29 @@ def run_review(
     version is refused. ``observer`` is called with each ``CheckResult`` as it is produced (used
     for logging and, in tests, to exercise the lock while the run is in progress).
     """
+    settings = settings or get_settings()
     with store.lock_model(session_id):
         version = store.active_model(session_id)
         if pinned_model_hash is not None and pinned_model_hash != version.sha256:
             raise ModelVersionMismatchError(session_id, pinned_model_hash, version.sha256)
-        plan, by_check = default_plan(store.read_requirements(session_id))
-        if not plan.checks:
+        full_plan, by_check = default_plan(store.read_requirements(session_id))
+        ordered_checks = list(by_check.items())
+        if not ordered_checks:
             raise NoExecutableChecksError(session_id)
-        attributed = list(by_check.values())
+        planned_count = min(len(ordered_checks), settings.max_plan_checks)
+        plan = ReviewPlan(checks=full_plan.checks[:planned_count])
+        attributed = [requirement for _, requirement in ordered_checks]
         manifest = _manifest(store, session_id, version, attributed)
 
         created_at = store.now()
         with ValidationTarget.open(version.path_for(MODEL_FILE), load_index(version)) as target:
-            results, findings = _execute(target, attributed, observer)
+            results, findings = _execute(
+                target,
+                ordered_checks,
+                planned_count=planned_count,
+                max_tool_calls=settings.max_tool_calls_per_run,
+                observer=observer,
+            )
         findings = sort_findings(findings)
 
         run = ReviewRun(
@@ -109,17 +126,63 @@ def run_review(
 
 
 def _execute(
-    target: ValidationTarget, requirements: Sequence[Requirement], observer: CheckObserver | None
+    target: ValidationTarget,
+    checks: Sequence[tuple[str, Requirement]],
+    *,
+    planned_count: int,
+    max_tool_calls: int,
+    observer: CheckObserver | None,
 ) -> tuple[list[CheckResult], list[Finding]]:
     results: list[CheckResult] = []
     findings: list[Finding] = []
-    for requirement in requirements:
-        outcome = target.run(requirement.check, requirement_id=requirement.id)
-        results.append(outcome.result)
-        findings.extend(outcome.findings)
+    tool_calls = 0
+    for position, (check_id, requirement) in enumerate(checks):
+        if position >= planned_count:
+            result = _skipped(
+                check_id,
+                requirement.id,
+                f"Skipped because MAX_PLAN_CHECKS={planned_count} was reached.",
+            )
+        elif tool_calls >= max_tool_calls:
+            result = _skipped(
+                check_id,
+                requirement.id,
+                f"Skipped because MAX_TOOL_CALLS_PER_RUN={max_tool_calls} was reached.",
+            )
+        else:
+            tool_calls += 1
+            try:
+                outcome = target.run(requirement.check, requirement_id=requirement.id)
+            except Exception as exc:
+                logger.exception(
+                    "check %s (%s) raised during deterministic execution",
+                    check_id,
+                    requirement.id,
+                )
+                result = CheckResult(
+                    check_id=check_id,
+                    requirement_id=requirement.id,
+                    status="error",
+                    applicable_count=0,
+                    diagnostics=[f"{type(exc).__name__}: {exc}"],
+                )
+            else:
+                result = outcome.result
+                findings.extend(outcome.findings)
+        results.append(result)
         if observer is not None:
-            observer(outcome.result)
+            observer(result)
     return results, findings
+
+
+def _skipped(check_id: str, requirement_id: str, diagnostic: str) -> CheckResult:
+    return CheckResult(
+        check_id=check_id,
+        requirement_id=requirement_id,
+        status="skipped",
+        applicable_count=0,
+        diagnostics=[diagnostic],
+    )
 
 
 def _manifest(
@@ -138,4 +201,8 @@ def _manifest(
 
 
 def _run_status(results: Sequence[CheckResult]) -> RunStatus:
-    return "partial" if any(result.status == "error" for result in results) else "completed"
+    return (
+        "partial"
+        if any(result.status in {"error", "skipped", "not_applicable"} for result in results)
+        else "completed"
+    )

@@ -65,6 +65,10 @@ class ValidationTarget:
         return str(self._require_model().schema_identifier)
 
     def run(self, check: CheckSpec, *, requirement_id: str) -> CheckOutcome:
+        if check.kind == "native":
+            from bim_intelligence.validation.native_rules import run_native_check
+
+            return run_native_check(self._index, check, requirement_id=requirement_id)
         return run_ids_check(
             self._require_model(), self._index, check, requirement_id=requirement_id
         )

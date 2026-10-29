@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from './client';
-import { fetchElement, loadModel, loadReviewWorkspace } from './bim';
+import { fetchElement, loadModel, loadReviewWorkspace, startStandardReview } from './bim';
 
 const modelHash = 'a'.repeat(64);
 const etag = `"${modelHash}"`;
@@ -56,6 +56,36 @@ afterEach(() => {
 });
 
 describe('version-aware BIM API requests', () => {
+  it('starts a standard review against the summary version and validates the session', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json(modelSummary, { headers: { ETag: etag } }))
+      .mockResolvedValueOnce(Response.json(reviewRun));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(startStandardReview('session-id')).resolves.toEqual(reviewRun);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('/sessions/session-id/reviews'),
+      expect.objectContaining({ method: 'POST', headers: { 'If-Match': etag } }),
+    );
+  });
+
+  it('rejects a standard-review response for another session', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(Response.json(modelSummary, { headers: { ETag: etag } }))
+        .mockResolvedValueOnce(Response.json({ ...reviewRun, session_id: 'other-session' })),
+    );
+
+    await expect(startStandardReview('session-id')).rejects.toMatchObject({
+      message: 'The started review does not match the requested session.',
+    });
+  });
+
   it('pins model bytes to the summary ETag and rechecks the active version', async () => {
     const fetchMock = vi
       .fn()

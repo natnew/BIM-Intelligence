@@ -16,6 +16,14 @@ from bim_intelligence.validation.ids_compiler import (
     ids_schema,
 )
 from bim_intelligence.validation.ids_runner import CheckOutcome, ValidationTarget, run_ids_check
+from bim_intelligence.validation.native_rules import (
+    CLASSIFICATION_CONSISTENCY_RULE_ID,
+    CLASSIFICATION_CONSISTENCY_RULE_VERSION,
+    CLASSIFICATION_CONSISTENCY_STATEMENT,
+    CLASSIFICATION_CONSISTENCY_TITLE,
+    classification_consistency_check,
+    run_native_check,
+)
 from bim_intelligence.validation.normaliser import (
     PROHIBITED_ENTITY_CATEGORY,
     facet_category,
@@ -23,6 +31,10 @@ from bim_intelligence.validation.normaliser import (
 )
 
 __all__ = [
+    "CLASSIFICATION_CONSISTENCY_RULE_ID",
+    "CLASSIFICATION_CONSISTENCY_RULE_VERSION",
+    "CLASSIFICATION_CONSISTENCY_STATEMENT",
+    "CLASSIFICATION_CONSISTENCY_TITLE",
     "IDS_NAMESPACE",
     "IDS_VERSION",
     "PROHIBITED_ENTITY_CATEGORY",
@@ -34,10 +46,12 @@ __all__ = [
     "InvalidIdsError",
     "ValidationTarget",
     "canonical_specification_xml",
+    "classification_consistency_check",
     "compile_ids",
     "facet_category",
     "hydrate_specification",
     "ids_schema",
     "normalise_specification",
     "run_ids_check",
+    "run_native_check",
 ]
