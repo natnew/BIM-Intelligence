@@ -220,7 +220,11 @@ The live command is an exact one-request smoke test, not general authorisation. 
 | [docs/EVALUATION.md](./docs/EVALUATION.md) | Benchmark design, metrics, reproduction |
 | [docs/RISKS.md](./docs/RISKS.md) | Risk register |
 | [docs/DEMO_PLAN.md](./docs/DEMO_PLAN.md) | Three-minute demo storyline and fallbacks |
+| [docs/UI_SPEC.md](./docs/UI_SPEC.md) | Owner-directed UI specification, protected behaviour and visual verification process |
+| [docs/UI_REFERENCES.md](./docs/UI_REFERENCES.md) | Owner-supplied UI reference and feedback register |
+| [docs/UI_CHANGELOG.md](./docs/UI_CHANGELOG.md) | Append-only UI iteration decisions and evidence |
 | [AGENTS.md](./AGENTS.md) | Engineering rules for human and AI contributors |
+| [frontend/AGENTS.md](./frontend/AGENTS.md) | Mandatory guardrails for AI agents changing frontend UI |
 
 ## Hackathon context
 

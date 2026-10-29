@@ -4,6 +4,14 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### T-7 — Owner-directed UI design governance framework
+
+- Establish [`docs/UI_SPEC.md`](./docs/UI_SPEC.md) as the evolving UI specification, separating verified behaviour, provisional design principles, owner-approved decisions and open questions without prescribing a new visual style.
+- Add [`docs/UI_REFERENCES.md`](./docs/UI_REFERENCES.md) and [`docs/UI_CHANGELOG.md`](./docs/UI_CHANGELOG.md) for owner-supplied references, approval feedback and append-only iteration evidence. Third-party screenshots are to remain in private local storage unless redistribution rights are established.
+- Add [`frontend/AGENTS.md`](./frontend/AGENTS.md) with mandatory owner-approval, scope, functional-regression, accessibility, testing, diff-review and no-commit/push/merge guardrails; link the frontend rules from the root [`AGENTS.md`](./AGENTS.md).
+- Document a repeatable visual verification, frontend regression and safe rollback process; use existing frontend commands and do not add browser automation dependencies.
+- Update the T-7 register and README documentation index. T-7 remains in progress; this framework introduces no visual redesign, no UI-001 scope, and no application behaviour changes.
+
 ### T-6 — Benchmark and Evaluation
 
 - Add a deterministic IFC4 benchmark generator with a clean model, defective model, versioned injection manifest, independently checked ground truth, matching IDS, synthetic BEP and objective examples. Keep generated IFC/results ignored and leave the existing minimal fixtures untouched.
