@@ -4,6 +4,22 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### T-7 / M3 — UI-002 Concept C v2 prototype
+
+- Refine UI-001 Concept C as an isolated synthetic-only HTML prototype with a dominant model
+  viewport, proposed project hierarchy, collapsible finding register and separate evidence/AI
+  inspector. Add nine Chrome 156.0.8078.76 screenshots covering model-loaded, finding-selected and
+  element-selected states at 1920×1080, 1440×900 and 390×844; outputs remain ignored under
+  `local-private/ui-prototypes/ui-002/`.
+- One bounded responsive pass replaced the narrow finding table with cards, reduced narrow toolbar
+  density, enlarged small evidence text and added native disclosures. Browser checks verified the
+  static states/disclosures and no horizontal document overflow at the narrow viewport; no
+  production tests or React/viewer changes were made.
+- Reference screenshots remain unprocessed under the prior synthetic-only decision; no
+  image-derived influence is claimed. UI-002 is proposed pending owner review; UI-003 scope is a
+  proposal only. No commit, push or merge is authorised. See
+  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md).
+
 ### T-7 / M3 — UI-001 review-workspace concept study
 
 - Produce three owner-reviewable, static workspace prototypes with a shared synthetic IFC-review
