@@ -1,27 +1,44 @@
-import { HealthPanel } from './components/HealthPanel';
+import { AppHeader } from './components/AppHeader';
 import { ModelWorkspace } from './components/ModelWorkspace';
+import { ProjectHome } from './components/ProjectHome';
+import { useAppLocation } from './state/useAppLocation';
 
 export function App() {
-  const search = new URLSearchParams(window.location.search);
-  const initialSessionId = search.get('session_id') ?? '';
-  const initialRunId = search.get('run_id') ?? '';
+  const [location, navigate] = useAppLocation();
+
+  if (location.kind === 'workspace') {
+    return (
+      <ModelWorkspace
+        key={`${location.sessionId}:${location.runId ?? ''}`}
+        sessionId={location.sessionId}
+        initialRunId={location.runId}
+        onRunChanged={(runId) =>
+          // Keep the URL shareable without remounting the workspace for the run it just produced.
+          window.history.replaceState(
+            null,
+            '',
+            `${window.location.pathname}?${new URLSearchParams({ session_id: location.sessionId, run_id: runId }).toString()}`,
+          )
+        }
+        onReturnHome={() => navigate({ kind: 'home' })}
+      />
+    );
+  }
 
   return (
-    <main className="app">
-      <header className="app__header">
-        <h1>BIM Intelligence</h1>
-        <p className="app__tagline">
-          Explore an IFC model and inspect deterministic review evidence by GlobalId.
-        </p>
-      </header>
-      <section aria-labelledby="status-heading" className="app__section app__section--status">
-        <h2 id="status-heading">Backend status</h2>
-        <HealthPanel />
-      </section>
-      <ModelWorkspace initialSessionId={initialSessionId} initialRunId={initialRunId} />
-      <footer className="app__footer">
-        <p>IFC files remain read-only. The viewer uses local WASM and worker assets.</p>
-      </footer>
-    </main>
+    <div className="app-shell">
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
+      <AppHeader
+        view="home"
+        sessionId={null}
+        onNavigateHome={() => undefined}
+        onNavigateWorkspace={null}
+      />
+      <ProjectHome
+        onOpenWorkspace={(sessionId, runId) => navigate({ kind: 'workspace', sessionId, runId })}
+      />
+    </div>
   );
 }

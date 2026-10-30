@@ -4,6 +4,33 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### T-7 / M3 — UI-003 production Project Home and review workspace
+
+- Replace the bare frontend entry page with a Project Home that creates a session
+  (`POST /sessions`), uploads one `.ifc` model and `.ids`/`.md`/`.txt` requirement documents
+  through the existing endpoints with explicit uploading/indexed/rejected states, and opens the
+  review workspace. Existing sessions can be opened by id; recent sessions and sample projects are
+  shown as unavailable because no API supports them.
+- Rebuild the review workspace on the owner-approved Concept C v2 direction: application header,
+  review bar, model information panel (from `ModelSummary`), dominant `ViewerCanvas` viewport with
+  truthful navigation hints, findings register with client-side search/severity filter, review
+  coverage, and an evidence inspector that traces Finding → Requirement/check/rule version →
+  GlobalId → `ElementRecord`. States for loading, running, completed/partial/failed runs, review
+  errors, model-version mismatch (typed `ModelVersionMismatchError`), no executable requirements
+  and empty findings are represented explicitly; zero findings are never presented as compliance.
+- API client gains `createSession`, `fetchSession`, `uploadModel`, `uploadDocument`,
+  `fetchRequirements`, upload-extension classification and `isExecutableRequirement`; version-aware
+  reads are unchanged. View state lives in the query string (`session_id`, `run_id`); nothing is
+  stored client-side.
+- Frontend tests grow from 18 to 54 (API client, Project Home/setup, workspace states and
+  selection coordination, app routing, source hygiene). A live browser walkthrough on the synthetic
+  fixture (create → upload IFC/IDS → render → orbit/pan/zoom → run review → finding ↔ element →
+  return home) and 1920×1080 / 1440×900 / 390×844 captures are recorded in
+  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md). Backend, viewer (`IfcViewer.ts`, `ViewerCanvas.tsx`),
+  generated types, schemas, fixtures, dependencies and CI are unchanged. Viewer camera/visibility
+  controls, model tree, AI explanation panel and session catalogue are deferred to UI-004. Owner
+  review and merge remain pending. T-7 and M3 remain in progress.
+
 ### T-7 / M3 — UI-002 Revision 2 Project Home and desktop workspace prototype
 
 - Extend the isolated UI-002 design prototype with a Project Home concept (new project, quick

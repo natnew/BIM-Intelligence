@@ -1,7 +1,20 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from './client';
-import { fetchElement, loadModel, loadReviewWorkspace, startStandardReview } from './bim';
+import {
+  classifyUploadFile,
+  createSession,
+  fetchElement,
+  fetchRequirements,
+  fetchSession,
+  isExecutableRequirement,
+  loadModel,
+  loadReviewWorkspace,
+  ModelVersionMismatchError,
+  startStandardReview,
+  uploadDocument,
+  uploadModel,
+} from './bim';
 
 const modelHash = 'a'.repeat(64);
 const etag = `"${modelHash}"`;
@@ -200,9 +213,212 @@ describe('version-aware BIM API requests', () => {
       .mockResolvedValueOnce(Response.json(staleRun));
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(loadReviewWorkspace('session-id', 'run-id')).rejects.toMatchObject({
+    const error: unknown = await loadReviewWorkspace('session-id', 'run-id').catch(
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(ModelVersionMismatchError);
+    expect(error).toMatchObject({
       message: 'This review run belongs to a different model version.',
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('starts the deterministic review without an objective body (no Meta API involvement)', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json(modelSummary, { headers: { ETag: etag } }))
+      .mockResolvedValueOnce(Response.json(reviewRun));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await startStandardReview('session-id');
+
+    const [, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(init.method).toBe('POST');
+    expect(init.body).toBeUndefined();
+  });
+});
+
+describe('session and upload requests', () => {
+  const session = {
+    id: 'session-id',
+    status: 'created' as const,
+    model_hash: null,
+    document_hashes: [],
+    created_at: '2026-10-30T00:00:00Z',
+  };
+
+  it('creates a session with POST /sessions', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(Response.json(session, { status: 201 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(createSession()).resolves.toEqual(session);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/sessions$/),
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('rejects a session response for another id', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(Response.json(session)));
+
+    await expect(fetchSession('other-id')).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('uploads an IFC as multipart form data to the model endpoint and returns its version', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json(modelSummary, { status: 201, headers: { ETag: etag } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const file = new File(['ISO-10303-21;'], 'minimal.ifc');
+
+    const result = await uploadModel('session-id', file);
+
+    expect(result.etag).toBe(etag);
+    expect(result.summary.model_hash).toBe(modelHash);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/sessions\/session-id\/model$/);
+    expect(init.method).toBe('POST');
+    expect(init.body).toBeInstanceOf(FormData);
+    expect((init.body as FormData).get('file')).toBeInstanceOf(File);
+  });
+
+  it('rejects a non-IFC model upload before any request is made', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(uploadModel('session-id', new File(['x'], 'model.rvt'))).rejects.toBeInstanceOf(
+      ApiError,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects an uploaded model whose ETag does not name its hash', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(Response.json(modelSummary, { headers: { ETag: '"different"' } })),
+    );
+
+    await expect(uploadModel('session-id', new File(['x'], 'minimal.ifc'))).rejects.toMatchObject({
+      message: 'The uploaded model returned an invalid version ETag.',
+    });
+  });
+
+  it('uploads each accepted requirements document type to the documents endpoint', async () => {
+    for (const name of ['minimal.ids', 'brief.md', 'notes.TXT']) {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(
+          Response.json(
+            { sha256: 'b'.repeat(64), kind: 'ids', title: 'Doc', requirements: [] },
+            { status: 201 },
+          ),
+        );
+      vi.stubGlobal('fetch', fetchMock);
+
+      await uploadDocument('session-id', new File(['x'], name));
+
+      const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect(url).toMatch(/\/sessions\/session-id\/documents$/);
+      expect(init.method).toBe('POST');
+      expect(init.body).toBeInstanceOf(FormData);
+    }
+  });
+
+  it('rejects unsupported requirement documents such as PDF before any request', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(uploadDocument('session-id', new File(['x'], 'brief.pdf'))).rejects.toMatchObject({
+      message: 'Only .ids, .md, .txt files can be uploaded as requirements.',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('surfaces backend problem details for a rejected upload', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          Response.json(
+            { title: 'Unsupported Media Type', detail: 'Only .ifc files are accepted.' },
+            { status: 415 },
+          ),
+        ),
+    );
+
+    await expect(uploadModel('session-id', new File(['x'], 'minimal.ifc'))).rejects.toMatchObject({
+      message: 'Only .ifc files are accepted.',
+      status: 415,
+    });
+  });
+
+  it('lists session requirements', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(Response.json([]));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(fetchRequirements('session-id')).resolves.toEqual([]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/sessions\/session-id\/requirements$/),
+      expect.any(Object),
+    );
+  });
+
+  it('maps a 412 response to a model-version mismatch error', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          Response.json({ title: 'Precondition failed', detail: 'Stale.' }, { status: 412 }),
+        ),
+    );
+
+    await expect(fetchElement('session-id', 'gid', etag)).rejects.toBeInstanceOf(
+      ModelVersionMismatchError,
+    );
+  });
+});
+
+describe('upload classification and requirement execution rules', () => {
+  it('classifies filenames by the backend-accepted extensions only', () => {
+    expect(classifyUploadFile('model.ifc')).toBe('model');
+    expect(classifyUploadFile('C:\\models\\MODEL.IFC')).toBe('model');
+    expect(classifyUploadFile('spec.ids')).toBe('ids');
+    expect(classifyUploadFile('brief.md')).toBe('narrative');
+    expect(classifyUploadFile('brief.txt')).toBe('narrative');
+    expect(classifyUploadFile('model.rvt')).toBeNull();
+    expect(classifyUploadFile('model.nwd')).toBeNull();
+    expect(classifyUploadFile('brief.pdf')).toBeNull();
+    expect(classifyUploadFile('.ifc')).toBeNull();
+    expect(classifyUploadFile('noextension')).toBeNull();
+  });
+
+  it('treats a requirement as executable only when its confirmed revision is current', () => {
+    const base = {
+      id: 'REQ-1',
+      title: 'T',
+      statement: 'S',
+      origin: 'ids' as const,
+      status: 'confirmed' as const,
+      confidence: null,
+      confirmed_at: null,
+      confirmed_by: null,
+      source: null,
+      check: {
+        id: 'c',
+        kind: 'ids' as const,
+        rule_id: 'ids:x',
+        rule_version: 'v',
+        params: {},
+        ids_specification: null,
+      },
+    };
+    expect(isExecutableRequirement({ ...base, revision: 1, confirmed_revision: 1 })).toBe(true);
+    expect(isExecutableRequirement({ ...base, revision: 2, confirmed_revision: 1 })).toBe(false);
+    expect(isExecutableRequirement({ ...base, revision: 1, confirmed_revision: null })).toBe(false);
   });
 });

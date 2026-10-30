@@ -516,7 +516,7 @@ Base path `/api/v1`. JSON everywhere; errors follow a single `ProblemDetail` sch
 
 **Authentication.** None in the MVP (localhost only). The API must refuse to start bound to a non-loopback interface unless `ALLOW_REMOTE=true` is set, to prevent accidental exposure of uploaded project files.
 
-The T-3 workspace can now initiate `Run standard review` for its entered session id. It first reads the model summary, sends its ETag as `If-Match`, then loads the returned run and findings through the existing version-pinned endpoints. The workspace shows the run status and per-check outcomes, including diagnostics for skipped, not-applicable and error checks.
+The review workspace can initiate a review (the **Run review** action; introduced in T-4 as "Run standard review") for its session. It first reads the model summary, sends its ETag as `If-Match`, then loads the returned run and findings through the existing version-pinned endpoints. The workspace shows the run status and per-check outcomes, including diagnostics for skipped, not-applicable and error checks.
 
 ---
 
@@ -567,7 +567,7 @@ Every panel renders loading, empty, error and success states. Degraded mode (LLM
 
 ### 12.3 T-3 viewer and T-4 review entry point
 
-The T-3 workspace uses the existing model, review-run, findings and element endpoints. T-4 adds a **Run standard review** action: it reads the model summary, sends its ETag as `If-Match` to the review endpoint, then loads that returned run and findings through the existing version-aware client. A review run is accepted only when its session and immutable `input_manifest.model_hash` match the active model summary. The model file and subsequent element lookups use that summary's `If-Match` ETag, and the summary is rechecked after loading the model and findings. A mismatch fails visibly instead of combining data from different model versions.
+The T-3 workspace uses the existing model, review-run, findings and element endpoints. T-4 adds a **Run standard review** action (labelled **Run review** since UI-003, which also replaced manual session/run-id entry with a Project Home that creates sessions and uploads models and documents through the existing endpoints): it reads the model summary, sends its ETag as `If-Match` to the review endpoint, then loads that returned run and findings through the existing version-aware client. A review run is accepted only when its session and immutable `input_manifest.model_hash` match the active model summary. The model file and subsequent element lookups use that summary's `If-Match` ETag, and the summary is rechecked after loading the model and findings. A mismatch fails visibly instead of combining data from different model versions.
 
 The findings list highlights the finding's affected GlobalIds with a dedicated deterministic viewer style. Selecting a rendered object resolves its GlobalId, loads that element's record and selects the first matching finding in the API's canonical order. Element details show identity, storey and a bounded property list with inherited-value provenance. Empty findings, loading, API/version errors and viewer-load errors are exposed in the interface.
 
