@@ -1,6 +1,7 @@
 # BIM Intelligence UI Specification
 
-**Status:** Governance baseline; no visual redesign is approved by this document.
+**Status:** Governance baseline; the owner-approved UI-002 Revision 2 visual direction is recorded
+in §13. No production redesign or functional implementation is approved by this document.
 **Scope:** Owner-directed interface refinement under T-7, contributing to M3.
 **Authority:** The project owner approves visual decisions. This document records verified
 behaviour, provisional design principles, approved decisions and unresolved questions separately.
@@ -35,7 +36,7 @@ The labels below apply throughout this document:
 2. **Provisional design principles** — constraints and workflow aims for discussion. They do not
    specify an approved visual style, layout or interaction.
 3. **Owner-approved design decisions** — only decisions explicitly approved by the project owner
-   may appear here. None are recorded yet.
+   may appear in §13. Prototype permission does not approve production implementation.
 4. **Ideas requiring further discussion** — unresolved visual, interaction and presentation choices.
 
 Current code and CSS are evidence of the implementation, not evidence that its appearance is final.
@@ -75,10 +76,13 @@ The product-level workflow described by the project documents is:
 5. Triage findings in relation to model elements and inspect deterministic evidence.
 6. Produce a traceable report with provenance.
 
-The current frontend does not provide model/document upload, requirement-candidate confirmation,
-objective planning, AI explanation panels, live progress streaming or report export. These are
-planned capabilities, not existing screens. Their design and sequencing remain subject to owner
-direction and implementation acceptance criteria.
+Backend endpoints currently create an unnamed review session, accept an `.ifc` model and accept
+`.ids`, `.md` or `.txt` requirement material. The frontend does not expose session creation, model
+or document upload, requirement-candidate confirmation, objective planning, an AI explanation
+panel, live progress streaming or report export. IDS specifications are validated as confirmed
+requirements; Markdown and text are stored as untrusted source material and do not create
+requirements until separate interpretation and explicit confirmation. Endpoint capability does not
+make a UI flow available; further work remains subject to implementation approval.
 
 ## 4. Navigation and workspace information hierarchy
 
@@ -88,6 +92,13 @@ The current application is a single page with a product heading and backend heal
 by the model review workspace. Within that workspace, the session/run form precedes the model
 summary and viewer; a findings and element-details panel sits alongside the viewer on wider screens.
 On narrow screens the model and review panel stack vertically.
+
+### Owner-approved direction — UI-002 Revision 2
+
+The approved Concept C v2 direction retains its restrained professional styling and colour palette,
+while evolving to a desktop-first product with a Project Home and a dominant model viewport. The
+static screens in the local UI-002 prototype demonstrate that direction only; they do not establish
+production routes, a project catalogue, working upload controls or a persistent project model.
 
 ### Provisional design principles
 
@@ -102,8 +113,8 @@ On narrow screens the model and review panel stack vertically.
 
 ### Ideas requiring further discussion
 
-- Whether the application needs persistent navigation, workspace tabs, a project-level landing
-  view or a single review workspace.
+- How the owner wants production navigation, project persistence and session-history behaviour
+  implemented; the proposed Project Home visual hierarchy is recorded in §13.
 - The priority and grouping of review setup, model context, findings and evidence.
 - How project, session, model version and review-run identity should appear.
 - Whether panel size, position or visibility should be adjustable.
@@ -132,6 +143,8 @@ On narrow screens the model and review panel stack vertically.
 - Make viewer loading, empty-geometry and error states distinguishable from a successfully loaded
   model.
 - Preserve IFC read-only handling and the existing model-version consistency contract.
+- Keep orientation, view presets, category visibility, hide/show/isolate and element-focus controls
+  marked as proposed until their viewer and data interfaces exist.
 
 ### Ideas requiring further discussion
 
@@ -139,6 +152,15 @@ On narrow screens the model and review panel stack vertically.
   navigation affordances.
 - How the viewport adapts to small screens and how users inspect the model without a pointer.
 - Whether the current viewer background, highlight colour and camera framing remain appropriate.
+
+### Proposed model browser and visibility scope
+
+The UI-002 Revision 2 prototype shows a proposed hierarchy of storeys and IFC categories, plus
+visibility, hide, show-all and isolate affordances. These are not existing application features.
+The current model summary exposes storeys and counts per IFC class, not a complete element
+hierarchy; the frontend has no category-visibility interface, and viewer camera controls are
+internal to the viewer. A working browser or visibility controls require a separately approved
+functional scope and focused viewer/data acceptance criteria.
 
 ## 6. Issue register and finding detail
 
@@ -164,6 +186,14 @@ explicit empty state appears when a review returns no findings.
 - How severity, check outcome and any future finding lifecycle status should be distinguished.
 - Whether finding details should be inline, in a side panel, or presented another way.
 
+### Finding domains
+
+The prototype labels the current synthetic examples as information-quality findings and explicitly
+marks geometric clash detection as unavailable. The reviewed implementation and task register
+provide no geometric clash engine or clash results. Information-quality checks and any future
+geometric clash workflow must remain separate in the interface; no clash result, coverage or
+capability may be implied until an implementation and evidence source are approved.
+
 ## 7. Element properties and evidence
 
 ### Existing verified behaviour
@@ -174,7 +204,10 @@ also contains other indexed information, but the current frontend does not displ
 
 Finding evidence currently includes observed and expected text, requirement ID, rule ID/version,
 method, affected element references and severity/category from the generated API contract. The
-current frontend does not display a source requirement quotation or AI explanation.
+current frontend does not display a source requirement quotation or fetch/present an AI
+explanation. The backend has an explanation endpoint, but the current frontend review data contract
+does not include an explanation. The UI-002 prototype's explanation copy is wholly synthetic,
+illustrative and disconnected from that endpoint.
 
 ### Provisional design principles
 
@@ -232,9 +265,10 @@ No export format or layout is approved by this specification.
 
 ## 10. Design tokens and states
 
-The values below are a snapshot of the existing `frontend/src/index.css`, included to make the
-starting point inspectable. They are **not a target palette, a recommended design system or
-owner-approved tokens**. A future iteration may change them only when its approved scope says so.
+The first table is a snapshot of the existing `frontend/src/index.css`, included to make the
+starting point inspectable. These application CSS values are not the approved concept palette.
+The owner-approved UI-002 Revision 2 direction retains the separate Concept C v2 prototype palette
+below; this does not change `frontend/src/index.css` or approve production token implementation.
 
 | Existing CSS token or rule                  | Current value                                           | Status                       |
 | ------------------------------------------- | ------------------------------------------------------- | ---------------------------- |
@@ -250,6 +284,26 @@ owner-approved tokens**. A future iteration may change them only when its approv
 | Font family                                 | System UI stack; monospace stack for `code`             | Existing implementation only |
 | Spacing and sizing                          | Primarily literal `rem` values; no shared spacing scale | Existing implementation only |
 
+### Owner-approved Concept C v2 palette
+
+These are the prototype's CSS values retained by the UI-002 Revision 2 approval. They describe the
+visual direction, not production CSS tokens or accessibility certification.
+
+| Prototype token | Value | Role |
+|---|---|---|
+| `--ink` / `--ink-strong` | `#1b2b36` / `#10232e` | Primary and highest-emphasis text |
+| `--muted` / `--line` | `#64737d` / `#d7dfe3` | Supporting text and panel boundaries |
+| `--paper` / `--surface` | `#f2f5f6` / `#ffffff` | Workspace canvas and cards |
+| `--navy` / `--navy-deep` | `#183541` / `#142a35` | Primary actions and dark shell accents |
+| `--teal` / `--teal-soft` | `#167c79` / `#e2f2ef` | Selection and primary accent |
+| `--amber` / `--amber-soft` | `#be7718` / `#fff2dc` | Warning and high-severity state |
+| `--red` / `--red-soft` | `#b44943` / `#f9e9e7` | Error state |
+| `--green` / `--green-soft` | `#2f795a` / `#e5f1e9` | Positive state |
+| `--blue` / `--blue-soft` | `#2876a2` / `#e8f2f8` | Model-element selection |
+
+Typography, spacing, sizes, borders, motion and component implementation remain subject to a
+separate production iteration and accessibility review.
+
 ### Verified component states
 
 The health panel and review workspace expose loading, error, empty and data-bearing states; the
@@ -259,10 +313,10 @@ keyboard or assistive-technology outcome has been audited.
 
 ### Provisional token principles
 
-If the owner approves a token change, record semantic intent and affected states in the iteration
-entry. Verify readable contrast, focus visibility and consistency across affected components.
-Typography families, scales, spacing, sizing, radii, elevation, motion and state colours remain
-open for owner input; this document assigns no new values.
+The Concept C v2 prototype palette is owner-approved for this visual direction only. Production
+token mapping still needs a separately approved implementation scope. Record semantic intent and
+affected states in the iteration entry and verify readable contrast, focus visibility and
+consistency. Typography, scales, spacing, sizing, radii, elevation and motion remain open.
 
 ## 11. Responsive layout and accessibility
 
@@ -282,6 +336,8 @@ requires explicit verification.
 
 - Keep information usable at narrow widths and browser zoom without requiring hidden pointer-only
   interactions.
+- Use a desktop-first composition for design review, retaining a deliberate narrow adaptation
+  rather than shrinking a dense desktop workspace or clipping panels.
 - Preserve semantic headings, labels, lists, descriptions and status announcements.
 - Maintain visible keyboard focus and readable text/background contrast.
 - Provide an accessible way to understand and operate any interaction introduced by an iteration;
@@ -289,7 +345,8 @@ requires explicit verification.
 
 ### Ideas requiring further discussion
 
-- Target viewport range, zoom expectations and any owner-selected breakpoint behaviour.
+- Production breakpoint and zoom acceptance beyond the UI-002 prototype review sizes of
+  1920 × 1080, 1440 × 900 and 390 × 844.
 - Keyboard alternatives for model selection and accessible descriptions of highlighted geometry.
 - Required contrast target, screen-reader support matrix, reduced-motion policy and acceptance
   criteria for an accessibility audit.
@@ -322,28 +379,41 @@ that scope.
 
 ## 13. Owner-approved design decisions
 
-**None recorded.** Add a decision here only after explicit owner approval, with the related UI
-iteration ID, date and reference IDs. Do not convert a provisional principle into an approved
-decision without that approval.
+### UI-002 Revision 2 — 30 October 2026
+
+The owner approved this **visual direction and one isolated prototype iteration**, not production
+implementation:
+
+- Retain Concept C v2's restrained styling and prototype palette listed in §10.
+- Make the IFC model the dominant desktop working surface; improve navigation discoverability and
+  technical-information presentation.
+- Add Project Home concepts for new project setup, quick upload and synthetic sample exploration.
+- Treat desktop as the primary design target and show a responsive narrow adaptation.
+- Keep project/session catalogue, model-category visibility, hide/show/isolate, geometric clash
+  detection and new upload/session UI capabilities explicitly proposed until separately approved.
+- Maintain information-quality findings separately from any future geometric-clash workflow.
+
+No reference screenshots were inspected; no REF-ID influence is claimed. This approval does not
+change production routes, backend/API/schema/viewer behaviour, dependencies, UI-003 scope or delivery
+status.
 
 ## 14. Open visual questions
 
-The following remain open for owner judgement:
+The following remain open for owner judgement; the approved prototype direction does not settle
+production interaction or implementation:
 
 - Which software, product or project references should be studied, and which specific interaction
   or visual feature matters in each?
-- What should be the primary review workspace hierarchy and navigation model?
-- Which viewport, issue-register and evidence-detail arrangements best fit the owner's coordination
-  workflow?
+- Which Project Home metadata and review-workspace hierarchy should be persisted in a production
+  project/session model?
 - Which property, finding, requirement and provenance details need to be immediately visible?
-- Which typography, colour, spacing and component-state directions should be retained, replaced or
-  tested?
+- Which production typography, spacing and component-state tokens should be adopted from the
+  prototype palette?
 - What responsive viewport range and accessibility acceptance criteria should govern iterations?
 - What reporting formats and report-preview workflow should be prioritised?
 
 Record references and feedback in [UI_REFERENCES.md](./UI_REFERENCES.md). Record each authorised
-implementation iteration and its evidence in [UI_CHANGELOG.md](./UI_CHANGELOG.md). Until the owner
-answers these questions, no visual direction is implied.
+implementation iteration and its evidence in [UI_CHANGELOG.md](./UI_CHANGELOG.md).
 
 ## 15. UI change-control process
 
@@ -486,3 +556,102 @@ framework**:
 Tool aliases and prompt instructions do not enforce an allow-list. Until a compatible guard is
 approved and tested, use supervised tool approvals, small explicit scopes and final diff review.
 Do not advertise prompt budgets as hard timeouts or these proposals as installed protection.
+
+## 17. UI-002 Revision 2 — proposed workflow and acceptance criteria
+
+This owner-authorised prototype revision expands the visual design, not production functionality.
+The Project Home and Review Workspace screens are static synthetic examples. Candidate functional
+requirements below are proposals, not adopted `FR-*` requirements or approval to implement them.
+
+### Proposed interaction contract
+
+| Interaction | Existing production capability | UI-002 Revision 2 prototype | Further work needed |
+|---|---|---|---|
+| Project Home / workspace navigation | No Project Home route; the current frontend opens the health panel and workspace. | Local links navigate between static files. | Add an application route and preserve session/run/model-version state. |
+| Create a project/session | `POST /sessions` creates an unnamed session; the frontend does not call it. | New-project fields are local-only; continuing changes the prototype screen only. | Wire session creation; named metadata needs an approved data/API contract. |
+| IFC and requirement upload | Backend endpoints accept `.ifc` and `.ids`/`.md`/`.txt`; current frontend has no upload client or form. | Browser selects a filename and checks its extension only; no bytes are read or sent. | Add client workflow, server validation/error handling and session-safe retries. Do not invent transfer percentages; no progress stream is evidenced. |
+| Narrative requirement material | `.md`/`.txt` are stored as untrusted source; they create no requirements before separate interpretation and explicit confirmation. | Copy states this distinction. | Preserve source provenance and confirmation controls if a later workflow is approved. |
+| Synthetic sample route / recent sessions | No sample catalogue or sessions-list endpoint is exposed. | Pavilion opens a static, synthetic preview; recent sessions are visibly marked proposed. | Provide a curated sample source and/or session-list capability before presenting prepared or recent work as available. |
+| IFC hierarchy and category visibility | Model summary exposes storeys and counts per IFC class; no full element-tree or visibility UI is exposed. Viewer selection exists, but camera controls are internal. | Storeys/categories and disabled visibility actions are illustrative. | Define element-tree data and a viewer interface for visibility, hide/show, isolate and focus; test selection/highlight consistency. |
+| Camera navigation | Viewer renders and supports selection/highlighting; camera controls are not exposed through the workspace interaction API. | Orbit, pan, zoom, fit and focus controls are disabled mock controls. | Expose and test camera operations through an approved viewer scope. |
+| Finding selection / evidence | Production supports finding-to-model highlight, model-to-element inspection and deterministic evidence. | Three labelled preview states use the same synthetic examples as UI-002 v2. | Preserve existing GlobalId and model-version contracts when refining the production layout. |
+| Finding search/filter and collapse | No register search/filter or docked-panel collapse interaction is exposed in the current frontend. | Search/filter and inspector-collapse affordances are labelled illustrative; native disclosure controls work locally. | Implement and test keyboard-operable controls and persistence of selected evidence. |
+| Geometric clashes | No geometric clash engine or clash results are evidenced. | The register distinguishes information quality from unavailable geometric clashes. | Separate approval, engine, result contract and evaluation before showing any geometric clash result. |
+| AI explanation | The backend has an explanation endpoint; current frontend review data does not fetch or present it. | Copy is synthetic and clearly labelled illustrative, not model-generated evidence. | Connect only after approved data/state design; preserve grounding and label explanations separately from Findings. |
+
+### Proposed functional requirements — owner approval required
+
+These identifiers organise design discussion only; they are not additions to `REQUIREMENTS.md`.
+
+1. **UI-PROP-HOME-01 — Project Home and session start.** Provide a clear new-session entry path
+   without requiring users to enter a session ID. If the interface accepts a project name or
+   metadata, state whether it is transient or persisted; persistence requires a separately approved
+   API/schema decision because the current create-session endpoint accepts no such fields.
+2. **UI-PROP-HOME-02 — Upload and validation.** Accept only the backend-supported extensions,
+   explain IDS versus narrative-document semantics, expose server validation and recoverable
+   errors, and never describe local filename recognition as successful upload or IFC validation.
+   With the current synchronous route, show an honest in-progress/indeterminate state rather than
+   a fabricated byte percentage.
+3. **UI-PROP-HOME-03 — Recent sessions and samples.** Do not show unavailable history or a
+   prepared sample as live. Add a real source for recent sessions and synthetic sample inputs/review
+   runs before enabling those routes.
+4. **UI-PROP-BROWSER-01 — Model tree and visibility.** Show only hierarchy data supported by a
+   reviewed contract; connect visibility controls to the viewer and keep them independent from
+   Finding filters and selected-element/highlight state.
+5. **UI-PROP-FINDINGS-01 — Investigation register.** Support keyboard-accessible search/filter,
+   severity, check status, element identity and coverage. Keep information-quality findings and
+   any future geometric-clash results separately typed and labelled.
+6. **UI-PROP-EVIDENCE-01 — Evidence and explanation.** Preserve requirement/check provenance,
+   observed/expected values, GlobalId and model version. Present any connected AI explanation and
+   human recommendation separately from deterministic evidence and the `Finding`.
+
+### Prototype acceptance criteria
+
+The static Revision 2 prototype is reviewable when all the following are true:
+
+- Project Home shows distinct new-project, quick-upload and synthetic-example entry routes plus an
+  explicitly proposed recent-session area; each route shows its own screen without leaving the
+  landing screen visible behind it.
+- New-project fields are described as local-only, and the unnamed-session API limitation is
+  visible.
+- The upload page presents supported extensions, local file-selection feedback, transfer/
+  validation/not-started states and representative errors without claiming any request ran.
+- IDS and narrative-document semantics are distinguishable.
+- The selected synthetic sample can navigate to the matching synthetic workspace example; no
+  client data or real model output is shown.
+- The workspace includes loaded, Finding-selected and browser/evidence-selected views; the IFC
+  illustration and repeated example data are identical to UI-002 v2.
+- The workspace gives geometry the largest working area, keeps model version/status visible,
+  separates model visibility from review filters, shows partial review coverage and states that
+  geometric clash detection is unavailable.
+- Deterministic values, source/check references, GlobalId and model version are distinguishable
+  from illustrative AI explanation copy.
+- The prototype has desktop captures at 1920 × 1080 and 1440 × 900 and a narrow adaptation at
+  390 × 844; this is design evidence, not a responsive implementation or WCAG audit.
+
+### Proposed UI-003 scope — not authorised
+
+For a future owner-approved first implementation slice, limit the initial scope to a Project Home
+shell and the existing unnamed-session / supported-upload APIs, with exact candidate files:
+
+- `frontend/src/App.tsx`
+- `frontend/src/components/ProjectHome.tsx` (new)
+- `frontend/src/components/ProjectHome.test.tsx` (new)
+- `frontend/src/components/ModelWorkspace.tsx`
+- `frontend/src/components/ModelWorkspace.test.tsx`
+- `frontend/src/api/bim.ts`
+- `frontend/src/api/bim.test.ts`
+- `frontend/src/index.css`
+
+Use the existing session/model/document endpoints and generated API types; do not hand-edit
+generated types. This first slice must not persist a project name, invent upload progress, add a
+sample catalogue/session list, expose an incomplete model tree, add viewer visibility/camera
+controls, implement geometric clashes or fabricate a frontend explanation. Those require separate
+functional/architecture approval and potentially additional file scopes. The illustrative estimate
+is **3–5 engineering days** for the focused frontend/API-client slice, including errors and
+regression evidence; model visibility/navigation and catalogue work are excluded. Principal risks
+are upload/session recovery, version consistency, stale partial reviews, accessible file input and
+viewer selection/highlight regression.
+
+No UI-003, backend change, model data exposure or production implementation is approved by this
+proposal.
