@@ -4,6 +4,28 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### T-7 — Constitution-driven autonomous UI design framework
+
+- Add [UI_CONSTITUTION.md](./docs/UI_CONSTITUTION.md) with binding BIM workflow, spatial context,
+  evidence integrity, accessibility, originality, approval and reversibility principles; no layout
+  or visual direction is approved.
+- Add the [bim-ui-refinement skill](./.github/skills/bim-ui-refinement/SKILL.md) and restricted
+  [designer](./.github/agents/bim-ui-designer.agent.md) /
+  [implementer](./.github/agents/bim-ui-implementer.agent.md) custom agents. Define progressive
+  context loading, three concepts, comparative visual prototypes, a weighted rubric, separate
+  owner gates, bounded revisions and supervised time/cost limits.
+- Align UI specifications, handling rules, iteration history and agent instructions; extend the
+  existing T-7 deliverable links without changing T-7/M3 status or the delivery schedule.
+- Record metadata-only reference checks under `GOV-UI-002`: the ignored library uses singular
+  `local-private/ui-reference/`; the preferred plural location is absent. Image/provider rights
+  remain unverified, so no images were opened. Recommend owner-managed relocation only.
+- Propose harness-specific pre-tool path and final changed-file safeguards, but install no hooks;
+  preserve `.githooks/pre-commit` secret scanning. No application, viewer, API, generated contract,
+  fixture, benchmark, dependency or CI changes; no external API calls, commit or push.
+- This establishes the design system only: no UI-001, redesign, measured design scores or
+  application/browser verification is claimed. See [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md)
+  for boundaries, limitations and rollback.
+
 ### Private reference and test data governance
 
 - Preserve the explicit `local-private/` exclusion in [`.gitignore`](./.gitignore); document

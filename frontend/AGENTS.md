@@ -62,6 +62,23 @@ A visually successful change that breaks functionality is a failed iteration.
 
 ## Change-control sequence
 
+The [UI constitution](../docs/UI_CONSTITUTION.md) is binding for design quality, conflict
+resolution and bounded autonomy. Use the
+[bim-ui-refinement skill](../.github/skills/bim-ui-refinement/SKILL.md) for progressive context
+loading, reference inventory, three alternatives, comparative prototypes and the weighted rubric.
+Select [BIM UI Designer](../.github/agents/bim-ui-designer.agent.md) for read-only proposals;
+select [BIM UI Implementer](../.github/agents/bim-ui-implementer.agent.md) only for an explicitly
+approved iteration or isolated prototype.
+
+Agree checkpoint outputs, paths, provider permissions, budget and revision cap before starting.
+Concept selection is not application-edit approval. The designer cannot create prototype files;
+rendered isolated prototypes require separate output approval. Stop after the agreed checkpoint;
+no unlimited revisions, unrestricted parallel agents, speculative dependencies or automatic next
+task. Time limits in prompts are advisory and require session supervision or supported external
+limits. Verify actual host discovery/tools; agent files are not a path sandbox. Optional Copilot
+guards in [UI_SPEC §16](../docs/UI_SPEC.md#16-optional-copilot-safeguards--proposal-only)
+are proposals only and must not disrupt the Git secret-scanning hook.
+
 Follow the owner-directed process in [`docs/UI_SPEC.md`](../docs/UI_SPEC.md): owner supplies a
 reference or objective; agent proposes a bounded scope and affected files; owner approves; agent
 implements only that scope on a separate branch from the latest approved baseline; agent runs

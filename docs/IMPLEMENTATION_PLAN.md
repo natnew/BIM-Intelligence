@@ -129,12 +129,13 @@ No milestone is complete solely because its contributing task labels exist. Orig
 
 - **Objective:** Integrate the review workflow into a usable interface and present traceable findings and reports with a reliable demo fallback.
 - **Responsible components:** `frontend/`, `reporting/`, browser/scenario tests and demo artefacts.
-- **Deliverables:** Owner-directed UI governance framework (`docs/UI_SPEC.md`, `docs/UI_REFERENCES.md`, `docs/UI_CHANGELOG.md` and `frontend/AGENTS.md`); requirement and objective panels; findings/detail views; model highlighting; JSON/Markdown report with provenance; replay/off mode; rehearsed demo.
+- **Deliverables:** Owner-directed UI governance framework (`docs/UI_SPEC.md`, `docs/UI_REFERENCES.md`, `docs/UI_CHANGELOG.md` and `frontend/AGENTS.md`), extended by the [UI constitution](./UI_CONSTITUTION.md), [refinement skill](../.github/skills/bim-ui-refinement/SKILL.md) and restricted [designer](../.github/agents/bim-ui-designer.agent.md)/[implementer](../.github/agents/bim-ui-implementer.agent.md) roles; requirement and objective panels; findings/detail views; model highlighting; JSON/Markdown report with provenance; replay/off mode; rehearsed demo.
 - **Dependencies:** T-3, T-4, T-5 and T-6. Begin integration as dependencies become testable, without treating incomplete upstream work as finished.
 - **Acceptance tests:** UI changes follow explicit owner approval and are recorded with repeatable visual evidence; full browser walkthrough on the benchmark; findings link to their deterministic checks and model elements; report provenance is complete; replay/degraded mode works; browser smoke test passes.
 - **Status:** **In progress — owner-directed UI governance framework established; reporting, interface implementation, browser walkthrough and demo acceptance remain incomplete. No visual redesign or UI-001 implementation has been authorised by this change.**
 - **Milestones:** M3.
 - **Evidence:** [T-3](#t-3--interactive-3d-bim-viewer) and [T-4](#t-4--end-to-end-deterministic-review-workflow) record verified interface slices; [UI_SPEC.md](./UI_SPEC.md) defines the owner-directed governance framework. The complete integrated workflow, report and demo evidence remain outstanding.
+- **Framework extension (30 October 2026):** constitution-driven, bounded concept/prototype evaluation and separate implementation approval are documented; optional Copilot guards are proposed, not installed. Reference metadata checks located an ignored singular-path library; image/provider permissions remain unverified. No UI-001 or visual redesign starts here. T-7/M3 status, dependencies, exit criteria and delivery dates are unchanged.
 
 ### T-8 — Final Hardening, Documentation and Submission
 

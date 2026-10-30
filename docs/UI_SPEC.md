@@ -5,6 +5,13 @@
 **Authority:** The project owner approves visual decisions. This document records verified
 behaviour, provisional design principles, approved decisions and unresolved questions separately.
 
+The [UI constitution](./UI_CONSTITUTION.md) supplies binding quality criteria and the conflict
+order; it does not prescribe a layout. The [refinement skill](../.github/skills/bim-ui-refinement/SKILL.md)
+supplies the bounded design workflow and reusable weighted rubric. Use
+[BIM UI Designer](../.github/agents/bim-ui-designer.agent.md) for read-only proposals and
+[BIM UI Implementer](../.github/agents/bim-ui-implementer.agent.md) only after separate scope
+approval. These development-time roles do not change the application's orchestrator.
+
 ## 1. Product and user context
 
 BIM Intelligence is an architectural BIM coordination and information-quality review application.
@@ -340,6 +347,21 @@ answers these questions, no visual direction is implied.
 
 ## 15. UI change-control process
 
+For exploratory design before implementation, use the skill's sequence: reference inventory ->
+professional workflow analysis -> three alternative concepts -> comparative visual prototype ->
+evaluation -> owner selection. Analysis and proposals may be autonomous within the agreed
+checkpoint; application edits may not. A read-only chat wireframe is not an implemented viewer.
+An isolated rendered prototype needs separate output/path approval and must not modify application
+source. Concept selection alone does not grant implementation approval.
+
+Use the [constitution's checkpoints](./UI_CONSTITUTION.md#3-execution-boundary-and-checkpoints),
+budgets, revision limits and stop conditions before following the implementation sequence below.
+The [weighted rubric](../.github/skills/bim-ui-refinement/SKILL.md#weighted-evaluation-rubric)
+compares professional BIM usability (25%), spatial clarity (20%), visual refinement/originality
+(20%), evidence integrity/interaction clarity (20%), accessibility/responsiveness (10%) and
+feasibility (5%). Scores require comparative evidence and explicit limitations, not invented
+measurements, and cannot override a protected invariant or owner approval.
+
 1. **Owner supplies a reference or design objective.**
 2. **Agent proposes** a small, bounded implementation and identifies affected files, protected
    behaviour and checks.
@@ -424,3 +446,43 @@ the specific files changed by that iteration to the latest approved baseline. In
 and diff first; preserve unrelated user changes. Do not use destructive reset/checkout operations
 against unrelated work. Record the decision, affected files and rollback method in
 `UI_CHANGELOG.md`.
+
+## 16. Optional Copilot safeguards — proposal only
+
+**Inspection, 30 October 2026:** `core.hooksPath` resolves to `.githooks`. Its existing
+`pre-commit` invokes `scripts/secret_scan.py --staged`, preferring the repository virtual
+environment. No repository `.github/hooks/` configuration was found. Git hooks and Copilot tool
+hooks are separate mechanisms. Do not replace, bypass or alter the secret-scanning hook.
+User-profile hook configuration was not inspected; no absence outside this repository is asserted.
+
+The proposed safeguards below require separate owner approval; **none is installed by this
+framework**:
+
+1. **Pre-tool path guard:** accept a reviewed iteration packet containing the baseline and exact
+   allowed paths. Before any mutation, resolve paths against the repository root, canonicalise
+   case/separators on Windows, resolve symlinks/junctions and reject escapes, traversal, unexpected
+   renames/deletes and edits to the guard/approval packet itself. Inspect every target in a
+   multi-file edit. Unknown tool/input forms must deny or request approval, not silently allow.
+   Shell execution can bypass edit-tool path checks: deny general shell mutation, nested shells,
+   redirects and opaque scripts; separately allow only reviewed validation commands, with their
+   known output paths and approval. A path-only edit hook is not a shell sandbox.
+2. **Changed-file scope check:** compare the approved baseline and initial dirty/untracked
+   inventory with final staged, unstaged, renamed, deleted and untracked paths. Distinguish
+   pre-existing owner work from this iteration; report unexpected paths without reverting them.
+   Check after mutation and before completion. A post-tool check detects an escape but cannot
+   undo an already completed side effect; it complements rather than replaces the pre-tool guard.
+3. **Compatibility and approval test:** validate the actual Copilot host/version, event names,
+   stdin schema, tool names, permission response and Windows command runner before installation.
+   VS Code Copilot Chat documents `PreToolUse` / `PostToolUse`; the active Copilot SDK-backed
+   surface must be checked for its own `preToolUse` support and configuration contract. Do not
+   paste VS Code JSON into a CLI/SDK host and assume it works. Codex and Claude have different
+   lifecycle/permission contracts. No portable hook file is asserted here.
+4. **Acceptance before enablement:** owner reviews the guard and scripts, then tests allowed edits,
+   blocked backend/generated/viewer paths, traversal/junctions, multi-file edits, shell bypass,
+   malformed input, denied writes, timeouts and changed-file detection in the chosen harness.
+   Record observed blocking behaviour and known limitations; keep secrets/private contents out
+   of logs. Preserve the existing Git secret scan throughout.
+
+Tool aliases and prompt instructions do not enforce an allow-list. Until a compatible guard is
+approved and tested, use supervised tool approvals, small explicit scopes and final diff review.
+Do not advertise prompt budgets as hard timeouts or these proposals as installed protection.
