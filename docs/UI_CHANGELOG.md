@@ -7,8 +7,9 @@ changes rather than duplicating this detailed record.
 
 ## Record status
 
-The UI-001 design proposal and private prototype evidence are recorded below. No concept has been
-selected or approved for production implementation.
+The UI-001 design proposal and private prototype evidence are recorded below. The owner selected
+Concept C as the UI-002 conceptual foundation; UI-002 remains a proposal, and no concept is
+approved for production implementation.
 
 Keep private verification evidence in the ignored, owner-managed `local-private/test-results/`
 and raw AEC tester feedback in `local-private/professional-feedback/`. Entries below use only
@@ -151,3 +152,116 @@ like the original approval; add a subsequent entry and link it to the earlier it
 - **Rollback instructions:** Remove only the listed files under
   `local-private/ui-prototypes/` if the owner rejects the prototypes. No production rollback is
   required.
+
+### UI-002 — Concept C, Professional BIM Workspace redesign
+
+- **UI iteration ID:** UI-002
+- **Date (YYYY-MM-DD):** 2026-10-30
+- **Delivery mapping:** T-7 / M3. T-7 and M3 remain in progress; this prototype does not satisfy
+  the M3 browser-walkthrough exit criteria.
+- **Design objective:** Refine selected UI-001 Concept C into a spatially dominant, technically
+  credible BIM review workspace, preserving the same synthetic review facts in loaded, finding-
+  selected and element-selected states.
+- **Source reference IDs and locations:** No REF-ID influence is claimed. Eight screenshot
+  filenames were shortlisted by metadata only and their intended relevance was reported to the
+  owner; no reference image was opened, transmitted or visually interpreted. The prior
+  synthetic-only processing decision and unverified provider/rights permissions remain in force.
+- **Explicit owner request:** The owner selected C as the conceptual foundation, requested one
+  refined prototype and one bounded improvement pass, and required the work to stop before
+  production implementation, commit, push or merge.
+- **Approved scope:** Prototype and screenshot output only under the ignored
+  `local-private/ui-prototypes/ui-002/`; synthetic examples; desktop screenshots at 1920×1080 and
+  1440×900; narrow screenshots at 390×844; three preview states; one bounded refinement pass.
+  No React application, viewer, API, backend, schema, test, fixture, dependency or reference-image
+  changes; no live Meta call, paid service or external asset.
+- **Proposed changes:** An original application shell with project identity and review navigation;
+  a prominent static model viewport with illustrative navigation/orientation controls; a proposed
+  collapsible model hierarchy; a collapsible finding register; an evidence inspector separating
+  synthetic deterministic evidence from an illustrative AI explanation; and narrow-screen finding
+  cards.
+- **Files changed:** `local-private/ui-prototypes/ui-002/index.html`;
+  the nine screenshot files matching
+  `local-private/ui-prototypes/ui-002/screenshots/concept-c-v2-{1920x1080,1440x900,390x844}-{model-loaded,finding-selected,element-selected}.png`;
+  this record in `docs/UI_CHANGELOG.md`; and a summary in `CHANGELOG.md`. Prototype and screenshot
+  artefacts are ignored and untracked.
+- **Reason for each significant change:** The isolated HTML file supplies the complete synthetic
+  prototype, preview states, responsive styles, semantic labels and explicitly illustrative
+  controls. The nine PNGs document the three states at each requested viewport. The detailed and
+  root changelogs record the approved scope, evidence, limitations and pending owner decision.
+- **Bounded improvement pass:** The first narrow capture exposed a crowded toolbar and unreadable
+  table layout. One pass replaced the narrow table with readable finding cards, exposed text
+  labels and touch guidance for navigation, reduced redundant filter/icon density, tightened the
+  state-selector controls, increased small evidence-text sizes and made the project browser and
+  finding register native collapsible disclosures. A targeted capture correction was included in
+  this same pass; no further redesign loop was performed.
+- **Protected behaviour:** Production React and viewer code remain unchanged. The static illustration
+  is not an IFC render, and no shown project, model, finding, property, requirement, source quotation,
+  rule output, AI explanation or navigation action is live or connected. The sample explanation is
+  explicitly illustrative and not a model fact.
+- **Tests executed:** No application test suite was run because no application code changed.
+  Google Chrome 156.0.8078.76 captured all nine PNGs; each PNG header was checked against its
+  requested 1920×1080, 1440×900 or 390×844 output dimensions. Browser verification at a 390×844
+  window reported a 375×844 CSS viewport (Chrome scrollbar reservation) and equal 375 px document
+  and viewport widths, with no horizontal document overflow. The finding and element preview
+  selectors displayed their corresponding overlays/highlights; both the issue register and mobile
+  project-browser disclosures opened and closed. These checks cover only this static mock-up.
+- **Visual before/after evidence:** UI-001 baseline:
+  `local-private/ui-prototypes/screenshots/concept-c-1920x1080.png`. UI-002:
+  `local-private/ui-prototypes/ui-002/screenshots/concept-c-v2-{1920x1080,1440x900,390x844}-{model-loaded,finding-selected,element-selected}.png`.
+  The 1920 px desktop composition allocates about 69% of the width to the central model workspace,
+  versus a comparatively small model pane in C v1. The selected marker, evidence inspector, run
+  coverage and finding register are visible together at the desktop viewport; the narrow state
+  cards avoid the prior table's horizontal squeeze. Static evidence does not establish real IFC
+  geometry, camera behaviour, user task speed or WebGL occlusion.
+- **Design-stage weighted evaluation:** Scores use the established 0–4 rubric and are predictions,
+  not usability measurements or implementation results. The C v1 comparator is the recorded
+  88.75/100 design-stage estimate; no common user study or live application test was performed.
+
+  | Criterion | Weight | C v1 | C v2 | Evidence and limitation |
+  |---|---:|---:|---:|---|
+  | Professional BIM usability | 25% | 4/4 | 3/4 | Project hierarchy, coverage, issue register, selection and evidence are organised for the review task; project actions, search/filters and navigation remain illustrative, with no empty/error/version-mismatch screen. |
+  | Spatial clarity | 20% | 3/4 | 4/4 | The model is the dominant central work area, with distinct finding/element outlines, an orientation cube and proposed navigation controls across the preview states. Geometry and camera interaction are static. |
+  | Visual refinement and originality | 20% | 4/4 | 4/4 | A restrained professional shell, original synthetic line illustration, dense but ordered evidence cards and consistent selected states are visible in all three desktop captures. No reference images were inspected; originality is not a similarity audit. |
+  | Evidence integrity and interaction clarity | 20% | 4/4 | 4/4 | Synthetic Finding, requirement, observed/expected values, check/version, GlobalId and provenance are labelled; AI copy is separately marked “Not a model fact”. No API, grounding checker or source document was exercised. |
+  | Accessibility and responsive behaviour | 10% | 2/4 | 2/4 | The prototype uses labelled native state radios and disclosure controls; mobile finding cards fit without horizontal document overflow. Small text remains, detailed evidence is below the narrow first viewport, and keyboard, screen-reader, contrast and zoom conformance were not tested. |
+  | Implementation feasibility | 5% | 3/4 | 3/4 | Existing workspace, finding selection, version-pinned data and GlobalId viewer wiring offer a reuse path. The current page contract has no review explanation payload, and viewer camera controls are not exposed through `ViewerCanvas`; hierarchy/control integration needs separate design and regression work. |
+  | **Weighted total** | **100%** | **88.75/100** | **87.5/100** | C v2 is **1.25 points lower** under this conservative review: spatial clarity improves, while lower workflow evidence reflects unimplemented controls and untested states. Low-to-moderate confidence; no acceptance threshold is implied. |
+
+- **Three weakest remaining aspects:** (1) most application actions, filters and camera controls are
+  illustrative rather than wired; (2) narrow evidence text is small and the complete inspector
+  requires scrolling; (3) the static happy path does not show real loading, empty, API-error,
+  partial-run recovery or model-version mismatch behaviour. These are design limitations, not
+  established production defects.
+- **Accessibility regression results:** No production accessibility regression was possible.
+  Browser inspection confirms named regions, labelled state choices, native disclosure semantics
+  and no horizontal document overflow at the tested narrow window. No keyboard-only, screen-reader,
+  contrast or browser-zoom audit was conducted. The static drawing has a text alternative, but
+  there is no non-spatial production model-selection path in this prototype.
+- **Functional regression results:** The three local preview states show the expected static
+  finding/element marker and evidence panel; native disclosure controls were exercised. No IFC
+  loading, camera operation, API interaction, model picking, review execution, AI call or production
+  regression test occurred.
+- **UI-003 implementation proposal — not approved:** If separately authorised, limit the initial
+  application iteration to `frontend/src/App.tsx` (application shell), `frontend/src/components/ModelWorkspace.tsx`
+  (review layout and existing data), `frontend/src/index.css` (responsive visual system), and
+  `frontend/src/components/ModelWorkspace.test.tsx` (selection, evidence, coverage and responsive
+  state regressions). Preserve the current API, generated types, ETag/version checks, finding
+  normalisation, GlobalId mapping and viewer lifecycle. Keep a project tree limited to data actually
+  present in `ModelSummary`/`ElementRecord`; do not imply a complete category hierarchy where the
+  API supplies no element collection. `ReviewWorkspaceData` exposes findings and a run, not an
+  explanation, so do not render fabricated AI content. If working orbit/pan/zoom/fit/focus buttons
+  or an orientation cube are in scope, request a separate exact allow-list and tests for
+  `frontend/src/viewer/ViewerCanvas.tsx` and `frontend/src/viewer/IfcViewer.ts`; the current viewer
+  holds camera controls internally. No backend/API/schema change is proposed. Indicative estimate:
+  2–3 engineering days for core layout, responsive interaction and regression evidence; add 1–2
+  days if navigation controls need a viewer adapter, subject to repository setup and review.
+  Principal risks are 3D lifecycle/resize regressions, selection/highlight drift, evidence
+  truncation, unavailable hierarchy/explanation data and accessibility regressions.
+- **Owner decision:** Proposed; UI-002 visual assessment and any UI-003 scope approval are pending.
+  This record does not authorise production implementation, commit, push or merge.
+- **Branch, commit and PR references:** `chore/ui-002-concept-c`; commit and PR reference to be
+  added after publication.
+- **Rollback instructions:** For rejection, remove only the ignored directory
+  `local-private/ui-prototypes/ui-002/` and revert this UI-002 entry in
+  `docs/UI_CHANGELOG.md` plus its corresponding UI-002 summary in `CHANGELOG.md`. Do not alter the
+  UI-001 prototype, application, viewer or existing records.
