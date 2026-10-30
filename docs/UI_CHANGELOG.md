@@ -259,8 +259,9 @@ like the original approval; add a subsequent entry and link it to the earlier it
   truncation, unavailable hierarchy/explanation data and accessibility regressions.
 - **Owner decision:** Proposed; UI-002 visual assessment and any UI-003 scope approval are pending.
   This record does not authorise production implementation, commit, push or merge.
-- **Branch, commit and PR references:** `chore/ui-002-concept-c`; commit and PR reference to be
-  added after publication.
+- **Branch, commit and PR references:** `chore/ui-002-concept-c`; commit
+  [`548e516`](https://github.com/natnew/BIM-Intelligence/commit/548e516a07f17285d4597c3771c7e7688c7cac23);
+  [PR #16](https://github.com/natnew/BIM-Intelligence/pull/16).
 - **Rollback instructions:** For rejection, remove only the ignored directory
   `local-private/ui-prototypes/ui-002/` and revert this UI-002 entry in
   `docs/UI_CHANGELOG.md` plus its corresponding UI-002 summary in `CHANGELOG.md`. Do not alter the
