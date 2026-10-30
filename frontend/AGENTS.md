@@ -35,6 +35,31 @@ direction, architecture, dependencies or visual design.
 
 A visually successful change that breaks functionality is a failed iteration.
 
+## Private references and testing evidence
+
+- Private materials must never be committed or copied into tracked directories. Use the ignored,
+  owner-managed `local-private/ui-references/` for owner-supplied visual references,
+  `local-private/test-results/` for private verification evidence, and
+  `local-private/professional-feedback/` for raw AEC tester feedback. The owner creates these
+  folders locally; do not add placeholders.
+- Inspect private files only for the explicitly owner-authorised task. Local availability is not
+  permission to inspect unrelated models, documents, screenshots or feedback.
+- Do not transmit real BIM files, client documents, screenshots or AEC tester feedback to an LLM
+  service without explicit owner approval and applicable data rights, including through tool
+  output, attachments, extracted text or excerpts. Local inspection approval is not transmission
+  approval.
+- Do not publish model-derived facts or private project names without authorisation. The tracked
+  reference register and UI changelog contain only non-sensitive reference/evidence identifiers,
+  authorised design interpretations and approval decisions, never raw private materials.
+- Public demonstration templates must use synthetic or expressly redistributable data with
+  recorded provenance and rights. Preserve the T-6 synthetic benchmark and existing test fixtures.
+- Keep AI explanations separately labelled from deterministic model findings. An explanation is
+  not a `Finding` and must not replace deterministic evidence.
+- Any change involving private data handling requires a documented security and provenance review
+  before implementation, following the root `AGENTS.md` review requirements. Keep sensitive review
+  details private and record only the non-sensitive summary and review identifier in tracked
+  documentation. Unresolved permissions block use, transmission or publication.
+
 ## Change-control sequence
 
 Follow the owner-directed process in [`docs/UI_SPEC.md`](../docs/UI_SPEC.md): owner supplies a

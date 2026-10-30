@@ -43,7 +43,20 @@ See [ARCHITECTURE.md Appendix A](./docs/ARCHITECTURE.md#appendix-a--recommended-
   [`docs/UI_CHANGELOG.md`](./docs/UI_CHANGELOG.md).
 - `docs/` holds engineering documentation only. No planning notes, scratch files or meeting logs.
 - `data/` is runtime storage and is git-ignored.
-- `hackathon-private/` is confidential and git-ignored. Never copy its contents into tracked files; summarise.
+- `hackathon-private/` is confidential and git-ignored. Never copy its contents into tracked files;
+  publish a non-sensitive summary only with owner authorisation.
+- `local-private/` is the ignored, owner-managed workspace for private source materials and
+  testing evidence. Its intended layout is below; the owner creates and populates these folders
+  locally. Do not create placeholder files or change the synthetic benchmark or tracked fixtures.
+
+```text
+local-private/
+  bim-models/
+  bim-documents/
+  ui-references/
+  test-results/
+  professional-feedback/
+```
 
 ## 4. Dependency management
 
@@ -112,6 +125,32 @@ Mermaid diagrams must render on GitHub; check syntax before committing. Keep ter
 - Server binds to `127.0.0.1` unless `ALLOW_REMOTE=true`.
 - Treat BEP/document content as untrusted input (prompt-injection surface). Validate all model output by schema; never execute anything derived from document text without the plan filter and human confirmation.
 - Run a secret scan before any push. Never commit `.ifc` files outside `tests/fixtures/` or `datasets/`, anything under `data/`, or anything under `hackathon-private/`.
+
+### Private data handling and provenance
+
+- Private materials must never be committed or copied into tracked directories. This includes
+  real BIM models, client/project documents, screenshots, AEC tester feedback and private testing
+  evidence. Git ignore rules are not access controls and do not protect files already tracked.
+- Inspect private files only for the explicitly owner-authorised task; access or local availability
+  does not grant permission to inspect unrelated material.
+- Do not transmit real BIM files, client documents, screenshots or AEC tester feedback to an LLM
+  service without explicit owner approval and applicable data rights. This includes attachments,
+  tool output, extracted text and derived excerpts; approval for local inspection is not approval
+  for transmission.
+- Do not publish model-derived facts or private project names without authorisation. Keep raw
+  feedback and evidence private; tracked registers may contain only non-sensitive reference
+  identifiers and authorised interpretations or decisions.
+- Public demonstration templates must use synthetic or expressly redistributable data. Record
+  provenance and redistribution rights for any non-synthetic public input; preserve the T-6
+  synthetic benchmark and existing fixtures.
+- Label AI explanations separately from deterministic model findings; an explanation must never
+  be presented or persisted as a `Finding` (`C-01`, `C-02`).
+- Any change involving private data handling requires a documented security and provenance review
+  before implementation. Record the authorised task, source/reference identifiers, ownership and
+  applicable rights, inspection scope, storage/access, proposed transmission or publication,
+  owner approvals, retention/deletion arrangements and verification. Keep sensitive review details
+  in `local-private/test-results/`; tracked change records contain only a non-sensitive summary
+  and review identifier. Unresolved permissions block use, transmission or publication.
 
 ## 9. Agent boundaries and prohibited actions
 

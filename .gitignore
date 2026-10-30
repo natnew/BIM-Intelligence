@@ -1,3 +1,15 @@
+
+# ------------------------------------------------------------
+# Private BIM testing and UI research — never commit
+# ------------------------------------------------------------
+local-private/
+
+# Real BIM models, project documents, client information,
+# third-party UI screenshots, feedback and private test outputs
+# must remain inside local-private/.
+# The owner creates and populates its subdirectories locally.
+# Do not add tracked placeholders or exceptions to this exclusion.
+
 # ---------------------------------------------------------------------------
 # Confidential project material — never commit
 # ---------------------------------------------------------------------------

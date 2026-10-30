@@ -4,6 +4,31 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### Private reference and test data governance
+
+- Preserve the explicit `local-private/` exclusion in [`.gitignore`](./.gitignore); document
+  owner-created `bim-models/`, `bim-documents/`, `ui-references/`, `test-results/` and
+  `professional-feedback/` subdirectories without adding folders or placeholders.
+- Extend the root and frontend agent rules with task-scoped private inspection, no private
+  commits/copies, separate owner approval and data rights for LLM transmission, authorised
+  publication, synthetic/redistributable public demonstrations, separately labelled AI
+  explanations and mandatory security/provenance reviews.
+- Prefer `local-private/ui-references/` for owner-supplied visual references. Align the reference
+  register, UI verification records and dataset guidance around non-sensitive identifiers and
+  authorised design decisions rather than private source content.
+- **Security and provenance review `GOV-PRIVATE-001` (30 October 2026):** the owner authorised
+  repository organisation and governance only. Inspection was limited to governance documents,
+  Git status/diffs and tracked filenames; no private source contents were opened or copied.
+  No private data rights or transmission/publication approval were inferred. Storage is
+  owner-managed and ignored, not access-controlled by Git; no retention period is imposed, and
+  the owner must establish access, rights and retention/deletion arrangements before private use.
+  No private data was transmitted, no application behaviour changed, and the T-6 benchmark and
+  tracked fixtures remain untouched. Filename review found no tracked private/reference paths;
+  the sole BIM/document/image candidate was the existing `tests/fixtures/minimal.ifc`.
+  `git check-ignore -v` confirmed all five intended private categories are ignored; fixture and
+  benchmark source controls remain unignored, generated T-6 output remains ignored, and protected
+  application/benchmark/fixture/dependency/CI path diffs are empty. `git diff --check` passed.
+
 ### T-7 — Owner-directed UI design governance framework
 
 - Establish [`docs/UI_SPEC.md`](./docs/UI_SPEC.md) as the evolving UI specification, separating verified behaviour, provisional design principles, owner-approved decisions and open questions without prescribing a new visual style.
