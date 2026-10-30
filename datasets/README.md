@@ -19,6 +19,18 @@ Never commit:
 
 Fixture IFC files are read-only (`C-04`). Produce variants by script, never by editing in place.
 
+## Private local inputs
+
+Real project models and documents belong in the ignored, owner-managed
+`local-private/bim-models/` and `local-private/bim-documents/`, not in `datasets/` or tracked fixture
+directories. The owner creates these folders locally; do not add placeholders. Private testing
+evidence belongs in `local-private/test-results/`. These inputs are separate from the T-6 synthetic
+benchmark and do not change its generation, evaluation or fixture policy.
+
+Follow the inspection, transmission, publication and security/provenance review rules in
+[AGENTS.md](../AGENTS.md). Local access does not authorise an LLM upload; public demonstration
+templates must use synthetic or expressly redistributable data.
+
 ## Status
 
 T-6 generates a synthetic IFC4 reference model, defective model, IDS, injection manifest,

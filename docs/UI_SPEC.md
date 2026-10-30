@@ -370,10 +370,14 @@ Vitest. Use a manual, repeatable check until an automation change is separately 
    unselected baseline, then select the IDS FireRating finding for W-002 (GlobalId
    `0QWMtUzsnUUONCUGc8Sqsa`) and capture the highlighted model and details. Also exercise selection
    from the model where the approved scope can affect that path.
-4. Save before/after images in the owner's private local reference store outside the repository
-   working tree or in a pre-existing git-ignored location. Record their locations and the tested
-   browser/viewport in `UI_CHANGELOG.md`; do not commit third-party reference screenshots without
-   redistribution rights.
+4. Save private before/after evidence in the owner-managed, git-ignored
+   `local-private/test-results/`, or an owner-approved private store outside the working tree.
+   Owner-supplied visual references preferably belong in `local-private/ui-references/`. Record
+   only non-sensitive evidence/reference identifiers or neutral paths and the tested
+   browser/viewport in `UI_CHANGELOG.md`; keep private project names, model-derived facts and raw
+   feedback out of tracked records unless publication is authorised. Private materials must never
+   be copied into tracked directories. Inspection and any LLM transmission require the separate
+   authorisations and applicable rights defined in [AGENTS.md](../AGENTS.md).
 5. Inspect alignment, clipping, legibility, selection/error states and the relevant keyboard/focus
    behaviour at the fixed viewport. Compare against the approved objective and reference—not a
    presumed redesign target.
