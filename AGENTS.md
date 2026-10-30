@@ -41,6 +41,11 @@ See [ARCHITECTURE.md Appendix A](./docs/ARCHITECTURE.md#appendix-a--recommended-
   [`docs/UI_SPEC.md`](./docs/UI_SPEC.md) before editing. The owner-directed UI reference and
   iteration records are [`docs/UI_REFERENCES.md`](./docs/UI_REFERENCES.md) and
   [`docs/UI_CHANGELOG.md`](./docs/UI_CHANGELOG.md).
+- Apply the binding [`UI constitution`](./docs/UI_CONSTITUTION.md) and the bounded
+  [`bim-ui-refinement` skill](./.github/skills/bim-ui-refinement/SKILL.md) for T-7 design work.
+  The [designer](./.github/agents/bim-ui-designer.agent.md) is read-only; the
+  [implementer](./.github/agents/bim-ui-implementer.agent.md) needs separate iteration approval.
+  Concept exploration is not redesign permission; stop at the agreed checkpoint.
 - `docs/` holds engineering documentation only. No planning notes, scratch files or meeting logs.
 - `data/` is runtime storage and is git-ignored.
 - `hackathon-private/` is confidential and git-ignored. Never copy its contents into tracked files;
