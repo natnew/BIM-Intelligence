@@ -145,8 +145,9 @@ like the original approval; add a subsequent entry and link it to the earlier it
 - **Owner decision:** Proposed; owner assessment pending. C is recommended for evidence-first
   triage, with the narrow-layout failures called out. No concept is approved and UI-002 is not
   authorised.
-- **Branch, commit and PR references:** `chore/ui-001-review-workspace-concepts`; commit and PR
-  references to be added after publication.
+- **Branch, commit and PR references:** `chore/ui-001-review-workspace-concepts`; commit
+  [`db82306`](https://github.com/natnew/BIM-Intelligence/commit/db82306bcb747951f59d80cf66591e8b79538a96);
+  [PR #15](https://github.com/natnew/BIM-Intelligence/pull/15).
 - **Rollback instructions:** Remove only the listed files under
   `local-private/ui-prototypes/` if the owner rejects the prototypes. No production rollback is
   required.
