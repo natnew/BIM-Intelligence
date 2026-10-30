@@ -500,9 +500,10 @@ like the original approval; add a subsequent entry and link it to the earlier it
   control); Visual refinement 3; Evidence integrity 4; Accessibility and responsive 2 (audit
   outstanding); Implementation feasibility 4. Weighted total **77.5/100**; comparative only, no
   passing threshold adopted.
-- **Owner decision:** The implementation was owner-approved, and commit/push/PR creation were authorised. Owner review and merge remain pending.
-- **Branch, commit and PR references:** `feature/ui-003-production-integration`; no commit
-  created; no PR.
+- **Owner decision:** The implementation was owner-approved; commit/push were authorised and completed, and [PR #18](https://github.com/natnew/BIM-Intelligence/pull/18) is open for owner review. Merge remains pending.
+- **Branch, commit and PR references:** `feature/ui-003-production-integration`; commit
+  [`decbe625`](https://github.com/natnew/BIM-Intelligence/commit/decbe62547574a16eeccac7ff7bc0437d0af9ba1);
+  [PR #18](https://github.com/natnew/BIM-Intelligence/pull/18), targeting `main`.
 - **Rollback instructions:** From the branch, `git checkout origin/main -- frontend/src/App.tsx
   frontend/src/index.css frontend/src/components/ModelWorkspace.tsx
   frontend/src/components/ModelWorkspace.test.tsx frontend/src/api/bim.ts frontend/src/api/bim.test.ts

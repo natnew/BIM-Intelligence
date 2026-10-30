@@ -678,7 +678,8 @@ proposal.
 ## 18. UI-003 — implemented design and remaining proposals
 
 **Status:** implemented on branch `feature/ui-003-production-integration` from baseline `a3e701f`
-(30 October 2026); owner review pending. Browser evidence is recorded in
+(30 October 2026); [PR #18](https://github.com/natnew/BIM-Intelligence/pull/18) is open for owner
+review. Browser evidence is recorded in
 [UI_CHANGELOG.md](./UI_CHANGELOG.md). This section describes the application as built; it does not
 mark T-7 or M3 complete.
 

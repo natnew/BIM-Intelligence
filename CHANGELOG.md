@@ -29,7 +29,8 @@ Significant implementation, architectural and delivery-framework changes are rec
   [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md). Backend, viewer (`IfcViewer.ts`, `ViewerCanvas.tsx`),
   generated types, schemas, fixtures, dependencies and CI are unchanged. Viewer camera/visibility
   controls, model tree, AI explanation panel and session catalogue are deferred to UI-004. Owner
-  review and merge remain pending. T-7 and M3 remain in progress.
+  review and merge remain pending; see [PR #18](https://github.com/natnew/BIM-Intelligence/pull/18).
+  T-7 and M3 remain in progress.
 
 ### T-7 / M3 — UI-002 Revision 2 Project Home and desktop workspace prototype
 
