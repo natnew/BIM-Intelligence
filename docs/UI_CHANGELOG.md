@@ -8,8 +8,9 @@ changes rather than duplicating this detailed record.
 ## Record status
 
 The UI-001 design proposal and private prototype evidence are recorded below. The owner selected
-Concept C as the UI-002 conceptual foundation; UI-002 remains a proposal, and no concept is
-approved for production implementation.
+Concept C as the UI-002 conceptual foundation and, on 30 October 2026, approved UI-003: the
+production implementation of that direction in the React application, recorded in the final entry.
+UI-003 awaits owner review; T-7 and M3 remain in progress.
 
 Keep private verification evidence in the ignored, owner-managed `local-private/test-results/`
 and raw AEC tester feedback in `local-private/professional-feedback/`. Entries below use only
@@ -367,3 +368,148 @@ like the original approval; add a subsequent entry and link it to the earlier it
   Restoring that exact earlier file therefore requires an owner-held copy. Do not remove the whole
   prototype directory or alter the earlier UI-002 changelog history, UI-001 files, application,
   viewer or other existing records.
+
+## UI-003 — Production implementation of Concept C v2 in the React application
+
+- **UI iteration ID:** UI-003
+- **Date (YYYY-MM-DD):** 2026-10-30
+- **Delivery mapping:** T-7 / M3. T-7 and M3 remain **in progress**; this iteration delivers the
+  integrated frontend workflow slice but not reporting, AI explanation, demo rehearsal or a
+  Playwright smoke test.
+- **Design objective:** Replace the bare entry page and session/run-ID form with a working Project
+  Home → setup → 3D review workspace built on the owner-approved Concept C v2 / Revision 2 visual
+  direction, using only existing API endpoints and real model data.
+- **Source reference IDs and locations:** Owner-approved local prototype
+  `local-private/ui-prototypes/ui-002/index.html` and `home.html` plus their 1920×1080 and
+  1440×900 captures (synthetic content only). No private BIM model, client document, external
+  reference image or REF-ID was inspected. No image was sent to any external service.
+- **Explicit owner request:** Owner approval to implement Concept C v2 into the existing
+  application within a stated frontend file scope; backend, schemas, `IfcViewer.ts`,
+  `ViewerCanvas.tsx`, generated types, fixtures, dependencies, CI, credentials and deployment
+  excluded. One principal pass plus one corrective pass; no Agent Bakeoff, no parallel branches, no
+  new dependencies, no image generation, no live Meta API call.
+- **Approved scope (as exercised):** `frontend/src/App.tsx`, `frontend/src/index.css`,
+  `frontend/src/components/ModelWorkspace.tsx` (+ test), `frontend/src/api/bim.ts` (+ test), new
+  focused components under `frontend/src/components/`, new focused tests and one narrow UI state
+  module. Documentation: `docs/UI_SPEC.md`, `docs/UI_CHANGELOG.md`, `docs/IMPLEMENTATION_PLAN.md`,
+  `CHANGELOG.md`, `README.md`.
+- **Baseline and branch:** `feature/ui-003-production-integration` created from `origin/main`
+  at `a3e701f` (merge of PR #17). Worktree was clean before work started.
+- **Files changed:**
+  - Modified: `frontend/src/App.tsx`, `frontend/src/index.css`,
+    `frontend/src/components/ModelWorkspace.tsx`, `frontend/src/components/ModelWorkspace.test.tsx`,
+    `frontend/src/api/bim.ts`, `frontend/src/api/bim.test.ts`.
+  - Added: `frontend/src/components/AppHeader.tsx`, `ProjectHome.tsx`, `ProjectHome.test.tsx`,
+    `ReviewSetup.tsx`, `ModelBrowser.tsx`, `FindingRegister.tsx`, `ReviewCoverage.tsx`,
+    `EvidenceInspector.tsx`, `frontend/src/state/useAppLocation.ts`, `frontend/src/App.test.tsx`,
+    `frontend/src/test/hygiene.test.ts`.
+  - Documentation: `docs/UI_SPEC.md` (§status, §10, §13, §17 note, new §18),
+    `docs/UI_CHANGELOG.md` (this entry), `docs/IMPLEMENTATION_PLAN.md` (T-7 note),
+    `docs/ARCHITECTURE.md` (two sentences in §11/§12.3 naming the renamed **Run review** action and
+    the Project Home entry), `CHANGELOG.md`, `README.md`.
+  - Unchanged: `frontend/src/viewer/*`, `frontend/src/api/generated/*`, `frontend/src/api/client.ts`,
+    `frontend/src/components/HealthPanel.tsx`, `frontend/src/state/useHealth.ts`, `frontend/src/main.tsx`,
+    `backend/`, `tests/`, `datasets/`, `package.json`/lockfile, tsconfig, CI.
+- **Reason for each significant change:**
+  - `api/bim.ts` → add `createSession`, `fetchSession`, `uploadModel`, `uploadDocument`,
+    `fetchRequirements`, extension classification (`.ifc`; `.ids`/`.md`/`.txt`),
+    `isExecutableRequirement` and a typed `ModelVersionMismatchError` (also mapped from HTTP 412)
+    so the UI can represent a stale run explicitly. Existing version-pinned reads are unchanged.
+  - `App.tsx` + `state/useAppLocation.ts` → home/workspace view state driven by the query string
+    (`session_id`, `run_id`) with `pushState`/`popstate`; replaces the inline session/run form.
+  - `ProjectHome.tsx` / `ReviewSetup.tsx` → product identity, session creation, IFC and
+    requirements upload with loading/success/rejection states, honest "not available" areas.
+  - `ModelWorkspace.tsx` → separate model / review / requirements / element state channels;
+    referentially stable viewer callbacks via refs so the WebGL viewer is created once per model
+    version; run-review flow keeps the existing bytes when the model hash is unchanged.
+  - `ModelBrowser.tsx`, `FindingRegister.tsx`, `ReviewCoverage.tsx`, `EvidenceInspector.tsx` →
+    Concept C v2 panels populated solely from `ModelSummary`, `ReviewRun`, `Finding`,
+    `Requirement` and `ElementRecord`.
+  - `index.css` → prototype palette as production tokens, header, Project Home, setup sequence,
+    fixed-height desktop grid, two-column and single-column adaptations.
+  - `test/hygiene.test.ts` → asserts no credential patterns or model-provider endpoints in
+    frontend sources (uses Vite `import.meta.glob`, no Node file-system access).
+- **Protected behaviour:** UI_SPEC §12 items 1–11 preserved: generated types untouched; ETag /
+  `If-Match` reads and the run-vs-model hash check unchanged in `bim.ts`; IFC bytes read-only;
+  `ViewerCanvas`/`IfcViewer` unchanged; finding→model highlight and model→finding selection
+  retained (tests + browser); finding identity, method, observed/expected, requirement/check/rule
+  version displayed verbatim; inherited-property provenance labelled; coverage and run status kept
+  distinct from findings; loading/empty/error/mismatch states explicit; keyboard-operable rows with
+  visible focus; no functionality removed (the manual session/run entry survives as "Open an
+  existing session").
+- **Corrective pass (one):** (1) desktop fixed-height grid did not engage because the grid's
+  column-flex basis overrode its height — fixed by sizing the shell to `100vh` and letting the grid
+  flex; (2) narrow layouts clipped the findings list because desktop `min-height: 0` rules leaked —
+  scoped to desktop; (3) `Start over` wrapped and the step-4 button stretched full width; (4) narrow
+  viewport hints now wrap below the heading.
+- **Tests executed (from `frontend/`, 30 October 2026):**
+  - `npm run lint` → passed (oxlint, no warnings).
+  - `npm run format:check` → passed. (`prettier --write` was applied **only** to the 17 files
+    changed by this iteration; the repository-wide `npm run format` was not run.)
+  - `npm run typecheck` → passed.
+  - `npm run types:check` → passed (`types.ts: up to date`). There is no `npm run types` script;
+    type generation was not run.
+  - `npm test` → passed: 6 files, 54 tests (baseline before this iteration: 3 files, 18 tests).
+  - `npm run build` → passed (`✓ built in 3.16s`). 26 `IMPORT_IS_UNDEFINED` warnings originate in
+    `node_modules/@thatopen/*` and are identical on the unmodified baseline (verified by stash/build).
+  - Backend `ruff`/`mypy`/`pytest` → not run (no backend file changed).
+- **Browser verification (actual, not mocked):** VS Code integrated browser
+  `Chrome/150.0.7871.250` (`Electron/43.8.3`), FastAPI on `127.0.0.1:8001` (`LLM_MODE=off`, no key;
+  port 8000 was occupied by an unrelated process) and Vite on `127.0.0.1:5173` with
+  `BIMI_API_ORIGIN=http://127.0.0.1:8001`. Inputs: `tests/fixtures/minimal.ifc` and
+  `tests/fixtures/minimal.ids` (synthetic). Steps completed: open Project Home → Create review
+  session (`POST /sessions`) → upload IFC (summary `Minimal Project`, IFC4, version `f2bd0007…`) →
+  upload IDS (2 executable requirements) → Open review workspace → real geometry rendered (three
+  walls) → left-drag orbit, right-drag pan and wheel zoom each changed the rendered pixels →
+  Run review (`plan_source: default`, 2 checks executed, 2 findings) → select finding W-002 →
+  element highlighted red in the viewer and `ElementRecord` shown (`Pset_WallCommon.IsExternal`,
+  Uniclass classification, source requirement from the IDS) → clear selection → click a wall in
+  the viewer → W-001 `ElementRecord` (`FireRating = REI 60`) with "no linked findings" →
+  keyboard: Tab/Enter on the W-003 row selected it → Return to Project Home (URL cleared).
+  Additional live states: IFC-only session → "No executable requirements · model view only" with
+  Run review disabled; unknown run id → problem detail shown, model still viewable; second model
+  version uploaded via API → deep link to the earlier run shows the version-mismatch alerts and
+  refuses the stale findings while the new model loads.
+  Tooling notes: the webview throttles `requestAnimationFrame` while the tab is hidden, which
+  stalls the viewer's camera fit until the tab is visible (environment behaviour, not an
+  application regression); desktop/narrow captures used CDP device-metrics emulation
+  (`Emulation.setDeviceMetricsOverride` + `setVisibleSize`), and DOM measurements confirmed the
+  layouts (1920: columns 238/1374/308 px; 1440: 238/894/308 px; 390: single column, scroll width
+  390 px).
+- **Visual evidence (ignored, private):** `local-private/test-results/ui-003/`:
+  `ui-003-home-{1920x1080,1440x900,390x844}.png`, `ui-003-setup-uploads-complete-1920x1080.png`,
+  `ui-003-workspace-finding-selected-{1920x1080,1440x900,390x844,390x844-fullpage}.png`,
+  `ui-003-workspace-finding-selected-1428x783.png`, `ui-003-workspace-element-selected-1428x783.png`,
+  `ui-003-workspace-after-orbit-pan-zoom-1428x783.png`,
+  `ui-003-workspace-keyboard-selected-w003-1920x1080.png`,
+  `ui-003-workspace-no-executable-requirements-1440x900.png`,
+  `ui-003-workspace-review-error-unknown-run-1440x900.png`,
+  `ui-003-workspace-model-version-mismatch-1440x900.png`. The `1428x783` files are native webview
+  captures; the others are emulated-viewport captures.
+- **Accessibility regression results:** semantic landmarks (`banner`, `nav`, `main`,
+  `complementary`, `region`), labelled file inputs, `aria-pressed` rows, `role=status`/`alert`
+  announcements and the `:focus-visible` outline are present; keyboard activation of a finding row
+  verified in the browser. Not assessed: contrast measurement, screen-reader output, 200 % zoom,
+  reduced motion. 3D selection remains pointer-only; the findings register is the non-spatial path.
+- **Functional regression results:** All protected interactions above passed in tests and in the
+  browser. Known behaviour carried from the baseline viewer: the library's green click-selection
+  style persists after *Clear selection* because `IfcViewer` exposes no clear API (deferred to
+  UI-004).
+- **Weighted evaluation (implementation-stage, measured in browser; 0–4 rubric):** Professional
+  BIM usability 3; Spatial clarity 3 (viewport dominant at both desktop sizes; no fit/focus
+  control); Visual refinement 3; Evidence integrity 4; Accessibility and responsive 2 (audit
+  outstanding); Implementation feasibility 4. Weighted total **77.5/100**; comparative only, no
+  passing threshold adopted.
+- **Owner decision:** The implementation was owner-approved; commit/push were authorised and completed, and [PR #18](https://github.com/natnew/BIM-Intelligence/pull/18) is open for owner review. Merge remains pending.
+- **Branch, commit and PR references:** `feature/ui-003-production-integration`; commit
+  [`decbe625`](https://github.com/natnew/BIM-Intelligence/commit/decbe62547574a16eeccac7ff7bc0437d0af9ba1);
+  [PR #18](https://github.com/natnew/BIM-Intelligence/pull/18), targeting `main`.
+- **Rollback instructions:** From the branch, `git checkout origin/main -- frontend/src/App.tsx
+  frontend/src/index.css frontend/src/components/ModelWorkspace.tsx
+  frontend/src/components/ModelWorkspace.test.tsx frontend/src/api/bim.ts frontend/src/api/bim.test.ts
+  docs/UI_SPEC.md docs/IMPLEMENTATION_PLAN.md docs/ARCHITECTURE.md CHANGELOG.md README.md` and
+  delete the added files
+  listed above (`AppHeader.tsx`, `ProjectHome.tsx`, `ProjectHome.test.tsx`, `ReviewSetup.tsx`,
+  `ModelBrowser.tsx`, `FindingRegister.tsx`, `ReviewCoverage.tsx`, `EvidenceInspector.tsx`,
+  `state/useAppLocation.ts`, `App.test.tsx`, `test/hygiene.test.ts`), then remove this entry.
+  Private evidence under `local-private/test-results/ui-003/` is owner-managed and ignored.

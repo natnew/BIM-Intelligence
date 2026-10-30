@@ -1,9 +1,12 @@
 import type {
+  DocumentImport,
   ElementRecord,
   Finding,
   ModelSummary,
   ProblemDetail,
+  Requirement,
   ReviewRun,
+  Session,
 } from './generated/types';
 import { API_BASE_URL, ApiError } from './client';
 
@@ -18,6 +21,48 @@ export interface ReviewWorkspaceData extends VersionedModel {
   readonly runId: string;
   readonly run: ReviewRun;
   readonly findings: Finding[];
+}
+
+/** Raised when a run, file or summary names a different model version than the active one. */
+export class ModelVersionMismatchError extends ApiError {
+  constructor(message: string) {
+    super(message, 412);
+    this.name = 'ModelVersionMismatchError';
+  }
+}
+
+/** The only extensions the backend upload routes accept (api/model.py, api/documents.py). */
+export const MODEL_FILE_EXTENSIONS: readonly string[] = ['.ifc'];
+export const DOCUMENT_FILE_EXTENSIONS: readonly string[] = ['.ids', '.md', '.txt'];
+
+export type UploadKind = 'model' | 'ids' | 'narrative';
+
+/** Classifies a filename by its extension; `null` means the backend would reject it (415). */
+export function classifyUploadFile(filename: string): UploadKind | null {
+  const leaf = filename.split(/[\\/]/).pop() ?? '';
+  const dot = leaf.lastIndexOf('.');
+  if (dot <= 0) {
+    return null;
+  }
+  const extension = leaf.slice(dot).toLowerCase();
+  if (MODEL_FILE_EXTENSIONS.includes(extension)) {
+    return 'model';
+  }
+  if (extension === '.ids') {
+    return 'ids';
+  }
+  if (DOCUMENT_FILE_EXTENSIONS.includes(extension)) {
+    return 'narrative';
+  }
+  return null;
+}
+
+/** A review executes only requirements whose confirmed revision is the current revision. */
+export function isExecutableRequirement(requirement: Requirement): boolean {
+  return (
+    requirement.confirmed_revision !== null &&
+    requirement.confirmed_revision === requirement.revision
+  );
 }
 
 function sessionPath(sessionId: string): string {
@@ -59,10 +104,83 @@ async function request(path: string, init: RequestInit = {}): Promise<Response> 
         throw error;
       }
     }
+    if (response.status === 412) {
+      throw new ModelVersionMismatchError(detail);
+    }
     throw new ApiError(detail, response.status);
   }
 
   return response;
+}
+
+export async function createSession(signal?: AbortSignal): Promise<Session> {
+  const options = requestOptions(signal);
+  options.method = 'POST';
+  const response = await request(`${API_BASE_URL}/sessions`, options);
+  return (await response.json()) as Session;
+}
+
+export async function fetchSession(sessionId: string, signal?: AbortSignal): Promise<Session> {
+  const response = await request(sessionPath(sessionId), requestOptions(signal));
+  const session = (await response.json()) as Session;
+  if (session.id !== sessionId) {
+    throw new ApiError('The returned session does not match the requested session.');
+  }
+  return session;
+}
+
+/** Uploads one `.ifc` file; the backend stores it byte-for-byte and publishes a new version. */
+export async function uploadModel(
+  sessionId: string,
+  file: File,
+  signal?: AbortSignal,
+): Promise<{ summary: ModelSummary; etag: string }> {
+  if (classifyUploadFile(file.name) !== 'model') {
+    throw new ApiError(
+      `Only ${MODEL_FILE_EXTENSIONS.join(', ')} files can be uploaded as a model.`,
+    );
+  }
+  const form = new FormData();
+  form.append('file', file, file.name);
+  const options = requestOptions(signal);
+  options.method = 'POST';
+  options.body = form;
+  const response = await request(`${sessionPath(sessionId)}/model`, options);
+  const summary = (await response.json()) as ModelSummary;
+  const etag = response.headers.get('ETag');
+  if (etag !== `"${summary.model_hash}"`) {
+    throw new ApiError('The uploaded model returned an invalid version ETag.');
+  }
+  return { summary, etag };
+}
+
+/** Uploads one `.ids`, `.md` or `.txt` requirements document. */
+export async function uploadDocument(
+  sessionId: string,
+  file: File,
+  signal?: AbortSignal,
+): Promise<DocumentImport> {
+  const kind = classifyUploadFile(file.name);
+  if (kind !== 'ids' && kind !== 'narrative') {
+    throw new ApiError(
+      `Only ${DOCUMENT_FILE_EXTENSIONS.join(', ')} files can be uploaded as requirements.`,
+    );
+  }
+  const form = new FormData();
+  form.append('file', file, file.name);
+  const options = requestOptions(signal);
+  options.method = 'POST';
+  options.body = form;
+  const response = await request(`${sessionPath(sessionId)}/documents`, options);
+  return (await response.json()) as DocumentImport;
+}
+
+export async function fetchRequirements(
+  sessionId: string,
+  signal?: AbortSignal,
+): Promise<Requirement[]> {
+  const response = await request(`${sessionPath(sessionId)}/requirements`, requestOptions(signal));
+  return (await response.json()) as Requirement[];
 }
 
 async function getModelSummary(
@@ -101,7 +219,7 @@ export async function loadReviewWorkspace(
     throw new ApiError('The selected review run does not match the requested session and run.');
   }
   if (run.input_manifest.model_hash !== summary.model_hash) {
-    throw new ApiError('This review run belongs to a different model version.');
+    throw new ModelVersionMismatchError('This review run belongs to a different model version.');
   }
 
   const [bytes, findings] = await Promise.all([

@@ -1,32 +1,96 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 
 import { ApiError } from '../api/client';
 import {
+  DOCUMENT_FILE_EXTENSIONS,
+  ModelVersionMismatchError,
+  classifyUploadFile,
   fetchElement,
+  fetchRequirements,
+  isExecutableRequirement,
+  loadModel,
   loadReviewWorkspace,
   startStandardReview,
-  type ReviewWorkspaceData,
+  uploadDocument,
+  type VersionedModel,
 } from '../api/bim';
-import type { ElementRecord, Finding, PropertyValue } from '../api/generated/types';
+import type { Finding, Requirement, ReviewRun } from '../api/generated/types';
 import { ViewerCanvas } from '../viewer/ViewerCanvas';
+import { AppHeader } from './AppHeader';
+import { EvidenceInspector, type ElementLoadState } from './EvidenceInspector';
+import { FindingRegister } from './FindingRegister';
+import { ModelBrowser } from './ModelBrowser';
+import { ReviewCoverage } from './ReviewCoverage';
 
 interface ModelWorkspaceProps {
-  readonly initialSessionId: string;
-  readonly initialRunId: string;
+  readonly sessionId: string;
+  readonly initialRunId: string | null;
+  readonly onRunChanged: (runId: string) => void;
+  readonly onReturnHome: () => void;
 }
 
-export function ModelWorkspace({ initialSessionId, initialRunId }: ModelWorkspaceProps) {
-  const [sessionId, setSessionId] = useState(initialSessionId);
-  const [runId, setRunId] = useState(initialRunId);
-  const [workspace, setWorkspace] = useState<ReviewWorkspaceData | null>(null);
+type ModelState =
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'ready'; readonly model: VersionedModel }
+  | { readonly kind: 'error'; readonly message: string };
+
+type ReviewState =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'loading'; readonly runId: string }
+  | { readonly kind: 'running' }
+  | { readonly kind: 'ready'; readonly run: ReviewRun; readonly findings: Finding[] }
+  | { readonly kind: 'mismatch'; readonly runId: string; readonly message: string }
+  | { readonly kind: 'error'; readonly message: string };
+
+type RequirementsState =
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'ready'; readonly items: Requirement[] }
+  | { readonly kind: 'error'; readonly message: string };
+
+type DocumentUploadState =
+  | { readonly kind: 'idle' }
+  | { readonly kind: 'uploading'; readonly filename: string }
+  | { readonly kind: 'done'; readonly filename: string; readonly executable: number }
+  | { readonly kind: 'error'; readonly message: string };
+
+const NO_FINDINGS: Finding[] = [];
+
+export function ModelWorkspace({
+  sessionId,
+  initialRunId,
+  onRunChanged,
+  onReturnHome,
+}: ModelWorkspaceProps) {
+  const [modelState, setModelState] = useState<ModelState>({ kind: 'loading' });
+  const [reviewState, setReviewState] = useState<ReviewState>(
+    initialRunId ? { kind: 'loading', runId: initialRunId } : { kind: 'none' },
+  );
+  const [requirementsState, setRequirementsState] = useState<RequirementsState>({
+    kind: 'loading',
+  });
+  const [documentUpload, setDocumentUpload] = useState<DocumentUploadState>({ kind: 'idle' });
   const [selectedFindingId, setSelectedFindingId] = useState<string | null>(null);
   const [selectedGlobalIds, setSelectedGlobalIds] = useState<string[]>([]);
-  const [selectedElement, setSelectedElement] = useState<ElementRecord | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const loadRequestRef = useRef<AbortController | null>(null);
+  const [elementState, setElementState] = useState<ElementLoadState>({ kind: 'idle' });
+  const [viewerError, setViewerError] = useState<string | null>(null);
+
+  const reviewRequestRef = useRef<AbortController | null>(null);
   const elementRequestRef = useRef<AbortController | null>(null);
-  const selectedFinding = workspace?.findings.find((finding) => finding.id === selectedFindingId);
+  // Refs let the viewer callbacks stay referentially stable, so the WebGL viewer is created once
+  // per model version rather than on every state change.
+  const etagRef = useRef<string | null>(null);
+  const findingsRef = useRef<Finding[]>(NO_FINDINGS);
+
+  const findings = reviewState.kind === 'ready' ? reviewState.findings : NO_FINDINGS;
+  const run = reviewState.kind === 'ready' ? reviewState.run : null;
+  const model = modelState.kind === 'ready' ? modelState.model : null;
+
+  useEffect(() => {
+    etagRef.current = model?.etag ?? null;
+    findingsRef.current = findings;
+  }, [model, findings]);
+
+  const selectedFinding = findings.find((finding) => finding.id === selectedFindingId) ?? null;
   const highlightedGlobalIds = useMemo(
     () =>
       selectedFinding?.elements.flatMap((element) =>
@@ -34,377 +98,513 @@ export function ModelWorkspace({ initialSessionId, initialRunId }: ModelWorkspac
       ) ?? [],
     [selectedFinding],
   );
-
-  useEffect(
-    () => () => {
-      loadRequestRef.current?.abort();
-      elementRequestRef.current?.abort();
-    },
-    [],
+  const relatedFindings = useMemo(
+    () =>
+      selectedGlobalIds.length === 0
+        ? []
+        : findings.filter((finding) =>
+            finding.elements.some(
+              (element) =>
+                element.global_id !== null && selectedGlobalIds.includes(element.global_id),
+            ),
+          ),
+    [findings, selectedGlobalIds],
   );
+  const executableCount =
+    requirementsState.kind === 'ready'
+      ? requirementsState.items.filter(isExecutableRequirement).length
+      : null;
 
-  async function connectToReview(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    loadRequestRef.current?.abort();
-    elementRequestRef.current?.abort();
+  useEffect(() => {
     const controller = new AbortController();
-    loadRequestRef.current = controller;
-    setLoading(true);
-    setError(null);
-    setWorkspace(null);
-    setSelectedFindingId(null);
-    setSelectedGlobalIds([]);
-    setSelectedElement(null);
+    const { signal } = controller;
 
-    try {
-      const loaded = await loadReviewWorkspace(sessionId.trim(), runId.trim(), controller.signal);
-      if (!controller.signal.aborted) {
-        setWorkspace(loaded);
-      }
-    } catch (caught) {
-      if (!controller.signal.aborted) {
-        setError(messageForError(caught));
-      }
-    } finally {
-      if (!controller.signal.aborted) {
-        setLoading(false);
-      }
-    }
-  }
-
-  async function runStandardReview() {
-    const activeSessionId = sessionId.trim();
-    if (!activeSessionId) {
-      return;
-    }
-
-    loadRequestRef.current?.abort();
-    elementRequestRef.current?.abort();
-    const controller = new AbortController();
-    loadRequestRef.current = controller;
-    setLoading(true);
-    setError(null);
-    setWorkspace(null);
-    setSelectedFindingId(null);
-    setSelectedGlobalIds([]);
-    setSelectedElement(null);
-
-    try {
-      const run = await startStandardReview(activeSessionId, controller.signal);
-      const loaded = await loadReviewWorkspace(activeSessionId, run.id, controller.signal);
-      if (!controller.signal.aborted) {
-        setRunId(run.id);
-        setWorkspace(loaded);
-      }
-    } catch (caught) {
-      if (!controller.signal.aborted) {
-        setError(messageForError(caught));
-      }
-    } finally {
-      if (!controller.signal.aborted) {
-        setLoading(false);
-      }
-    }
-  }
-
-  const loadElement = useCallback(
-    async (globalId: string | null) => {
-      elementRequestRef.current?.abort();
-      if (!globalId || !workspace) {
-        setSelectedElement(null);
-        return;
-      }
-
-      const controller = new AbortController();
-      elementRequestRef.current = controller;
-      setSelectedElement(null);
-      setError(null);
+    async function load() {
       try {
-        const element = await fetchElement(
-          workspace.sessionId,
-          globalId,
-          workspace.etag,
-          controller.signal,
-        );
-        if (!controller.signal.aborted) {
-          setSelectedElement(element);
-          setError(null);
+        if (initialRunId) {
+          try {
+            const loaded = await loadReviewWorkspace(sessionId, initialRunId, signal);
+            if (signal.aborted) {
+              return;
+            }
+            setModelState({
+              kind: 'ready',
+              model: { summary: loaded.summary, etag: loaded.etag, bytes: loaded.bytes },
+            });
+            setReviewState({ kind: 'ready', run: loaded.run, findings: loaded.findings });
+            return;
+          } catch (caught) {
+            if (signal.aborted) {
+              return;
+            }
+            const fallback = await loadModel(sessionId, signal);
+            if (signal.aborted) {
+              return;
+            }
+            setModelState({ kind: 'ready', model: fallback });
+            setReviewState(
+              caught instanceof ModelVersionMismatchError
+                ? { kind: 'mismatch', runId: initialRunId, message: caught.message }
+                : { kind: 'error', message: messageForError(caught) },
+            );
+            return;
+          }
+        }
+        const loaded = await loadModel(sessionId, signal);
+        if (!signal.aborted) {
+          setModelState({ kind: 'ready', model: loaded });
         }
       } catch (caught) {
-        if (!controller.signal.aborted) {
-          setSelectedElement(null);
-          setError(messageForError(caught));
+        if (!signal.aborted) {
+          setModelState({ kind: 'error', message: messageForError(caught) });
         }
       }
+    }
+
+    void load();
+    void fetchRequirements(sessionId, signal)
+      .then((items) => {
+        if (!signal.aborted) {
+          setRequirementsState({ kind: 'ready', items });
+        }
+      })
+      .catch((caught: unknown) => {
+        if (!signal.aborted) {
+          setRequirementsState({ kind: 'error', message: messageForError(caught) });
+        }
+      });
+
+    return () => {
+      controller.abort();
+      reviewRequestRef.current?.abort();
+      elementRequestRef.current?.abort();
+    };
+  }, [sessionId, initialRunId]);
+
+  const loadElement = useCallback(
+    (globalId: string | null) => {
+      elementRequestRef.current?.abort();
+      const etag = etagRef.current;
+      if (!globalId || !etag) {
+        setElementState({ kind: 'idle' });
+        return;
+      }
+      const controller = new AbortController();
+      elementRequestRef.current = controller;
+      setElementState({ kind: 'loading', globalId });
+      void fetchElement(sessionId, globalId, etag, controller.signal)
+        .then((element) => {
+          if (!controller.signal.aborted) {
+            setElementState({ kind: 'ready', element });
+          }
+        })
+        .catch((caught: unknown) => {
+          if (!controller.signal.aborted) {
+            setElementState({ kind: 'error', globalId, message: messageForError(caught) });
+          }
+        });
     },
-    [workspace],
+    [sessionId],
   );
 
   const selectFromViewer = useCallback(
     (globalIds: string[]) => {
       const uniqueIds = [...new Set(globalIds)];
-      const finding = workspace?.findings.find((candidate) =>
+      const finding = findingsRef.current.find((candidate) =>
         candidate.elements.some(
           (element) => element.global_id !== null && uniqueIds.includes(element.global_id),
         ),
       );
       setSelectedGlobalIds(uniqueIds);
       setSelectedFindingId(finding?.id ?? null);
-      void loadElement(uniqueIds[0] ?? null);
+      loadElement(uniqueIds[0] ?? null);
     },
-    [loadElement, workspace],
+    [loadElement],
   );
+
+  const handleViewerError = useCallback((message: string) => setViewerError(message), []);
 
   function selectFinding(finding: Finding) {
     const globalIds = finding.elements.flatMap((element) =>
       element.global_id ? [element.global_id] : [],
     );
-    setError(null);
     setSelectedFindingId(finding.id);
     setSelectedGlobalIds(globalIds);
-    void loadElement(globalIds[0] ?? null);
+    loadElement(globalIds[0] ?? null);
   }
 
-  return (
-    <section className="workspace" aria-labelledby="model-heading">
-      <div className="workspace__heading">
-        <div>
-          <p className="eyebrow">T-3/T-4 · Review workspace</p>
-          <h2 id="model-heading">Model viewer</h2>
-        </div>
-        {workspace && <span className="version-badge">Version pinned</span>}
-      </div>
+  function clearSelection() {
+    elementRequestRef.current?.abort();
+    setSelectedFindingId(null);
+    setSelectedGlobalIds([]);
+    setElementState({ kind: 'idle' });
+  }
 
-      <form className="review-form" onSubmit={(event) => void connectToReview(event)}>
-        <div className="review-form__field">
-          <label htmlFor="session-id">Session ID</label>
-          <input
-            id="session-id"
-            name="session_id"
-            autoComplete="off"
-            value={sessionId}
-            onChange={(event) => setSessionId(event.target.value)}
-            placeholder="Paste a session UUID"
-            required
-          />
-        </div>
-        <div className="review-form__field">
-          <label htmlFor="run-id">Review run ID</label>
-          <input
-            id="run-id"
-            name="run_id"
-            autoComplete="off"
-            value={runId}
-            onChange={(event) => setRunId(event.target.value)}
-            placeholder="Paste a completed run ID"
-            required
-          />
-        </div>
-        <button type="submit" disabled={loading}>
-          {loading ? 'Loading review…' : 'Load review'}
-        </button>
+  async function runReview() {
+    reviewRequestRef.current?.abort();
+    const controller = new AbortController();
+    reviewRequestRef.current = controller;
+    clearSelection();
+    setReviewState({ kind: 'running' });
+    try {
+      const started = await startStandardReview(sessionId, controller.signal);
+      const loaded = await loadReviewWorkspace(sessionId, started.id, controller.signal);
+      if (controller.signal.aborted) {
+        return;
+      }
+      setModelState((previous) =>
+        previous.kind === 'ready' && previous.model.summary.model_hash === loaded.summary.model_hash
+          ? previous
+          : {
+              kind: 'ready',
+              model: { summary: loaded.summary, etag: loaded.etag, bytes: loaded.bytes },
+            },
+      );
+      setReviewState({ kind: 'ready', run: loaded.run, findings: loaded.findings });
+      onRunChanged(started.id);
+    } catch (caught) {
+      if (!controller.signal.aborted) {
+        setReviewState(
+          caught instanceof ModelVersionMismatchError
+            ? { kind: 'mismatch', runId: 'new run', message: caught.message }
+            : { kind: 'error', message: messageForError(caught) },
+        );
+      }
+    }
+  }
+
+  async function handleDocumentChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) {
+      return;
+    }
+    const kind = classifyUploadFile(file.name);
+    if (kind !== 'ids' && kind !== 'narrative') {
+      setDocumentUpload({
+        kind: 'error',
+        message: `"${file.name}" is not a supported requirements document. Use ${DOCUMENT_FILE_EXTENSIONS.join(', ')}.`,
+      });
+      return;
+    }
+    setDocumentUpload({ kind: 'uploading', filename: file.name });
+    try {
+      const imported = await uploadDocument(sessionId, file);
+      const items = await fetchRequirements(sessionId);
+      setRequirementsState({ kind: 'ready', items });
+      setDocumentUpload({
+        kind: 'done',
+        filename: file.name,
+        executable: imported.requirements.filter(isExecutableRequirement).length,
+      });
+    } catch (caught) {
+      setDocumentUpload({ kind: 'error', message: messageForError(caught) });
+    }
+  }
+
+  const reviewBusy = reviewState.kind === 'running' || reviewState.kind === 'loading';
+  const canRun =
+    model !== null &&
+    !reviewBusy &&
+    documentUpload.kind !== 'uploading' &&
+    (executableCount === null || executableCount > 0);
+
+  return (
+    <div className="workspace-shell">
+      <AppHeader
+        view="workspace"
+        sessionId={sessionId}
+        onNavigateHome={onReturnHome}
+        onNavigateWorkspace={null}
+      >
         <button
           type="button"
-          disabled={loading || !sessionId.trim()}
-          onClick={() => void runStandardReview()}
+          className="button button--primary"
+          disabled={!canRun}
+          onClick={() => void runReview()}
+          title={
+            executableCount === 0
+              ? 'Add an IDS with confirmed requirements before running a review'
+              : undefined
+          }
         >
-          {loading ? 'Running review…' : 'Run standard review'}
+          {reviewState.kind === 'running' ? 'Running review…' : 'Run review'}
         </button>
-      </form>
+      </AppHeader>
 
-      {error && (
-        <p role="alert" className="notice notice--error">
-          {error}
+      <div className="review-bar" aria-label="Review status">
+        {model ? (
+          <>
+            <span className="review-bar__item">
+              <span className="review-bar__label">Model</span>{' '}
+              {model.summary.project_name ?? 'Unnamed project'} · {model.summary.ifc_schema} ·{' '}
+              <code title={model.summary.model_hash}>{model.summary.model_hash.slice(0, 12)}</code>
+            </span>
+            <ReviewStatusChip state={reviewState} executableCount={executableCount} />
+          </>
+        ) : (
+          <span className="review-bar__item">
+            {modelState.kind === 'loading'
+              ? 'Loading the active model version…'
+              : 'Model unavailable'}
+          </span>
+        )}
+        <button type="button" className="button button--ghost" onClick={onReturnHome}>
+          Return to Project Home
+        </button>
+      </div>
+
+      {modelState.kind === 'loading' && (
+        <p role="status" className="notice workspace-shell__notice">
+          {reviewState.kind === 'loading'
+            ? 'Checking the run’s model version and loading the review…'
+            : 'Checking the active model version and downloading the stored IFC…'}
         </p>
       )}
-      {!workspace && !loading && !error && (
-        <p className="notice workspace__notice">
-          Load an existing review or run a standard review for a session. Model and findings are
-          read from version-aware API endpoints.
-        </p>
-      )}
-      {loading && (
-        <p role="status" className="notice workspace__notice">
-          Checking the run’s model version and loading review data…
-        </p>
+      {modelState.kind === 'error' && (
+        <div className="workspace-shell__notice">
+          <p role="alert" className="notice notice--error">
+            {modelState.message}
+          </p>
+          <p className="notice">
+            The session may have no uploaded model yet. Return to Project Home to upload one or open
+            a different session.
+          </p>
+        </div>
       )}
 
-      {workspace && (
-        <div className="workspace__content">
-          <div className="workspace__model">
-            <dl className="model-summary" aria-label="Model summary">
-              <div>
-                <dt>Project</dt>
-                <dd>{workspace.summary.project_name ?? 'Untitled project'}</dd>
-              </div>
-              <div>
-                <dt>Schema</dt>
-                <dd>{workspace.summary.ifc_schema}</dd>
-              </div>
-              <div>
-                <dt>Model hash</dt>
-                <dd>
-                  <code>{workspace.summary.model_hash.slice(0, 12)}</code>
-                </dd>
-              </div>
-              <div>
-                <dt>Deterministic findings</dt>
-                <dd>{workspace.findings.length}</dd>
-              </div>
-            </dl>
+      {model && (
+        <main className="workspace-grid" id="main">
+          <ModelBrowser summary={model.summary} />
+
+          <section className="viewport" aria-labelledby="viewport-heading">
+            <div className="viewport__head">
+              <h2 id="viewport-heading">3D model</h2>
+              <p className="viewport__hints">
+                Left-drag orbit · right-drag pan · wheel zoom · click an element to inspect it. Fit,
+                focus and visibility controls are not exposed by the viewer in this iteration.
+              </p>
+              {selectedGlobalIds.length > 0 && (
+                <button type="button" className="button button--ghost" onClick={clearSelection}>
+                  Clear selection
+                </button>
+              )}
+            </div>
+            {viewerError && (
+              <p role="alert" className="notice notice--error viewport__error">
+                {viewerError}
+              </p>
+            )}
             <ViewerCanvas
-              bytes={workspace.bytes}
-              modelId={workspace.summary.model_hash}
+              bytes={model.bytes}
+              modelId={model.summary.model_hash}
               highlightedGlobalIds={highlightedGlobalIds}
               onGlobalIdsSelected={selectFromViewer}
-              onViewerError={setError}
+              onViewerError={handleViewerError}
             />
-          </div>
-
-          <aside className="review-panel" aria-label="Findings and element details">
-            <p className="notice" role="status">
-              Review status: {workspace.run.status}
-            </p>
-            <section aria-labelledby="check-coverage-heading">
-              <h3 id="check-coverage-heading">Check coverage</h3>
-              <ul aria-label="Check coverage" className="check-result-list">
-                {workspace.run.check_results.map((result) => (
-                  <li key={result.check_id}>
-                    <code>{result.requirement_id}</code> · {result.status}
-                    {result.diagnostics.length > 0 && <p>{result.diagnostics.join(' ')}</p>}
-                  </li>
-                ))}
-              </ul>
-            </section>
-            <section aria-labelledby="findings-heading">
-              <div className="panel-heading">
-                <h3 id="findings-heading">Findings</h3>
-                <span className="finding-count">{workspace.findings.length}</span>
-              </div>
-              {workspace.findings.length === 0 ? (
-                <p className="notice">No findings were returned for this review run.</p>
-              ) : (
-                <ul className="finding-list">
-                  {workspace.findings.map((finding) => (
-                    <li key={finding.id}>
-                      <button
-                        type="button"
-                        className="finding-list__item"
-                        aria-pressed={finding.id === selectedFindingId}
-                        onClick={() => selectFinding(finding)}
-                      >
-                        <span className="finding-list__meta">
-                          <span className={`severity severity--${finding.severity}`}>
-                            {finding.severity}
-                          </span>
-                          <code>{finding.rule_id}</code>
-                        </span>
-                        <span className="finding-list__name">
-                          {finding.elements[0]?.name ?? finding.category}
-                        </span>
-                        <span className="finding-list__summary">{finding.expected}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-
-            {selectedFinding && (
-              <section className="detail-section" aria-labelledby="finding-detail-heading">
-                <h3 id="finding-detail-heading">Finding details</h3>
-                <p className="verification-label">
-                  Deterministically verified · {selectedFinding.method}
-                </p>
-                <dl className="detail-list">
-                  <dt>Observed</dt>
-                  <dd>{selectedFinding.observed}</dd>
-                  <dt>Expected</dt>
-                  <dd>{selectedFinding.expected}</dd>
-                  <dt>Requirement</dt>
-                  <dd>
-                    <code>{selectedFinding.requirement_id}</code>
-                  </dd>
-                  <dt>Rule version</dt>
-                  <dd>
-                    <code>{selectedFinding.rule_version}</code>
-                  </dd>
-                </dl>
+            {reviewState.kind === 'ready' ? (
+              <FindingRegister
+                findings={findings}
+                selectedFindingId={selectedFindingId}
+                onSelect={selectFinding}
+              />
+            ) : (
+              <section className="register register--empty" aria-labelledby="findings-heading">
+                <div className="panel-heading">
+                  <h2 id="findings-heading">Findings</h2>
+                </div>
+                <ReviewPlaceholder state={reviewState} executableCount={executableCount} />
               </section>
             )}
+          </section>
 
-            <section className="detail-section" aria-labelledby="element-heading">
-              <h3 id="element-heading">Selected element</h3>
-              {selectedElement ? (
-                <ElementDetails element={selectedElement} />
-              ) : (
-                <p className="notice">
-                  Select a finding or click an element in the model to inspect its GlobalId and
-                  properties.
+          <div className="workspace-side">
+            <section className="review-controls" aria-labelledby="review-controls-heading">
+              <div className="panel-heading">
+                <h3 id="review-controls-heading">Requirements</h3>
+                <span className="panel-heading__hint">
+                  {requirementsState.kind === 'loading' && 'Loading…'}
+                  {requirementsState.kind === 'error' && 'Unavailable'}
+                  {requirementsState.kind === 'ready' &&
+                    `${executableCount ?? 0} executable of ${requirementsState.items.length}`}
+                </span>
+              </div>
+              {requirementsState.kind === 'error' && (
+                <p role="alert" className="notice notice--error">
+                  {requirementsState.message}
                 </p>
               )}
-              {selectedGlobalIds.length > 1 && (
-                <p className="selection-count">
-                  {selectedGlobalIds.length} affected elements selected in the model.
+              {requirementsState.kind === 'ready' && executableCount === 0 && (
+                <p className="notice">
+                  No confirmed executable requirements. The model can be viewed, but no
+                  deterministic review can run until an IDS is added.
+                </p>
+              )}
+              <label className="file-field file-field--compact">
+                <span className="file-field__label">Add requirements document</span>
+                <input
+                  type="file"
+                  accept=".ids,.md,.txt"
+                  disabled={documentUpload.kind === 'uploading' || reviewBusy}
+                  onChange={(event) => void handleDocumentChange(event)}
+                />
+              </label>
+              {documentUpload.kind === 'uploading' && (
+                <p role="status" className="notice">
+                  Uploading {documentUpload.filename}…
+                </p>
+              )}
+              {documentUpload.kind === 'done' && (
+                <p role="status" className="notice">
+                  {documentUpload.filename} imported ·{' '}
+                  {documentUpload.executable > 0
+                    ? `${documentUpload.executable} executable requirement${documentUpload.executable === 1 ? '' : 's'}`
+                    : 'stored as source text; no requirements created'}
+                  .
+                </p>
+              )}
+              {documentUpload.kind === 'error' && (
+                <p role="alert" className="notice notice--error">
+                  {documentUpload.message}
                 </p>
               )}
             </section>
-          </aside>
-        </div>
+
+            {run && (
+              <ReviewCoverage
+                run={run}
+                findingCount={findings.length}
+                activeModelHash={model.summary.model_hash}
+              />
+            )}
+
+            <EvidenceInspector
+              selectedFinding={selectedFinding}
+              elementState={elementState}
+              selectedGlobalIds={selectedGlobalIds}
+              relatedFindings={relatedFindings}
+              requirements={requirementsState.kind === 'ready' ? requirementsState.items : null}
+              runModelHash={run?.input_manifest.model_hash ?? null}
+              onSelectFinding={selectFinding}
+            />
+          </div>
+        </main>
       )}
-    </section>
+    </div>
   );
 }
 
-function ElementDetails({ element }: { readonly element: ElementRecord }) {
-  const properties = Object.entries(element.psets).flatMap(([setName, values]) =>
-    Object.entries(values ?? {}).flatMap(([name, value]) =>
-      value ? [{ name: `${setName}.${name}`, value }] : [],
-    ),
-  );
-
-  return (
-    <>
-      <p className="element-panel__name">{element.ref.name ?? element.ref.ifc_type}</p>
-      <dl className="detail-list">
-        <dt>GlobalId</dt>
-        <dd>
-          <code>{element.ref.global_id}</code>
-        </dd>
-        <dt>IFC type</dt>
-        <dd>{element.ref.ifc_type}</dd>
-        <dt>Storey</dt>
-        <dd>{element.ref.storey ?? 'Not assigned'}</dd>
-      </dl>
-      {properties.length > 0 && (
-        <div className="property-list" aria-label="Element properties">
-          <h4>Properties</h4>
-          {properties.slice(0, 12).map((property) => (
-            <div className="property-list__row" key={property.name}>
-              <span>{property.name}</span>
-              <span>
-                {formatPropertyValue(property.value)}
-                {property.value.inherited && <span className="inherited-label"> · inherited</span>}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
-
-function formatPropertyValue(property: PropertyValue): string {
-  const value = property.value;
-  if (typeof value === 'string') {
-    return value;
+function ReviewStatusChip({
+  state,
+  executableCount,
+}: {
+  readonly state: ReviewState;
+  readonly executableCount: number | null;
+}) {
+  switch (state.kind) {
+    case 'none':
+      return (
+        <span className="review-bar__item review-bar__chip" role="status">
+          {executableCount === 0
+            ? 'No executable requirements · model view only'
+            : 'No review run yet'}
+        </span>
+      );
+    case 'loading':
+      return (
+        <span className="review-bar__item review-bar__chip" role="status">
+          Loading run <code>{state.runId.slice(0, 8)}</code>…
+        </span>
+      );
+    case 'running':
+      return (
+        <span className="review-bar__item review-bar__chip review-bar__chip--active" role="status">
+          Deterministic review running…
+        </span>
+      );
+    case 'ready':
+      return (
+        <span
+          className={`review-bar__item review-bar__chip review-bar__chip--${state.run.status}`}
+          role="status"
+        >
+          Review {state.run.status} · {state.findings.length} finding
+          {state.findings.length === 1 ? '' : 's'} · run <code>{state.run.id.slice(0, 8)}</code>
+        </span>
+      );
+    case 'mismatch':
+      return (
+        <span className="review-bar__item review-bar__chip review-bar__chip--failed" role="alert">
+          Model version mismatch · run {state.runId.slice(0, 8)} not shown
+        </span>
+      );
+    case 'error':
+      return (
+        <span className="review-bar__item review-bar__chip review-bar__chip--failed" role="alert">
+          Review error
+        </span>
+      );
   }
-  return JSON.stringify(value) ?? String(value);
+}
+
+function ReviewPlaceholder({
+  state,
+  executableCount,
+}: {
+  readonly state: Exclude<ReviewState, { kind: 'ready' }>;
+  readonly executableCount: number | null;
+}) {
+  switch (state.kind) {
+    case 'none':
+      return (
+        <p className="notice">
+          {executableCount === 0
+            ? 'This session has no confirmed executable requirements, so no review has run and no findings exist. Add an IDS to enable Run review.'
+            : 'No review has run for this model version. Use Run review to execute the deterministic default plan.'}
+        </p>
+      );
+    case 'loading':
+      return (
+        <p role="status" className="notice">
+          Loading review run <code>{state.runId}</code> and its findings…
+        </p>
+      );
+    case 'running':
+      return (
+        <p role="status" className="notice">
+          Running the deterministic review against the active model version…
+        </p>
+      );
+    case 'mismatch':
+      return (
+        <div>
+          <p role="alert" className="notice notice--error">
+            {state.message}
+          </p>
+          <p className="notice">
+            Run <code>{state.runId}</code> was recorded against a different model version, so its
+            findings are not shown with this model. Run a new review to produce findings for the
+            active version.
+          </p>
+        </div>
+      );
+    case 'error':
+      return (
+        <div>
+          <p role="alert" className="notice notice--error">
+            {state.message}
+          </p>
+          <p className="notice">
+            No findings are shown because the review did not complete. The model remains viewable.
+          </p>
+        </div>
+      );
+  }
 }
 
 function messageForError(error: unknown): string {
   if (error instanceof ApiError) {
     return error.message;
   }
-  return error instanceof Error ? error.message : 'The review request failed.';
+  return error instanceof Error ? error.message : 'The request failed.';
 }

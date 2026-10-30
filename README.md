@@ -123,9 +123,26 @@ uvicorn bim_intelligence.api.main:app --reload --app-dir backend --host 127.0.0.
 cd frontend
 npm install
 npm run dev                     # http://localhost:5173, proxies /api to :8000
+# If port 8000 is taken, start uvicorn on another port and set BIMI_API_ORIGIN, e.g.
+# BIMI_API_ORIGIN=http://127.0.0.1:8001 npm run dev
 ```
 
 Configuration variables are documented in [.env.example](./.env.example). The server refuses to bind to a non-loopback address unless `ALLOW_REMOTE=true`, and rejects `-contributor` model ids unless `ALLOW_CONTRIBUTOR_MODELS=true`.
+
+### Review a model in the browser
+
+With both servers running, open <http://localhost:5173>. The Project Home offers **New review**,
+which creates a session on the server and walks through uploading one `.ifc` model and optional
+`.ids`, `.md` or `.txt` requirement documents (IDS specifications become executable requirements;
+Markdown/text is stored as source only), then opens the review workspace. **Open an existing
+session** accepts a session id (and optionally a run id) from an earlier upload or API call;
+`?session_id=…&run_id=…` deep links work the same way. In the workspace, **Run review** executes the
+deterministic default plan against the active model version; select a finding to highlight its
+element in the 3D viewer, or click an element to inspect its properties and linked findings. A
+session without confirmed executable requirements can be viewed but cannot run a review, and a run
+recorded against a different model version is shown as a mismatch rather than loaded. Only
+`.ifc` models are ingested; RVT, NWD and PDF files are rejected. Verified on 30 October 2026 with
+the committed fixtures (see [docs/UI_CHANGELOG.md](./docs/UI_CHANGELOG.md), UI-003).
 
 ### Upload and inspect a model
 
@@ -171,7 +188,7 @@ curl -s "$BASE/sessions/$SID/findings?run_id=$RUN"
 
 Each `<specification>` of the IDS becomes a confirmed `Requirement` bound to an immutable, content-addressed `CheckSpec`. The default plan deduplicates confirmed checks in stable order and applies `MAX_PLAN_CHECKS` and `MAX_TOOL_CALLS_PER_RUN`; skipped, errored or not-applicable checks make the run `partial`. Findings have no timestamps, so `findings.json` is byte-identical across repeated runs over the same inputs. Nothing in this path calls a language model or the network ([ADR-018](./docs/DECISIONS.md#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock)).
 
-For the built-in P0 check that IDS 1.0 cannot express, explicitly add the parameter-free native classification-consistency requirement with `POST /sessions/$SID/requirements/native/classification-consistency`. In the existing viewer workspace, enter the session id and select **Run standard review** to start a model-version-pinned run and load its findings; per-check coverage is shown alongside the existing viewer. The registered rule is `classification.consistent_by_type` v1.0.0. IDS continues to check classification presence/system, required properties and expressible naming patterns; no P1/P2 native rules are included. IDS boolean values should be written in lower case (`true`/`false`); see [RISKS.md R-DEP-08](./docs/RISKS.md).
+For the built-in P0 check that IDS 1.0 cannot express, explicitly add the parameter-free native classification-consistency requirement with `POST /sessions/$SID/requirements/native/classification-consistency`. In the browser, open the session from Project Home and select **Run review** to start a model-version-pinned run and load its findings; per-check coverage is shown beside the viewer. The registered rule is `classification.consistent_by_type` v1.0.0. IDS continues to check classification presence/system, required properties and expressible naming patterns; no P1/P2 native rules are included. IDS boolean values should be written in lower case (`true`/`false`); see [RISKS.md R-DEP-08](./docs/RISKS.md).
 
 ## Testing
 

@@ -1,7 +1,8 @@
 # BIM Intelligence UI Specification
 
 **Status:** Governance baseline; the owner-approved UI-002 Revision 2 visual direction is recorded
-in §13. No production redesign or functional implementation is approved by this document.
+in §13, and the UI-003 production implementation of that direction is recorded in §18. Further
+functional scope (viewer controls, model tree, catalogue, clashes, AI explanation) remains proposed.
 **Scope:** Owner-directed interface refinement under T-7, contributing to M3.
 **Authority:** The project owner approves visual decisions. This document records verified
 behaviour, provisional design principles, approved decisions and unresolved questions separately.
@@ -304,6 +305,11 @@ visual direction, not production CSS tokens or accessibility certification.
 Typography, spacing, sizes, borders, motion and component implementation remain subject to a
 separate production iteration and accessibility review.
 
+**UI-003 (30 October 2026):** `frontend/src/index.css` now defines these prototype values as
+production custom properties (`--ink`, `--teal`, `--amber`, … with `--focus: #236fd5` retained for
+focus rings) and keeps the earlier `--colour-*` names as aliases for the unchanged health panel and
+viewer styles. Base size is 14 px with a system/Segoe UI stack; no contrast audit has been run.
+
 ### Verified component states
 
 The health panel and review workspace expose loading, error, empty and data-bearing states; the
@@ -396,6 +402,15 @@ implementation:
 No reference screenshots were inspected; no REF-ID influence is claimed. This approval does not
 change production routes, backend/API/schema/viewer behaviour, dependencies, UI-003 scope or delivery
 status.
+
+### UI-003 — 30 October 2026
+
+The owner explicitly approved **production implementation** of the Concept C v2 / Revision 2
+direction in the existing React application, bounded to the frontend file scope in §18. The
+approval excludes the BIM validation engine, backend schemas, `IfcViewer.ts`, `ViewerCanvas.tsx`,
+generated types, fixtures, dependencies, CI, credentials and deployment. The implemented result and
+its deviations from the prototype are recorded in §18 and in the UI-003 entry of
+[UI_CHANGELOG.md](./UI_CHANGELOG.md). T-7 and M3 remain in progress.
 
 ## 14. Open visual questions
 
@@ -631,6 +646,10 @@ The static Revision 2 prototype is reviewable when all the following are true:
 
 ### Proposed UI-003 scope — not authorised
 
+> **Superseded (30 October 2026):** the owner subsequently authorised UI-003 with a wider frontend
+> file scope than listed here; the implemented scope is recorded in §18. This proposal text is kept
+> unchanged as the historical record.
+
 For a future owner-approved first implementation slice, limit the initial scope to a Project Home
 shell and the existing unnamed-session / supported-upload APIs, with exact candidate files:
 
@@ -655,3 +674,54 @@ viewer selection/highlight regression.
 
 No UI-003, backend change, model data exposure or production implementation is approved by this
 proposal.
+
+## 18. UI-003 — implemented design and remaining proposals
+
+**Status:** implemented on branch `feature/ui-003-production-integration` from baseline `a3e701f`
+(30 October 2026); [PR #18](https://github.com/natnew/BIM-Intelligence/pull/18) is open for owner
+review. Browser evidence is recorded in
+[UI_CHANGELOG.md](./UI_CHANGELOG.md). This section describes the application as built; it does not
+mark T-7 or M3 complete.
+
+### Implemented (verified by Vitest/RTL tests and a live browser walkthrough)
+
+| Area | Behaviour | Source |
+|---|---|---|
+| Project Home | Product identity, backend status, **New review** (`POST /sessions`), **Open an existing session** (`GET /sessions/{id}`; routes a `created` session into setup and a `model_ready` session into the workspace) and an explicit *not available* card for recent sessions / sample projects. | `components/ProjectHome.tsx` |
+| Review setup | Four-step sequence: session created → IFC model (`POST /sessions/{id}/model`, `.ifc` only) → requirements (`POST /sessions/{id}/documents`, `.ids`/`.md`/`.txt`) → open workspace. Shows uploading / indexed / rejected states, the returned `ModelSummary`, executable-requirement counts per IDS and the "narrative source only" distinction. Unsupported types (RVT, NWD, PDF…) are rejected client-side before any request and server rejections are shown verbatim. No transfer percentage is invented. | `components/ReviewSetup.tsx`, `api/bim.ts` |
+| Application shell | Header with brand, Project Home / Review workspace navigation, session chip and the **Run review** action; query-string view state (`?session_id=&run_id=`) so a refresh reopens the same session and run with no client-side storage. | `components/AppHeader.tsx`, `state/useAppLocation.ts`, `App.tsx` |
+| Workspace layout | Desktop ≥ 1280 px: fixed-height three-column grid (model information 17 rem · viewport + findings · requirements/coverage/inspector 22 rem) with the viewport as the largest surface and side panels scrolling internally. 900–1279 px: two columns with model information below. ≤ 896 px: single column (viewport → findings → requirements/coverage → inspector → model information), no horizontal overflow at 390 px. | `index.css`, `components/ModelWorkspace.tsx` |
+| Model information | Project, schema, model version, indexed instance total, storeys in file order and instance counts per IFC class (top 8 + disclosure) from `ModelSummary`; explicit note that no element tree or visibility control exists. | `components/ModelBrowser.tsx` |
+| Viewport | Unchanged `ViewerCanvas`/`IfcViewer`; truthful navigation hints (left-drag orbit, right-drag pan, wheel zoom, click to inspect — confirmed in the browser); **Clear selection**; viewer errors surfaced beside the canvas. No fit/focus/visibility buttons are rendered. | `components/ModelWorkspace.tsx` |
+| Findings register | Rows show severity, method, element name, requirement id, rule id, IFC type/storey, GlobalId (+ *n more*), observed → expected; `aria-pressed` selection; keyboard-operable (Tab/Enter verified). Client-side search and severity filter hide rows only and announce "Showing n of m"; canonical order and records are untouched. Geometric clashes labelled *not available*. Empty state states that no findings ≠ compliance. | `components/FindingRegister.tsx` |
+| Review coverage | Run status chip, checks executed/passed/failed/not run (error · skipped · n/a), findings count, plan source, per-check results with diagnostics, and an alert when the run's `input_manifest.model_hash` differs from the active model. | `components/ReviewCoverage.tsx` |
+| Evidence inspector | Finding evidence (id, observed/expected, requirement, check, rule + version, category, model version, affected elements) and the source `Requirement` (title, statement, origin/status/revision, verbatim quote with location when present; otherwise an explicit "no narrative quotation" note). Selected element (`ElementRecord`: GlobalId, type/predefined type, storey, object type, type object, container, classifications with inherited flag, property/quantity sets with inherited provenance) and linked findings. A fixed note states that AI explanation is not connected. | `components/EvidenceInspector.tsx` |
+| Review execution | **Run review** → `POST /sessions/{id}/reviews` with `If-Match` and no objective body → `loadReviewWorkspace`. States: none, loading run, running, ready (completed/partial/failed/interrupted), **model-version mismatch** (typed `ModelVersionMismatchError`; model stays viewable, stale findings refused), error (problem detail shown, model stays viewable), and **no executable requirements** (Run review disabled, "model view only"). Requirements documents can also be added from the workspace. | `components/ModelWorkspace.tsx`, `api/bim.ts` |
+
+### Differences from the Revision 2 prototype
+
+- No project browser tree, category checkboxes, hide/show/isolate or Orbit/Pan/Zoom/Fit/Focus
+  buttons: the viewer exposes no such interface, so none are rendered rather than shown inert.
+- The evidence inspector uses stacked native `<details>` sections instead of Finding/Element/
+  Requirement tabs; requirement details are nested under the finding.
+- Review coverage sits in the right column above the inspector rather than inside the empty
+  inspector state; the requirements panel with an upload control is new.
+- The synthetic sample route, recent-session list and project-name field are omitted or shown as
+  unavailable; sessions are unnamed server objects.
+- "Upload / replace IFC" is available only in the setup sequence, not in the workspace header.
+- Prototype illustrative AI explanation copy is replaced by a fixed *not connected* note.
+
+### Deferred to UI-004 (owner approval and, where noted, viewer/API scope required)
+
+1. **Viewer interface** (`IfcViewer.ts`): fit-to-model, focus-selection, clear-selection (the
+   library's own click-selection style persists after *Clear selection*), orthographic/perspective
+   toggle, keyboard camera controls and an accessible description of highlighted geometry.
+2. **Visibility**: per-class or per-storey hide/isolate requires a viewer API and an element
+   listing beyond `ModelSummary`.
+3. **Model tree**: needs an elements-by-container/class endpoint; not derivable from `ModelSummary`.
+4. **Replace IFC from the workspace** and explicit handling of the resulting version change.
+5. **Explanation panel**: connect the existing explanation endpoint with grounding status and
+   separate labelling (ADR-009).
+6. **Session history / sample catalogue**: requires new API capability.
+7. **Accessibility audit**: contrast measurement, screen-reader pass and 200 % zoom check; only
+   keyboard activation of finding rows and focus visibility were exercised.
