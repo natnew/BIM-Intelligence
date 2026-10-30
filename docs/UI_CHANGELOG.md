@@ -266,3 +266,104 @@ like the original approval; add a subsequent entry and link it to the earlier it
   `local-private/ui-prototypes/ui-002/` and revert this UI-002 entry in
   `docs/UI_CHANGELOG.md` plus its corresponding UI-002 summary in `CHANGELOG.md`. Do not alter the
   UI-001 prototype, application, viewer or existing records.
+
+## UI-002 Revision 2 — Project Home and desktop-first review workspace
+
+- **Date / delivery mapping:** 30 October 2026; T-7 / M3. T-7 and M3 remain in progress; this
+  prototype does not satisfy the M3 browser-walkthrough exit criteria.
+- **Design objective:** Extend the owner-selected Concept C v2 direction with a Project Home and a
+  more legible desktop review workspace, keeping the approved restrained palette and making the
+  model viewport the primary working surface.
+- **Explicit owner request:** The owner approved this prototype-only revision, including Project
+  Home, synthetic examples, desktop-first workspace refinements, the three workspace states,
+  responsive captures and one bounded corrective pass. Production implementation, commit, push,
+  merge and UI-003 remain unauthorised.
+- **Approved scope:** `local-private/ui-prototypes/ui-002/` and the four authorised records:
+  `docs/UI_SPEC.md`, `docs/UI_CHANGELOG.md`, `docs/IMPLEMENTATION_PLAN.md` and `CHANGELOG.md`.
+  The prototype uses synthetic model facts, findings, requirements and property values only.
+  No private BIM model, project document or client evidence was inspected.
+- **Reference treatment:** The prototype retains the previously approved Concept C v2 palette.
+  No reference screenshot was opened or processed for this revision, so no REF-ID-specific
+  influence is claimed. No proprietary layout, branding or asset was copied.
+- **Files changed:** `local-private/ui-prototypes/ui-002/home.html` (Project Home screens);
+  `local-private/ui-prototypes/ui-002/index.html` (refined workspace and preview states);
+  the 15 ignored screenshot files listed below; `docs/UI_SPEC.md` (approved direction, proposed
+  capabilities, acceptance criteria and UI-003 proposal); `docs/IMPLEMENTATION_PLAN.md` (T-7
+  scope note only); `CHANGELOG.md` (Unreleased summary); and this append-only record.
+- **Reason for significant changes:** Project Home separates session start, supported-file
+  preparation and clearly synthetic sample routes from review work. The workspace improves
+  desktop hierarchy, separates model categories from findings, exposes partial coverage and
+  distinguishes deterministic evidence from illustrative AI explanation. Documentation records
+  the production/API boundary and does not treat prototype controls as implemented functionality.
+- **Screenshot evidence:** All captures are local and ignored under
+  `local-private/ui-prototypes/ui-002/screenshots/`.
+  - Project Home: `ui-002-r2-home-1920x1080.png`,
+    `ui-002-r2-home-1440x900.png`, `ui-002-r2-home-390x844.png`.
+  - New project: `ui-002-r2-new-project-1920x1080.png`.
+  - Quick upload: `ui-002-r2-quick-upload-1920x1080.png`,
+    `ui-002-r2-quick-upload-local-accepted-1920x1080.png`,
+    `ui-002-r2-quick-upload-local-error-1920x1080.png`.
+  - Synthetic sample selection: `ui-002-r2-synthetic-sample-selection-1920x1080.png`.
+  - Workspace: `ui-002-r2-workspace-{1920x1080,1440x900}-{loaded,finding-selected,browser-evidence}.png`
+    and `ui-002-r2-workspace-390x844-browser-evidence.png`. The six desktop captures cover the
+    requested loaded, Finding-selected and browser/evidence states at both desktop sizes.
+- **Bounded corrective pass:** Initial review identified (1) a wrapped register heading at 1440 px,
+  (2) an apparent selected-element treatment in the unselected browser state, and (3) cramped
+  desktop information sizing. Final capture review also found that the landing screen remained
+  visible behind alternate Project Home routes. One pass hid inactive routes, shortened the
+  register heading, tied the selected browser treatment to the element-selected state, and refined
+  workspace width and text sizing. The element-selected mobile route opens the native browser
+  disclosure. All Home routes were recaptured and checked for one visible screen. No further
+  redesign pass was performed.
+- **Remaining weakest aspects:** (1) mobile remains a long, vertically stacked screen; reaching
+  the complete browser and evidence requires scrolling; (2) camera, visibility, filtering, upload
+  and review controls remain illustrative, with no production connections; (3) keyboard-only,
+  screen-reader, contrast and zoom conformance have not been assessed, and no user study was run.
+- **Protected behaviour and capability boundaries:** The model drawing, counts and review evidence
+  are synthetic, not an IFC render or client record. New-project fields are not saved, file
+  selection checks only the filename extension, and no file bytes are read or sent. The sample
+  route opens a static preview only. Recent sessions, a sample catalogue, frontend upload/session
+  flows, category visibility, exposed camera navigation, geometric clash detection and a connected
+  AI explanation remain unimplemented or separately approval-gated. Production React, viewer,
+  backend, API clients, schemas, tests, fixtures, dependencies and benchmark were not changed.
+- **Browser and visual checks:** The VS Code integrated browser reported
+  `Chrome/150.0.7871.250` with `Electron/43.8.3`. All 15 Revision 2 PNGs were checked against
+  their requested pixel dimensions. At 390×844, the home, upload and workspace pages had equal
+  document and client widths (375 CSS px, due to the reserved scrollbar), with no horizontal
+  document overflow. Browser checks exercised the new-project-to-upload prototype route, local
+  acceptance feedback for a synthetic `.ifc` filename, local rejection of a synthetic `.pdf`
+  filename, the synthetic-sample-to-workspace route, all three preview states, the mobile browser
+  disclosure and an empty page-error list. These are static prototype checks, not application
+  tests or upload/review execution. An initial automation attempt tried to click a visually hidden
+  preview radio directly and timed out; rerunning through its visible labelled control passed.
+- **Design-stage weighted evaluation:** Scores use the established 0–4 rubric. They are a
+  qualitative prototype assessment, not measured task performance, implementation results,
+  accessibility conformance or a user study. The earlier Concept C v2 design-stage estimate was
+  87.5/100; this Revision 2 estimate is not a measured regression because it adds Project Home
+  tasks and a broader screen set.
+
+  | Criterion | Weight | Revision 2 | Evidence and limitation |
+  |---|---:|---:|---|
+  | Professional BIM usability | 25% | 3/4 | Distinct start paths, coverage, model hierarchy, register and inspector support a plausible review flow; session creation, upload, filtering and review execution are not connected, and real error/recovery behaviour is not exercised. |
+  | Spatial clarity | 20% | 4/4 | The model is the central desktop workspace at 1920×1080 and 1440×900, with labelled synthetic selection states; no IFC geometry, camera motion or real occlusion was tested. |
+  | Visual refinement and originality | 20% | 3/4 | The palette and restrained visual language are consistent across Home and workspace; denser information and vertical mobile scrolling remain limitations, and no reference-image similarity review was performed. |
+  | Evidence integrity and interaction clarity | 20% | 4/4 | Synthetic provenance, requirement/check references, observed/expected values, GlobalId, model version, partial coverage and separate illustrative AI copy are labelled; no live evidence or grounding behaviour was exercised. |
+  | Accessibility and responsive behaviour | 10% | 2/4 | Semantic headings, labels, focus styling and native disclosure controls are present, and no horizontal document overflow was measured at 390×844; keyboard-only, screen-reader, contrast and zoom checks remain outstanding. |
+  | Implementation feasibility | 5% | 3/4 | The UI specification separates existing interfaces from proposed work and gives a bounded candidate UI-003 file list; Home/upload wiring needs focused API, routing, error-state and regression work, while viewer controls are excluded. |
+  | **Weighted total** | **100%** | **82.5/100** | Complete design-stage estimate with low confidence; no passing threshold is adopted. |
+
+- **UI-003 proposal:** See `docs/UI_SPEC.md` §17 for the exact proposed frontend file boundaries,
+  retained API/type constraints, estimate and integration risks. This proposal is not an approval
+  to begin implementation.
+- **Owner decision:** UI-002 Revision 2 is complete for visual review; owner assessment is pending.
+  T-7/M3 remain in progress. No commit, push, merge or UI-003 work is authorised.
+- **Rollback instructions:** For Revision 2, this file-specific rollback supersedes the
+  whole-directory rollback in the preceding Concept C v2 entry; preserve the earlier UI-002
+  artefacts and history. To reject the Revision 2 addition, remove only
+  `local-private/ui-prototypes/ui-002/home.html` and the 15 `ui-002-r2-*` screenshots, then revert
+  this record and the corresponding Revision 2 sections in `docs/UI_SPEC.md`,
+  `docs/IMPLEMENTATION_PLAN.md` and `CHANGELOG.md`. `index.html` was evolved in place from an
+  ignored Concept C v2 prototype; this worktree contains no separate pre-Revision-2 source copy.
+  Restoring that exact earlier file therefore requires an owner-held copy. Do not remove the whole
+  prototype directory or alter the earlier UI-002 changelog history, UI-001 files, application,
+  viewer or other existing records.

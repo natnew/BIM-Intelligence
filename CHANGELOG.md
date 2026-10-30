@@ -4,6 +4,20 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### T-7 / M3 — UI-002 Revision 2 Project Home and desktop workspace prototype
+
+- Extend the isolated UI-002 design prototype with a Project Home concept (new project, quick
+  upload, synthetic samples and a proposed recent-session area) and a refined desktop-first review
+  workspace. Preserve the approved Concept C v2 palette and clearly label synthetic data and
+  non-functional controls.
+- Distinguish existing backend session/upload endpoints from frontend capabilities; document
+  proposed metadata persistence, session history, sample loading, category visibility, camera
+  controls and geometric clashes as unimplemented and separately approval-gated.
+- Update the UI specification, append the UI-002 Revision 2 iteration record and make a minimal
+  T-7 scope note. All prototype output remains ignored under `local-private/ui-prototypes/ui-002/`;
+  production code, backend, viewer, schemas, tests and dependencies are unchanged. Owner review is
+  pending; no commit, push or merge is authorised. See [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md).
+
 ### T-7 / M3 — UI-002 Concept C v2 prototype
 
 - Refine UI-001 Concept C as an isolated synthetic-only HTML prototype with a dominant model
