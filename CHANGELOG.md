@@ -4,6 +4,19 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### T-7 / M3 — UI-001 review-workspace concept study
+
+- Produce three owner-reviewable, static workspace prototypes with a shared synthetic IFC-review
+  example and local screenshots. Keep all prototype and image outputs under the Git-ignored
+  `local-private/ui-prototypes/` path; no production React, viewer, API, schema, test or dependency
+  files change.
+- Record the weighted comparison and a conditional recommendation in the private concept report.
+  The owner selected synthetic-only reference processing, so the four reference collections were
+  inventoried by metadata only; no screenshots were opened and no REF-ID influence is claimed.
+- Desktop captures use the same Chrome 156.0.8078.76 viewport (1920×1080); supplementary narrow
+  captures (390×844) expose clipping/overlap that must be resolved before any implementation
+  proposal. No concept is approved, and UI-002 is not authorised. T-7/M3 remain in progress.
+
 ### T-7 — Constitution-driven autonomous UI design framework
 
 - Add [UI_CONSTITUTION.md](./docs/UI_CONSTITUTION.md) with binding BIM workflow, spatial context,

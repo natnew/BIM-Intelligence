@@ -7,9 +7,8 @@ changes rather than duplicating this detailed record.
 
 ## Record status
 
-No visual UI iteration has been recorded. This governance framework is not a visual iteration; it
-does not create or approve a UI-001 scope. Do not fabricate prior decisions, screenshots or test
-results.
+The UI-001 design proposal and private prototype evidence are recorded below. No concept has been
+selected or approved for production implementation.
 
 Keep private verification evidence in the ignored, owner-managed `local-private/test-results/`
 and raw AEC tester feedback in `local-private/professional-feedback/`. Entries below use only
@@ -87,3 +86,67 @@ like the original approval; add a subsequent entry and link it to the earlier it
   skill and two agents; modifications are the seven aligned records listed above. No rollback,
   commit, push or merge is authorised by this entry.
 - **Owner review:** pending. T-7 and M3 remain in progress. UI-001 is not started.
+
+### UI-001 — Three independent review-workspace concepts
+
+- **UI iteration ID:** UI-001
+- **Date (YYYY-MM-DD):** 2026-10-30
+- **Design objective:** Compare three substantially different review-workspace concepts for the
+  same project-open, model-inspection, review, finding, element and evidence workflow.
+- **Source reference IDs and locations:** No image-derived REF-ID influence is claimed. Metadata
+  only: the owner-managed library is at the singular `local-private/ui-reference/`; the folders
+  contain 19 Revit, 13 Snaptrude, 4 Spacemaker and 6 World_Lab files. The plural location is absent.
+  The owner selected synthetic-only processing; no screenshot was opened, transmitted or copied.
+- **Explicit owner request:** Create concepts A/B/C, static previews and screenshots in the ignored
+  `local-private/ui-prototypes/` directory, then stop for owner assessment. The owner selected
+  `synthetic-only` when asked about provider image processing.
+- **Proposed changes:** Isolated HTML/CSS and screenshot artefacts only. A: Professional BIM
+  Workspace; B: Spatial Intelligence Studio; C: AI Review Command Centre. No production layout or
+  interaction was changed.
+- **Execution boundary:** The BIM UI Designer custom role was not dispatchable from this session's
+  agent tool surface. Its read-only workflow guidance was followed directly; no host-enforced
+  designer tool restriction is claimed. Prototype output was created only after the owner approved
+  the isolated output path.
+- **Approved scope:** One metadata-only reference inventory, one initial prototype pass per concept,
+  synthetic example data, desktop captures at 1920×1080, and supplementary narrow captures at
+  390×844. No external assets, network calls, paid services, live Meta calls or AI-generated
+  content. Output path: `local-private/ui-prototypes/`.
+- **Files changed:** `local-private/ui-prototypes/index.html`; `styles.css`;
+  `concept-a-professional-workspace.html`; `concept-b-spatial-studio.html`;
+  `concept-c-command-centre.html`; `screenshots/concept-a-1920x1080.png`;
+  `screenshots/concept-b-1920x1080.png`; `screenshots/concept-c-1920x1080.png`;
+  `screenshots/concept-a-390x844.png`; `screenshots/concept-b-390x844.png`;
+  `screenshots/concept-c-390x844.png`. All are Git-ignored and untracked.
+- **Reason for each significant change:** `index.html` records rationale, hierarchy, interactions,
+  evidence/AI treatment, accessibility, trade-offs, shared synthetic data, comparative rubric,
+  recommendation and limitations; `styles.css` supplies shared primitives and three distinct
+  visual systems; each concept HTML is a local static screen; six PNGs preserve controlled desktop
+  and narrow viewport evidence.
+- **Protected behaviour:** No application, viewer, API, schema, test, dependency, IFC, fixture or
+  benchmark files changed. Static screens label all example content synthetic, keep AI copy
+  separate from deterministic Finding-shaped examples, and show incomplete coverage distinctly.
+  Production contracts in UI_SPEC §12 remain untouched.
+- **Tests executed:** Static pages opened in the integrated browser; accessibility snapshots exposed
+  headings, named regions, buttons and selected states. Google Chrome 156.0.8078.76 captured all
+  desktop screenshots at 1920×1080 and narrow screenshots at 390×844; PNG dimensions were verified.
+  No application test suite was run because no application code changed. Prototype controls are
+  inert and were not treated as functional tests.
+- **Visual before/after evidence:** No production before/after comparison. Desktop evidence:
+  `local-private/ui-prototypes/screenshots/concept-{a,b,c}-1920x1080.png`. Supplementary narrow
+  evidence: `local-private/ui-prototypes/screenshots/concept-{a,b,c}-390x844.png`. Browser:
+  Google Chrome 156.0.8078.76.
+- **Accessibility regression results:** Prototype markup includes semantic landmarks, named
+  controls, selected-state attributes, skip links and visible focus styling. Narrow captures show
+  horizontal clipping in A and C and inspector/model overlap in B. No zoom, keyboard-only,
+  screen-reader or contrast-conformance testing was performed; none is claimed.
+- **Functional regression results:** No production interactions changed; no regression test
+  applies. The selected model, findings and controls are static illustrations without IFC, API or
+  model calls. Loading, error, version-mismatch and empty-finding states are not illustrated.
+- **Owner decision:** Proposed; owner assessment pending. C is recommended for evidence-first
+  triage, with the narrow-layout failures called out. No concept is approved and UI-002 is not
+  authorised.
+- **Branch, commit and PR references:** `chore/ui-001-review-workspace-concepts`; commit and PR
+  references to be added after publication.
+- **Rollback instructions:** Remove only the listed files under
+  `local-private/ui-prototypes/` if the owner rejects the prototypes. No production rollback is
+  required.
