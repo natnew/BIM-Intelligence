@@ -62,6 +62,35 @@ flowchart LR
 
 A single Python (FastAPI) backend and a single-page TypeScript frontend; no microservices, queues or databases in the MVP. Full design: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
+## How requirement confirmation and verification work
+
+BIM Intelligence separates requirement interpretation from model verification. An imported IDS is treated as a confirmed project specification. Requirements interpreted from narrative documents remain candidates until a person confirms them; a confirmed candidate can bind only to an existing confirmed, immutable `CheckSpec`. For a review objective, AI may propose a bounded plan, but the application checks it against confirmed checks and execution caps. A person does not need to approve every individual plan.
+
+```mermaid
+flowchart LR
+    IDS["Imported IDS"] -->|confirmed on import| CHECKS["Confirmed immutable CheckSpecs"]
+    TEXT["Narrative document"] --> AI["AI extracts candidates<br/>with source quotes"]
+    AI --> HUMAN["Human confirms candidate<br/>and binds it to an existing check"]
+    CHECKS --> HUMAN
+    HUMAN --> BOUND["Confirmed requirement<br/>reuses that CheckSpec"]
+    OBJECTIVE["Review objective"] --> PLAN["AI or default plan<br/>confirmed checks only; caps applied"]
+    CHECKS --> PLAN
+    BOUND --> PLAN
+    PLAN --> VALIDATE["Deterministic validation<br/>IfcTester / registered native rule"]
+    IFC["Uploaded IFC<br/>read-only"] --> VALIDATE
+    VALIDATE --> FINDINGS["Deterministic Findings"]
+    FINDINGS --> VIEW["3D inspection<br/>affected elements and evidence"]
+    FINDINGS --> EXPLANATION["Separate, grounded AI explanation"]
+```
+
+Only IfcTester or a registered native rule creates a `Finding`; AI explanations are separate, grounded outputs and never become findings. Review runs read the uploaded IFC but do not modify or re-save it.
+
+- **Implemented:** IDS import, narrative-candidate and confirmation endpoints, bounded review execution, deterministic findings, and the current deterministic browser review and 3D inspection.
+- **Offline-tested AI components:** narrative extraction, bounded objective planning and grounded explanations have Fake/Replay coverage. Live Meta API compatibility has not been verified; `LLM_MODE=off` is the default.
+- **Browser integration still outstanding:** the browser does not yet expose the AI-assisted narrative-candidate and review-planning/explanation workflows.
+
+These boundaries are recorded in [ADR-001](./docs/DECISIONS.md#adr-001-findings-are-deterministic-the-llm-never-asserts-model-facts), [ADR-008](./docs/DECISIONS.md#adr-008-human-confirmation-of-extracted-requirements), [ADR-015](./docs/DECISIONS.md#adr-015-contract-model-immutable-checkspec-content-addressed-finding-per-check-checkresult), [ADR-018](./docs/DECISIONS.md#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock) and [ADR-020](./docs/DECISIONS.md#adr-020-t-5-meta-client-spend-ledger-and-human-gates).
+
 ## Technology stack
 
 | Layer | Choice | Why |
