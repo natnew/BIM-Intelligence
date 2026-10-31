@@ -4,6 +4,17 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### T-8 / M4 — Open-source documentation foundation
+
+- Add root-level contribution, security, support and software-citation guidance based on the
+  verified implementation and current pre-alpha status. No application, dependency, test or CI
+  changes.
+- Record that no private security-reporting channel is verified; do not publish an invented
+  contact. Defer a Code of Conduct pending an approved reporting/enforcement route and defer a
+  separate third-party notices file pending a complete distribution and asset-licence review.
+- Keep the minimal README link update as a separate proposal for owner review. T-8 and M4 remain
+  in progress; no release or submission action is taken.
+
 ### T-7 / M3 — README project header
 
 - Add project, CI, release and licence branding to the README header, with links to existing
