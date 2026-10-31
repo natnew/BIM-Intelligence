@@ -4,6 +4,13 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### T-7 / M3 — README project header
+
+- Add project, CI, release and licence branding to the README header, with links to existing
+  setup, workflow, technology-stack and documentation sections, plus the requested application
+  panel image. No application behaviour, task status or delivery schedule changes; T-7 and M3
+  remain in progress.
+
 ### T-7 / M3 — UI-003 production Project Home and review workspace
 
 - Replace the bare frontend entry page with a Project Home that creates a session
