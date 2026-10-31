@@ -1,3 +1,19 @@
+<div align="center">
+  <img src="assets/BIM-Intelligence%20Architectural%20Logo.png" alt="BIM Intelligence architectural logo" width="33%">
+
+**From architectural requirements to verifiable model intelligence.**
+
+An AI-native BIM review system combining IFC analysis, buildingSMART IDS validation and deterministic checking with intelligent review workflows. Identify model deficiencies, examine affected building elements in 3D, and trace findings to their source requirements and supporting evidence.
+
+[![CI](https://github.com/natnew/BIM-Intelligence/actions/workflows/ci.yml/badge.svg)](https://github.com/natnew/BIM-Intelligence/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/natnew/BIM-Intelligence)](https://github.com/natnew/BIM-Intelligence/releases)
+[![Licence](https://img.shields.io/github/license/natnew/BIM-Intelligence)](./LICENSE)
+
+[Get Started](#local-setup) | [Example Workflow](#intended-user-workflow) | [Tool](#technology-stack) | [Documentation](#documentation)
+
+<img src="assets/bim-intelligence-panel.png" alt="BIM Intelligence application interface" width="100%">
+</div>
+
 # BIM-Intelligence
 
 **AI-native architectural BIM model review.** Upload an IFC model and your project's BIM Execution Plan, state what you want reviewed in plain language, and get deterministic, traceable findings — explained in context, highlighted in 3D, and exported as a review report.
