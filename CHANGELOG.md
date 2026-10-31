@@ -15,6 +15,19 @@ Significant implementation, architectural and delivery-framework changes are rec
 - Keep the minimal README link update as a separate proposal for owner review. T-8 and M4 remain
   in progress; no release or submission action is taken.
 
+### T-8 / M4 — Third-party notices and version audit (31 October 2026)
+
+- Add [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) after reviewing Python and npm manifests,
+  the npm lockfile, installed Python metadata, tracked visual assets and generated web-ifc WASM.
+  Record unresolved attribution and licensing evidence explicitly; this inventory is not a
+  distribution compliance certification.
+- Confirm `pyproject.toml` as the recommended canonical application version (`0.1.0`). The
+  backend `__version__` and frontend package also repeat `0.1.0`; the npm lockfile mirrors its
+  package version. No root `VERSION` file or CI consistency check is added. No application code,
+  dependency, test, README, licence or release changes.
+- Record maintainer-documentation gaps as recommendations only. README links remain a proposal for
+  owner review. T-8 and M4 remain in progress.
+
 ### T-7 / M3 — README project header
 
 - Add project, CI, release and licence branding to the README header, with links to existing

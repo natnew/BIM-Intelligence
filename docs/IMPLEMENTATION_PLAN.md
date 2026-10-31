@@ -149,6 +149,10 @@ No milestone is complete solely because its contributing task labels exist. Orig
 - **Status:** **In progress — delivery-framework documentation is being reconciled here; final hardening, demo and submission acceptance have not been completed.** This documentation change does not establish product functionality or M4 completion.
 - **Milestones:** M4.
 - **Evidence:** This plan, [AGENTS.md §11](../AGENTS.md#11-delivery-milestones-engineering-tasks-and-progress-tracking) and [CHANGELOG.md](../CHANGELOG.md) establish the tracking requirements; final task evidence remains outstanding.
+- **31 October 2026 documentation evidence:** [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)
+  records dependency metadata, web-ifc build assets and unresolved licensing/provenance checks.
+  This audit does not complete T-8: final distribution-specific attribution, remaining hardening,
+  demo and submission evidence are still outstanding.
 
 ## 4. Revised delivery schedule
 
