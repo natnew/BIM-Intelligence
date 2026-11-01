@@ -69,6 +69,28 @@ Significant implementation, architectural and delivery-framework changes are rec
   acceptance. This chat did not repeat the smoke or make another paid call. No dependency change,
   commit, push or merge. UI integration and live explanations remain pending; T-5, M0 and M2 remain
   in progress.
+### T-3 / M0 and T-7 / M3 — UI-004A viewer corrections (1 November 2026)
+
+- Add distinct Fit model, canonical Reset view and Focus selected actions using verified installed
+  viewer APIs; keep zoom/pan recoverable and retain the current approved visual identity.
+- Synchronise pointer, finding and application selection; Clear selection removes viewer styling
+  without moving the camera. Preserve active issue highlights over neutral selection and reject
+  stale asynchronous highlight results.
+- Expose observable model-download, geometry-preparation, ready and failed states. Keep desktop
+  evidence/findings panels independently scrollable and preserve the narrow single-column layout.
+- Record live browser verification at 1920×1080, 1440×900, 1216×735 and 390×844, plus the complete
+  frontend validation set and private ignored screenshot evidence in [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md).
+- The browser's two IDS findings and the deterministic scenario's additional native finding use
+  different configured check sets; no backend review behaviour, API/schema, fixture or dependency
+  changed. T-3 remains verified, T-7/M3 remain in progress. The original evidence predates PR #25;
+  integration into `main` remains pending.
+- Reconcile the existing implementation onto `main` at `a13857c` without changing the merged T-5
+  API or FED-001 harness. Correct short-desktop-height scrolling and allow application selection
+  to clear while the viewer is preparing or has failed. Fresh integration evidence is recorded in
+  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#ui-004a-main-integration-verification--1-november-2026).
+- FR-VIS-08 and FR-VIS-11 have recorded acceptance evidence. FR-VIS-09 remains in progress:
+  the viewer uses a single issue style and its behaviour across finding severities is not yet
+  verified. Integration into `main` remains subject to review and merge.
 
 ### T-7 / M3 — Final delivery decisions and implementation contracts (1 November 2026)
 

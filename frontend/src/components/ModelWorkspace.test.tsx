@@ -1,5 +1,11 @@
-import { createElement } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+/// <reference types="node" />
+
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createElement, forwardRef, useEffect, useImperativeHandle } from 'react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -14,11 +20,23 @@ import {
   type VersionedModel,
 } from '../api/bim';
 import type { ElementRecord, Finding, Requirement } from '../api/generated/types';
+import type { ViewerCanvasHandle } from '../viewer/ViewerCanvas';
 import { ModelWorkspace } from './ModelWorkspace';
 
 const globalId = '0QWMtUzsnUUONCUGc8Sqsa';
+const w003GlobalId = '2qvnbd6oPPKR1ac5HegGTJ';
+const w001GlobalId = '21KH8X9wHPWw7JLiY2NtSZ';
 const modelHash = 'a'.repeat(64);
 const etag = `"${modelHash}"`;
+const viewerActions = vi.hoisted(() => ({
+  fitModel: vi.fn(async () => undefined),
+  resetView: vi.fn(async () => undefined),
+  clearSelection: vi.fn(async () => undefined),
+  focusSelection: vi.fn(async (_globalIds: readonly string[]) => undefined),
+  syncHighlights: vi.fn(
+    async (_selected: readonly string[], _issues: readonly string[]) => undefined,
+  ),
+}));
 const finding: Finding = {
   id: 'finding-id',
   check_id: 'check-id',
@@ -40,6 +58,23 @@ const finding: Finding = {
   observed: 'FireRating is missing.',
   expected: 'FireRating must be present.',
   method: 'ids',
+};
+const w003Finding: Finding = {
+  ...finding,
+  id: 'finding-w003',
+  requirement_id: 'REQ-002',
+  rule_id: 'ids:Classification',
+  elements: [
+    {
+      global_id: w003GlobalId,
+      express_id: 60,
+      ifc_type: 'IfcWall',
+      name: 'W-003',
+      storey: 'L00',
+    },
+  ],
+  observed: 'Classification is missing.',
+  expected: 'A classification reference must be present.',
 };
 const secondFinding: Finding = {
   ...finding,
@@ -71,6 +106,14 @@ const element: ElementRecord = {
     storey: 'L00',
   },
   type_ref: null,
+};
+const w003Element: ElementRecord = {
+  ...element,
+  ref: { ...element.ref, global_id: w003GlobalId, express_id: 60, name: 'W-003' },
+};
+const w001Element: ElementRecord = {
+  ...element,
+  ref: { ...element.ref, global_id: w001GlobalId, express_id: 58, name: 'W-001' },
 };
 const requirement: Requirement = {
   id: 'REQ-001',
@@ -155,25 +198,77 @@ vi.mock('../api/bim', async (importOriginal) => ({
 }));
 
 vi.mock('../viewer/ViewerCanvas', () => ({
-  ViewerCanvas: (props: {
-    readonly modelId: string;
-    readonly highlightedGlobalIds: string[];
-    readonly onGlobalIdsSelected: (globalIds: string[]) => void;
-  }) =>
-    createElement(
-      'div',
-      { 'data-testid': 'viewer', 'data-model-id': props.modelId },
-      createElement(
-        'output',
-        { 'data-testid': 'highlighted-global-ids' },
-        props.highlightedGlobalIds.join(','),
-      ),
-      createElement(
-        'button',
-        { onClick: () => props.onGlobalIdsSelected([globalId]) },
-        'Select fixture wall',
-      ),
-    ),
+  ViewerCanvas: forwardRef<
+    ViewerCanvasHandle,
+    {
+      readonly bytes: ArrayBuffer;
+      readonly modelId: string;
+      readonly selectedGlobalIds: readonly string[];
+      readonly highlightedGlobalIds: readonly string[];
+      readonly onGlobalIdsSelected: (globalIds: string[]) => void;
+      readonly onViewerError: (message: string) => void;
+      readonly onLoadStateChange: (state: 'preparing' | 'ready' | 'failed') => void;
+    }
+  >(
+    (
+      { modelId, selectedGlobalIds, highlightedGlobalIds, onGlobalIdsSelected, onLoadStateChange },
+      ref,
+    ) => {
+      useImperativeHandle(
+        ref,
+        () => ({
+          fitModel: viewerActions.fitModel,
+          resetView: viewerActions.resetView,
+          clearSelection: viewerActions.clearSelection,
+          focusSelection: viewerActions.focusSelection,
+        }),
+        [],
+      );
+      useEffect(() => onLoadStateChange('ready'), [onLoadStateChange]);
+      useEffect(() => {
+        void viewerActions.syncHighlights(selectedGlobalIds, highlightedGlobalIds);
+      }, [selectedGlobalIds, highlightedGlobalIds]);
+      return createElement(
+        'div',
+        { 'data-testid': 'viewer', 'data-model-id': modelId },
+        createElement(
+          'output',
+          { 'data-testid': 'selected-global-ids' },
+          selectedGlobalIds.join(','),
+        ),
+        createElement(
+          'output',
+          { 'data-testid': 'highlighted-global-ids' },
+          highlightedGlobalIds.join(','),
+        ),
+        createElement(
+          'button',
+          { onClick: () => onGlobalIdsSelected([globalId]) },
+          'Select first model element',
+        ),
+        createElement(
+          'button',
+          { onClick: () => onGlobalIdsSelected([w003GlobalId]) },
+          'Select second model element',
+        ),
+        createElement(
+          'button',
+          { onClick: () => onGlobalIdsSelected([w001GlobalId]) },
+          'Select third model element',
+        ),
+        createElement(
+          'button',
+          { onClick: () => onLoadStateChange('preparing') },
+          'Simulate viewer preparing',
+        ),
+        createElement(
+          'button',
+          { onClick: () => onLoadStateChange('failed') },
+          'Simulate viewer failed',
+        ),
+      );
+    },
+  ),
 }));
 
 function renderWorkspace(initialRunId: string | null = 'run-id') {
@@ -190,20 +285,58 @@ function renderWorkspace(initialRunId: string | null = 'run-id') {
   return { onRunChanged, onReturnHome };
 }
 
+describe('UI-004A desktop layout', () => {
+  it('lets the viewer yield height to findings on short desktop screens', () => {
+    const workspaceStyles = readFileSync(
+      resolve(dirname(fileURLToPath(import.meta.url)), '..', 'index.css'),
+      'utf8',
+    );
+    expect(workspaceStyles).toContain('@media (min-width: 70rem)');
+    const style = document.createElement('style');
+    style.textContent = workspaceStyles;
+    document.head.append(style);
+
+    try {
+      const desktop = Array.from(style.sheet?.cssRules ?? []).find(
+        (rule): rule is CSSMediaRule =>
+          rule instanceof CSSMediaRule && rule.conditionText === '(min-width: 70rem)',
+      );
+      expect(desktop).toBeDefined();
+      const viewer = Array.from(desktop?.cssRules ?? []).find(
+        (rule): rule is CSSStyleRule =>
+          rule instanceof CSSStyleRule && rule.selectorText === '.viewer',
+      );
+
+      expect(viewer).toBeDefined();
+      expect(viewer?.style.minHeight).toBe('min(22rem, 30vh)');
+    } finally {
+      style.remove();
+    }
+  });
+});
+
 describe('ModelWorkspace model loading', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(loadModel).mockResolvedValue(model);
     vi.mocked(loadReviewWorkspace).mockResolvedValue(workspace);
     vi.mocked(startStandardReview).mockResolvedValue(workspace.run);
-    vi.mocked(fetchElement).mockResolvedValue(element);
+    vi.mocked(fetchElement).mockImplementation(async (_sessionId, selectedId) => {
+      if (selectedId === w003GlobalId) {
+        return w003Element;
+      }
+      if (selectedId === w001GlobalId) {
+        return w001Element;
+      }
+      return element;
+    });
     vi.mocked(fetchRequirements).mockResolvedValue([requirement]);
   });
 
   it('loads the active model version for a session without a run and shows real summary data', async () => {
     renderWorkspace(null);
 
-    expect(screen.getByRole('status')).toHaveTextContent(/checking the active model version/i);
+    expect(screen.getByText('Downloading model…')).toBeInTheDocument();
     expect(await screen.findByTestId('viewer')).toHaveAttribute('data-model-id', modelHash);
     expect(loadModel).toHaveBeenCalledWith('session-id', expect.any(AbortSignal));
     expect(loadReviewWorkspace).not.toHaveBeenCalled();
@@ -228,7 +361,8 @@ describe('ModelWorkspace model loading', () => {
     vi.mocked(loadModel).mockRejectedValue(new Error('Session has no model.'));
     renderWorkspace(null);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Session has no model.');
+    expect(await screen.findByRole('alert')).toHaveTextContent(/failed/i);
+    expect(screen.getByRole('alert')).toHaveTextContent('Session has no model.');
     expect(screen.queryByTestId('viewer')).not.toBeInTheDocument();
   });
 
@@ -248,7 +382,15 @@ describe('ModelWorkspace selection coordination', () => {
     vi.mocked(loadModel).mockResolvedValue(model);
     vi.mocked(loadReviewWorkspace).mockResolvedValue(workspace);
     vi.mocked(startStandardReview).mockResolvedValue(workspace.run);
-    vi.mocked(fetchElement).mockResolvedValue(element);
+    vi.mocked(fetchElement).mockImplementation(async (_sessionId, selectedId) => {
+      if (selectedId === w003GlobalId) {
+        return w003Element;
+      }
+      if (selectedId === w001GlobalId) {
+        return w001Element;
+      }
+      return element;
+    });
     vi.mocked(fetchRequirements).mockResolvedValue([requirement]);
   });
 
@@ -258,8 +400,17 @@ describe('ModelWorkspace selection coordination', () => {
     const findingButton = await screen.findByRole('button', { name: /W-002/ });
     fireEvent.click(findingButton);
 
+    await waitFor(() =>
+      expect(fetchElement).toHaveBeenCalledWith(
+        'session-id',
+        globalId,
+        etag,
+        expect.any(AbortSignal),
+      ),
+    );
     expect(await screen.findByText('FireRating')).toBeInTheDocument();
     expect(findingButton).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('selected-global-ids')).toHaveTextContent(globalId);
     expect(screen.getByTestId('highlighted-global-ids')).toHaveTextContent(globalId);
     expect(fetchElement).toHaveBeenCalledWith(
       'session-id',
@@ -274,7 +425,7 @@ describe('ModelWorkspace selection coordination', () => {
     renderWorkspace();
 
     await screen.findByRole('button', { name: /W-002/ });
-    fireEvent.click(screen.getByRole('button', { name: 'Select fixture wall' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select first model element' }));
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /W-002/ })).toHaveAttribute('aria-pressed', 'true');
@@ -289,6 +440,161 @@ describe('ModelWorkspace selection coordination', () => {
     expect(
       screen.getByRole('list', { name: 'Findings that reference this element' }),
     ).toHaveTextContent('ids:FireRating');
+  });
+
+  it('clears finding and viewer selection together without resetting the camera', async () => {
+    const user = userEvent.setup();
+    renderWorkspace();
+
+    const findingButton = await screen.findByRole('button', { name: /W-002/ });
+    await user.click(findingButton);
+    expect(await screen.findByText('FireRating')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Clear selection' }));
+
+    expect(findingButton).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTestId('selected-global-ids')).toBeEmptyDOMElement();
+    expect(screen.getByTestId('highlighted-global-ids')).toBeEmptyDOMElement();
+    expect(screen.queryByText('FireRating')).not.toBeInTheDocument();
+    expect(viewerActions.clearSelection).toHaveBeenCalledOnce();
+    expect(viewerActions.resetView).not.toHaveBeenCalled();
+  });
+
+  it.each(['preparing', 'failed'] as const)(
+    'clears application selection while the viewer is %s',
+    async (viewerState) => {
+      const user = userEvent.setup();
+      renderWorkspace();
+
+      const findingButton = await screen.findByRole('button', { name: /W-002/ });
+      await user.click(findingButton);
+      await user.click(screen.getByRole('button', { name: `Simulate viewer ${viewerState}` }));
+      await user.click(screen.getByRole('button', { name: 'Clear selection' }));
+
+      expect(findingButton).toHaveAttribute('aria-pressed', 'false');
+      expect(screen.getByTestId('selected-global-ids')).toBeEmptyDOMElement();
+      expect(screen.getByTestId('highlighted-global-ids')).toBeEmptyDOMElement();
+      expect(viewerActions.clearSelection).not.toHaveBeenCalled();
+    },
+  );
+
+  it('clears model selection styling and inspector after a W-003 pointer selection', async () => {
+    vi.mocked(loadReviewWorkspace).mockResolvedValue({
+      ...workspace,
+      findings: [finding, w003Finding],
+    });
+    const user = userEvent.setup();
+    renderWorkspace();
+
+    const w003FindingButton = await screen.findByRole('button', { name: /W-003/ });
+    await user.click(screen.getByRole('button', { name: 'Select second model element' }));
+
+    const inspector = screen.getByRole('complementary', { name: 'Evidence inspector' });
+    await waitFor(() => expect(inspector).toHaveTextContent('W-003'));
+    expect(w003FindingButton).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('selected-global-ids')).toHaveTextContent(w003GlobalId);
+    expect(screen.getByTestId('highlighted-global-ids')).toHaveTextContent(w003GlobalId);
+
+    await user.click(screen.getByRole('button', { name: 'Clear selection' }));
+
+    expect(w003FindingButton).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTestId('selected-global-ids')).toBeEmptyDOMElement();
+    expect(screen.getByTestId('highlighted-global-ids')).toBeEmptyDOMElement();
+    expect(inspector).not.toHaveTextContent('W-003');
+
+    await user.click(w003FindingButton);
+    expect(w003FindingButton).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('selected-global-ids')).toHaveTextContent(w003GlobalId);
+    await user.click(screen.getByRole('button', { name: 'Clear selection' }));
+    expect(w003FindingButton).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTestId('selected-global-ids')).toBeEmptyDOMElement();
+    expect(screen.getByTestId('highlighted-global-ids')).toBeEmptyDOMElement();
+    expect(inspector).not.toHaveTextContent('W-003');
+  });
+
+  it('keeps W-001 selectable without assigning it a finding', async () => {
+    vi.mocked(loadReviewWorkspace).mockResolvedValue({
+      ...workspace,
+      findings: [finding, w003Finding],
+    });
+    const user = userEvent.setup();
+    renderWorkspace();
+
+    await screen.findByRole('button', { name: /W-002/ });
+    await user.click(screen.getByRole('button', { name: 'Select third model element' }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('selected-global-ids')).toHaveTextContent(w001GlobalId),
+    );
+    expect(await screen.findByText('W-001')).toBeInTheDocument();
+    expect(screen.getByTestId('selected-global-ids')).toHaveTextContent(w001GlobalId);
+    expect(screen.getByTestId('highlighted-global-ids')).toBeEmptyDOMElement();
+    expect(screen.getByRole('complementary', { name: 'Evidence inspector' })).toHaveTextContent(
+      'No finding in the loaded run references this element.',
+    );
+    expect(screen.queryByRole('button', { name: /W-001/ })).not.toBeInTheDocument();
+  });
+
+  it('keeps the latest selection while switching between finding and model paths', async () => {
+    vi.mocked(loadReviewWorkspace).mockResolvedValue({
+      ...workspace,
+      findings: [finding, w003Finding],
+    });
+    const user = userEvent.setup();
+    renderWorkspace();
+
+    const w002FindingButton = await screen.findByRole('button', { name: /W-002/ });
+    const w003FindingButton = screen.getByRole('button', { name: /W-003/ });
+    await user.click(w002FindingButton);
+    await user.click(screen.getByRole('button', { name: 'Select second model element' }));
+    await user.click(w002FindingButton);
+
+    expect(w002FindingButton).toHaveAttribute('aria-pressed', 'true');
+    expect(w003FindingButton).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTestId('selected-global-ids')).toHaveTextContent(globalId);
+    expect(screen.getByTestId('highlighted-global-ids')).toHaveTextContent(globalId);
+    expect(await screen.findByText('FireRating')).toBeInTheDocument();
+  });
+
+  it('supports keyboard activation of Fit, Reset and Focus Selected controls', async () => {
+    const user = userEvent.setup();
+    renderWorkspace();
+
+    await screen.findByRole('button', { name: /W-002/ });
+    const fitButton = screen.getByRole('button', { name: 'Fit model' });
+    await waitFor(() => expect(fitButton).toBeEnabled());
+    fitButton.focus();
+    await user.keyboard('{Enter}');
+    expect(viewerActions.fitModel).toHaveBeenCalledTimes(1);
+
+    const resetButton = screen.getByRole('button', { name: 'Reset view' });
+    resetButton.focus();
+    await user.keyboard(' ');
+    expect(viewerActions.resetView).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: /W-002/ }));
+    const focusButton = screen.getByRole('button', { name: 'Focus selected' });
+    focusButton.focus();
+    await user.keyboard('{Enter}');
+    expect(viewerActions.focusSelection).toHaveBeenCalledWith([globalId]);
+  });
+
+  it('focuses W-002 and W-003 using their selected model identities', async () => {
+    const user = userEvent.setup();
+    vi.mocked(loadReviewWorkspace).mockResolvedValue({
+      ...workspace,
+      findings: [finding, w003Finding],
+    });
+    renderWorkspace();
+
+    const focusButton = await screen.findByRole('button', { name: 'Focus selected' });
+    await user.click(screen.getByRole('button', { name: /W-002/ }));
+    await user.click(focusButton);
+    await user.click(screen.getByRole('button', { name: /W-003/ }));
+    await user.click(focusButton);
+
+    expect(viewerActions.focusSelection).toHaveBeenNthCalledWith(1, [globalId]);
+    expect(viewerActions.focusSelection).toHaveBeenNthCalledWith(2, [w003GlobalId]);
   });
 
   it('presents the finding’s canonical identity, evidence and source requirement unchanged', async () => {
@@ -323,7 +629,7 @@ describe('ModelWorkspace selection coordination', () => {
       target: { value: 'warning' },
     });
 
-    expect(screen.queryByRole('button', { name: /W-002/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /ids:FireRating/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /D-001/ })).toBeInTheDocument();
     expect(screen.getByText(/Showing 1 of 2 findings/)).toBeInTheDocument();
     expect(screen.getByLabelText('2 findings in this run')).toHaveTextContent('2');
@@ -359,7 +665,7 @@ describe('ModelWorkspace review execution and status', () => {
         .join(' '),
     ).toMatch(/loading the review/i);
 
-    resolveWorkspace(workspace);
+    await act(async () => resolveWorkspace(workspace));
     expect(await screen.findByRole('button', { name: /W-002/ })).toBeInTheDocument();
   });
 
@@ -436,7 +742,7 @@ describe('ModelWorkspace review execution and status', () => {
     expect(alerts.map((node) => node.textContent).join(' ')).toMatch(
       /belongs to a different model version/,
     );
-    expect(screen.queryByRole('button', { name: /W-002/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /ids:FireRating/ })).not.toBeInTheDocument();
     expect(loadModel).toHaveBeenCalledWith('session-id', expect.any(AbortSignal));
   });
 

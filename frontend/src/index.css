@@ -920,6 +920,12 @@ select {
   font-size: 0.78rem;
 }
 
+.viewport__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
 .viewport__error {
   margin: 0.6rem 1rem 0;
 }
@@ -1505,14 +1511,15 @@ select {
   font-size: 0.76rem;
 }
 
-/* Desktop: fixed-height application layout so the model stays in view while panels scroll. */
-@media (min-width: 80rem) {
+/* Desktop: keep the model visible while the evidence and finding regions scroll independently. */
+@media (min-width: 70rem) {
   .workspace-shell {
     height: 100vh;
   }
 
   .workspace-grid {
     flex: 1 1 0;
+    grid-template-columns: 15rem minmax(0, 1fr) 20rem;
     grid-template-rows: minmax(0, 1fr);
     min-height: 0;
   }
@@ -1527,17 +1534,23 @@ select {
     overflow: hidden;
   }
 
+  .viewer {
+    min-height: min(22rem, 30vh);
+  }
+
   .register {
     overflow: hidden;
   }
 
   .finding-list {
     flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
   }
 }
 
-/* Laptop and tablet widths: two columns, page scrolls, browser moves below the viewport. */
-@media (max-width: 79.99rem) {
+/* Narrower layouts retain the existing two-column/page-scroll arrangement. */
+@media (max-width: 69.99rem) {
   .workspace-grid {
     grid-template-columns: minmax(0, 1fr) 21rem;
   }
@@ -1652,6 +1665,10 @@ select {
   .viewport__hints {
     flex-basis: 100%;
     order: 3;
+  }
+
+  .viewport__actions {
+    flex-basis: 100%;
   }
 
   .viewport__head,
