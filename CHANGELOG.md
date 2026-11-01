@@ -4,6 +4,23 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### T-3 / M0 and T-7 / M3 — UI-004A viewer corrections (1 November 2026)
+
+- Add distinct Fit model, canonical Reset view and Focus selected actions using verified installed
+  viewer APIs; keep zoom/pan recoverable and retain the current approved visual identity.
+- Synchronise pointer, finding and application selection; Clear selection removes viewer styling
+  without moving the camera. Preserve active issue highlights over neutral selection and reject
+  stale asynchronous highlight results.
+- Expose observable model-download, geometry-preparation, ready and failed states. Keep desktop
+  evidence/findings panels independently scrollable and preserve the narrow single-column layout.
+- Record live browser verification at 1920×1080, 1440×900, 1216×735 and 390×844, plus the complete
+  frontend validation set and private ignored screenshot evidence in [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md).
+- The browser's two IDS findings and the deterministic scenario's additional native finding use
+  different configured check sets; no backend review behaviour, API/schema, fixture or dependency
+  changed. T-3 remains verified, T-7/M3 remain in progress. No commit, push or merge was made.
+- Verified acceptance evidence for FR-VIS-08, FR-VIS-09 and FR-VIS-11 is recorded in
+  `docs/REQUIREMENTS.md`.
+
 ### T-7 / M3 — Final delivery decisions and implementation contracts (1 November 2026)
 
 - Append ADR-021–ADR-025 for bounded federation, deterministic clash analysis, visual integrity,

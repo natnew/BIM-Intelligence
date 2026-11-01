@@ -10,7 +10,8 @@ changes rather than duplicating this detailed record.
 The UI-001 design proposal and private prototype evidence are recorded below. The owner selected
 Concept C as the UI-002 conceptual foundation and, on 30 October 2026, approved UI-003: the
 production implementation of that direction in the React application, recorded in the final entry.
-UI-003 awaits owner review; T-7 and M3 remain in progress.
+UI-003 has merged into `main`. UI-004A implements approved viewer and navigation corrections on an
+isolated branch; owner review remains pending, and T-7/M3 remain in progress.
 
 Keep private verification evidence in the ignored, owner-managed `local-private/test-results/`
 and raw AEC tester feedback in `local-private/professional-feedback/`. Entries below use only
@@ -519,3 +520,80 @@ like the original approval; add a subsequent entry and link it to the earlier it
 The UI-003 entry above records the state when it was written. PR #18 has since merged into `main`;
 the Project Home, upload and single-model review workflow described there is the current baseline.
 This correction preserves the original review history rather than rewriting it.
+
+## UI-004A — Professional 3D viewer and navigation corrections
+
+- **UI iteration ID:** UI-004A.
+- **Task and milestone:** T-3/M0 viewer behaviour and T-7/M3 interface refinement. This slice does
+  not complete T-7 or M3.
+- **Requirements served:** FR-VIS-08 (camera recovery/focus), FR-VIS-09 (selection coherence) and
+  FR-VIS-11 (truthful viewer lifecycle states).
+- **Status:** Implemented and verified on the isolated branch
+  `feature/ui-004a-viewer-corrections`; owner review is pending. No commit, push or merge was made.
+- **Objective:** Correct the evidenced Day 6 viewer usability defects while retaining the approved
+  visual identity and deterministic review engine.
+- **Implementation:** Added distinct **Fit model**, **Reset view** and **Focus selected** actions.
+  Fit recovers the full model after navigation while retaining useful orientation where possible;
+  Reset restores the canonical isometric view; Focus selected frames the selected element with
+  surrounding context. Zoom and pan are bounded so Fit remains a recovery path. These actions use
+  the installed That Open Components 3.6.0 and camera-controls 3.1.2 APIs, verified against the
+  installed package definitions; Three.js remains 0.182.0.
+- **Selection and findings:** Pointer selection, application selection and finding selection remain
+  coordinated by GlobalId. Clear selection removes viewer styling and application/inspector/finding
+  selection without moving the camera. Neutral selection styling does not cover active issue
+  highlighting, and stale asynchronous highlight work cannot reinstate a superseded selection.
+  Viewer-internal clearing is distinguished from a user clear so it cannot cancel its own highlight
+  refresh.
+- **Loading and layout:** The viewer reports Downloading model, Preparing geometry, Ready and
+  Failed from observable lifecycle stages; it does not invent percentage progress. At desktop
+  widths, evidence and findings regions scroll independently while the model remains visible. The
+  existing narrow, single-column arrangement is retained.
+- **Browser verification:** Live browser interaction on the synthetic fixture verified Fit after
+  extreme zoom and pan; Reset after finding focus; Focus W-002/W-003; W-003 selection by pointer
+  and finding row; Clear selection after both paths; repeated W-002/W-003 switching; no finding on
+  W-001; panel scrolling and viewer resize; keyboard activation of camera buttons; and a blocked
+  `web-ifc.wasm` load transitioning to Failed, then Ready after restoring the request. A fresh
+  browser interaction after the final selection-clear fix confirmed W-001 displays the neutral
+  selection treatment, has no linked finding, and clears from the inspector without a camera move.
+  The browser review returned two IDS findings. The deterministic scenario test returns those two
+  plus a native classification finding on W-002 after explicitly confirming that native check; this
+  is a different configured check set, and no backend or review behaviour was changed.
+- **Viewport and browser evidence:** Actual browser screenshots at 1920×1080, 1440×900, 1216×735
+  and 390×844, plus the W-003 error-highlight, W-001 neutral selection, Clear-selection and
+  Fit-after-extreme-navigation states, are stored under the ignored
+  `local-private/test-results/ui004a/` directory. Exact viewport captures are
+  `workspace-1920x1080-interactive.png`, `workspace-1440x900-interactive.png`,
+  `workspace-1216x735-interactive.png` and `workspace-390x844-interactive.png`; additional
+  1203×676 states include `workspace-w003-error-focus-1203x676.png`,
+  `workspace-w001-no-finding-pointer-1203x676.png`,
+  `workspace-clear-after-finding-1203x676.png`,
+  `workspace-clear-after-model-selection-1203x676.png` and
+  `workspace-fit-after-extreme-navigation-1203x676.png`. Browser: integrated VS Code browser,
+  Chrome 150.0.7871.250 / Electron 43.8.3 on Windows. The 390×844 view had no horizontal document
+  overflow; desktop evidence/findings regions scrolled without moving the viewer.
+- **Automated frontend validation** (from `frontend/`, 1 November 2026): `npm run lint`,
+  `npm run format:check`, `npm run typecheck`, `npm run types:check`, `npm test` (**8 files,
+  67 tests passed**) and `npm run build` — all passed. A formatting check initially identified
+  two new files; they were formatted and the complete validation set then passed.
+- **Deterministic fixture regression:** from the repository root,
+  `.\.venv\Scripts\python.exe -m pytest tests\scenario\test_deterministic_review.py -q` —
+  **1 passed, 1 upstream Starlette/httpx deprecation warning**. The test continues to verify the
+  two IDS findings plus the explicitly confirmed native classification finding, with no finding
+  on W-001.
+- **Scope boundaries:** No backend, API contract, schema, deterministic validation rule, Meta
+  integration, session storage, fixture, dependency or coordination behaviour changed. The UI
+  currently runs the fixture's IDS checks; configuring the additional native rule through the UI
+  remains outside this iteration.
+- **Rollback:** Preserve the isolated branch for review. If rollback is needed, first save
+  `git diff --binary` to a patch outside the repository and copy the three new source files
+  (`frontend/src/viewer/ViewerCanvas.test.tsx`,
+  `frontend/src/viewer/highlightSelection.ts` and
+  `frontend/src/viewer/highlightSelection.test.ts`) if they must be retained. Then restore only
+  these tracked files from the approved baseline: `CHANGELOG.md`,
+  `docs/IMPLEMENTATION_PLAN.md`, `docs/UI_CHANGELOG.md`, `docs/UI_SPEC.md`,
+  `frontend/src/components/FindingRegister.tsx`,
+  `frontend/src/components/ModelWorkspace.test.tsx`,
+  `frontend/src/components/ModelWorkspace.tsx`, `frontend/src/index.css`,
+  `frontend/src/viewer/IfcViewer.ts` and `frontend/src/viewer/ViewerCanvas.tsx`. Remove only the
+  three added source files above; do not reset the branch or discard unrelated work. Private
+  screenshots are ignored and may be retained or removed separately by the owner.

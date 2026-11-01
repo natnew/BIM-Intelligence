@@ -1,12 +1,14 @@
 # BIM Intelligence UI Specification
 
 **Status:** Governance baseline; the owner-approved UI-002 Revision 2 visual direction is recorded
-in §13, and the UI-003 production implementation of that direction is recorded in §18. Further
-functional scope (viewer controls, model tree, catalogue, clashes, AI explanation) remains proposed.
-**Status correction (1 November 2026):** §3 and §4 describe the current UI-003 production
-baseline. The UI-002 proposal in §17 is a dated pre-implementation snapshot; its former statements
-that Project Home and upload were absent are not current production status. The detailed UI-003
-implementation and browser evidence in §18 and `docs/UI_CHANGELOG.md` remain the evidence record.
+in §13, the UI-003 production implementation in §18, and the owner-authorised UI-004A viewer
+corrections in §20. Remaining scope (model tree, catalogue, clashes and AI explanation) remains
+proposed.
+**Status correction (1 November 2026):** §3 and §4 describe the current UI-003 production baseline
+with UI-004A viewer corrections. The UI-002 proposal in §17 is a dated pre-implementation snapshot;
+its former statements that Project Home and upload were absent are not current production status.
+The detailed implementation and browser evidence in §§18 and 20 and `docs/UI_CHANGELOG.md` remain
+the evidence record.
 **Scope:** Owner-directed interface refinement under T-7, contributing to M3.
 **Authority:** The project owner approves visual decisions. This document records verified
 behaviour, provisional design principles, approved decisions and unresolved questions separately.
@@ -65,6 +67,8 @@ implication.
   record.
 - Select a rendered model element to load its record and select the first matching finding in
   canonical API order.
+- Use **Fit model**, **Reset view** and **Focus selected** to control camera framing; clear
+  selection independently without an automatic camera move.
 - Inspect element identity and property values, including whether a property is inherited.
 - See loading, empty, API/version mismatch and viewer error states.
 
@@ -143,6 +147,11 @@ production routes, a project catalogue, working upload controls or a persistent 
 - GlobalId is the join key between findings and rendered objects. Finding selection resolves
   GlobalIds to viewer-local IDs and applies the deterministic issue highlight; model selection
   resolves viewer-local IDs back to GlobalIds.
+- UI-004A adds distinct model fit, canonical isometric reset and selected-element focus actions;
+  camera zoom and pan remain recoverable through Fit model.
+- Pointer, finding and application selection stay synchronised. Clear selection removes viewer
+  selection styling without clearing issue highlights or moving the camera.
+- Viewer lifecycle states distinguish model download, geometry preparation, ready and failed.
 - The current viewer reports loading and initialisation errors. The review workspace carries the
   pinned model hash and checks the active model version around its API reads.
 - The minimal fixture's W-002 finding-to-model highlight and model-to-element selection were
@@ -157,8 +166,8 @@ production routes, a project catalogue, working upload controls or a persistent 
 - Make viewer loading, empty-geometry and error states distinguishable from a successfully loaded
   model.
 - Preserve IFC read-only handling and the existing model-version consistency contract.
-- Keep orientation, view presets, category visibility, hide/show/isolate and element-focus controls
-  marked as proposed until their viewer and data interfaces exist.
+- Keep category visibility, hide/show/isolate and controls requiring new viewer/data interfaces
+  marked as proposed. Fit, reset and selected-element focus are implemented by UI-004A.
 
 ### Ideas requiring further discussion
 
@@ -590,7 +599,8 @@ Do not advertise prompt budgets as hard timeouts or these proposals as installed
 **Historical snapshot:** this section records the UI-002 prototype and production state before
 UI-003 was implemented on 30 October 2026. Rows that say Project Home, upload, recent sessions or
 sample routes are absent describe that earlier state, not the current production baseline.
-UI-003's current behaviour and evidence are recorded in §18 and the append-only UI changelog.
+UI-003's current behaviour is recorded in §18; later UI-004A camera and selection behaviour is
+recorded in §20 and the append-only UI changelog.
 
 This owner-authorised prototype revision expands the visual design, not production functionality.
 The Project Home and Review Workspace screens are static synthetic examples. Candidate functional
@@ -712,9 +722,9 @@ evidence remain as recorded, and T-7/M3 remain in progress.
 | Project Home | Product identity, backend status, **New review** (`POST /sessions`), **Open an existing session** (`GET /sessions/{id}`; routes a `created` session into setup and a `model_ready` session into the workspace) and an explicit *not available* card for recent sessions / sample projects. | `components/ProjectHome.tsx` |
 | Review setup | Four-step sequence: session created → IFC model (`POST /sessions/{id}/model`, `.ifc` only) → requirements (`POST /sessions/{id}/documents`, `.ids`/`.md`/`.txt`) → open workspace. Shows uploading / indexed / rejected states, the returned `ModelSummary`, executable-requirement counts per IDS and the "narrative source only" distinction. Unsupported types (RVT, NWD, PDF…) are rejected client-side before any request and server rejections are shown verbatim. No transfer percentage is invented. | `components/ReviewSetup.tsx`, `api/bim.ts` |
 | Application shell | Header with brand, Project Home / Review workspace navigation, session chip and the **Run review** action; query-string view state (`?session_id=&run_id=`) so a refresh reopens the same session and run with no client-side storage. | `components/AppHeader.tsx`, `state/useAppLocation.ts`, `App.tsx` |
-| Workspace layout | Desktop ≥ 1280 px: fixed-height three-column grid (model information 17 rem · viewport + findings · requirements/coverage/inspector 22 rem) with the viewport as the largest surface and side panels scrolling internally. 900–1279 px: two columns with model information below. ≤ 896 px: single column (viewport → findings → requirements/coverage → inspector → model information), no horizontal overflow at 390 px. | `index.css`, `components/ModelWorkspace.tsx` |
+| Workspace layout | At the current 14 px root font size, ≥ 980 px uses the fixed-height three-column grid (model information 15 rem · viewport + findings · requirements/coverage/inspector 20 rem) with the viewport as the largest surface and side panels scrolling internally. 785–979 px uses two columns with model information below. ≤ 784 px uses one column (viewport → findings → requirements/coverage → inspector → model information). UI-004A verified no horizontal overflow at 390 px. | `index.css`, `components/ModelWorkspace.tsx` |
 | Model information | Project, schema, model version, indexed instance total, storeys in file order and instance counts per IFC class (top 8 + disclosure) from `ModelSummary`; explicit note that no element tree or visibility control exists. | `components/ModelBrowser.tsx` |
-| Viewport | Unchanged `ViewerCanvas`/`IfcViewer`; truthful navigation hints (left-drag orbit, right-drag pan, wheel zoom, click to inspect — confirmed in the browser); **Clear selection**; viewer errors surfaced beside the canvas. No fit/focus/visibility buttons are rendered. | `components/ModelWorkspace.tsx` |
+| Viewport | UI-003 established truthful navigation hints, **Clear selection** and viewer error reporting. UI-004A adds **Fit model**, canonical **Reset view**, **Focus selected**, synchronised selection/highlighting, and observable download/preparation/ready/failed states; see §20. | `components/ModelWorkspace.tsx`, `viewer/IfcViewer.ts`, `viewer/ViewerCanvas.tsx` |
 | Findings register | Rows show severity, method, element name, requirement id, rule id, IFC type/storey, GlobalId (+ *n more*), observed → expected; `aria-pressed` selection; keyboard-operable (Tab/Enter verified). Client-side search and severity filter hide rows only and announce "Showing n of m"; canonical order and records are untouched. Geometric clashes labelled *not available*. Empty state states that no findings ≠ compliance. | `components/FindingRegister.tsx` |
 | Review coverage | Run status chip, checks executed/passed/failed/not run (error · skipped · n/a), findings count, plan source, per-check results with diagnostics, and an alert when the run's `input_manifest.model_hash` differs from the active model. | `components/ReviewCoverage.tsx` |
 | Evidence inspector | Finding evidence (id, observed/expected, requirement, check, rule + version, category, model version, affected elements) and the source `Requirement` (title, statement, origin/status/revision, verbatim quote with location when present; otherwise an explicit "no narrative quotation" note). Selected element (`ElementRecord`: GlobalId, type/predefined type, storey, object type, type object, container, classifications with inherited flag, property/quantity sets with inherited provenance) and linked findings. A fixed note states that AI explanation is not connected. | `components/EvidenceInspector.tsx` |
@@ -722,8 +732,9 @@ evidence remain as recorded, and T-7/M3 remain in progress.
 
 ### Differences from the Revision 2 prototype
 
-- No project browser tree, category checkboxes, hide/show/isolate or Orbit/Pan/Zoom/Fit/Focus
-  buttons: the viewer exposes no such interface, so none are rendered rather than shown inert.
+- No project browser tree, category checkboxes or hide/show/isolate controls. UI-004A adds
+  operational Fit/Reset/Focus actions; orbit, pan and zoom remain pointer gestures with truthful
+  instructions rather than inert controls.
 - The evidence inspector uses stacked native `<details>` sections instead of Finding/Element/
   Requirement tabs; requirement details are nested under the finding.
 - Review coverage sits in the right column above the inspector rather than inside the empty
@@ -733,11 +744,10 @@ evidence remain as recorded, and T-7/M3 remain in progress.
 - "Upload / replace IFC" is available only in the setup sequence, not in the workspace header.
 - Prototype illustrative AI explanation copy is replaced by a fixed *not connected* note.
 
-### Deferred to UI-004 (owner approval and, where noted, viewer/API scope required)
+### Remaining scope beyond UI-004A (separate approval and, where noted, viewer/API scope required)
 
-1. **Viewer interface** (`IfcViewer.ts`): fit-to-model, focus-selection, clear-selection (the
-   library's own click-selection style persists after *Clear selection*), orthographic/perspective
-   toggle, keyboard camera controls and an accessible description of highlighted geometry.
+1. **Viewer interface:** orthographic/perspective toggle, direct keyboard camera navigation and an
+   accessible description of highlighted geometry remain unimplemented.
 2. **Visibility**: per-class or per-storey hide/isolate requires a viewer API and an element
    listing beyond `ModelSummary`.
 3. **Model tree**: needs an elements-by-container/class endpoint; not derivable from `ModelSummary`.
@@ -746,7 +756,7 @@ evidence remain as recorded, and T-7/M3 remain in progress.
    separate labelling (ADR-009).
 6. **Session history / sample catalogue**: requires new API capability.
 7. **Accessibility audit**: contrast measurement, screen-reader pass and 200 % zoom check; only
-   keyboard activation of finding rows and focus visibility were exercised.
+   keyboard activation of finding rows and camera buttons, plus focus visibility, were exercised.
 
 ## 19. Day 7 coordination mode — conditional proposal
 
@@ -773,9 +783,10 @@ The conditional interaction sequence is:
    creates or edits a Finding, clash coordinate, count or check criterion.
 
 Keep the 3D viewport continuous on desktop while the matrix and evidence are inspected. Keep
-selection styling neutral and distinct from issue severity. Provide Fit All, Reset View and Focus
-Selection only when the installed viewer exposes verified support; do not show inactive controls.
-Use honest loading/error states without progress percentages unless they are measured.
+selection styling neutral and distinct from issue severity. Reuse the verified single-model
+**Fit model**, **Reset view** and **Focus selected** actions from UI-004A where appropriate; do not
+show inactive controls. Use honest loading/error states without progress percentages unless they
+are measured.
 
 The minimum front-end integration boundary is a coordination-set identifier and version-pinned
 matrix/result API response; frontend code must not calculate geometry or infer alignment. The
@@ -789,3 +800,36 @@ evaluation materials and unapproved third-party assets remain in the owner-manag
 `local-private/` layout. Duplex Apartment is the preferred external candidate only after
 compatibility and rights checks. The safe fallback is a one-click synthetic single-model review;
 it must not be presented as a clash demonstration.
+
+## 20. UI-004A — Viewer camera, selection and responsive-state corrections
+
+**Status:** Implemented and browser-verified on `feature/ui-004a-viewer-corrections`; owner review
+is pending. This is a bounded viewer correction, not approval for a wider redesign and not
+completion of T-7/M3. Detailed interaction evidence and validation commands are recorded in
+[UI_CHANGELOG.md](./UI_CHANGELOG.md#ui-004a--professional-3d-viewer-and-navigation-corrections).
+
+### Verified behaviour
+
+- **Fit model** frames the full model after zooming or panning and retains a useful orientation
+  where possible. **Reset view** restores the canonical isometric view. **Focus selected** frames
+  the selected element with surrounding context. Navigation is bounded and Fit model remains a
+  recovery action.
+- Camera actions use the installed That Open Components and camera-controls APIs. No new
+  dependencies or viewer framework were introduced.
+- Model-pointer selection, finding selection and application selection stay coordinated by
+  GlobalId. Neutral selection styling is distinct from severity styling; an element with an active
+  error retains its issue highlight when selected.
+- **Clear selection** clears viewer styling and the inspector/findings selection without changing
+  the camera. Asynchronous highlight updates cannot reapply a superseded selection.
+- Model loading distinguishes **Downloading model**, **Preparing geometry**, **Ready** and
+  **Failed** using observable lifecycle stages; no percentage progress is fabricated.
+- On desktop, evidence and findings regions scroll independently while the model remains visible.
+  At 390×844, the existing single-column arrangement has no horizontal document overflow.
+
+### Scope not included
+
+This iteration does not add orthographic/perspective switching, direct keyboard camera navigation,
+model-tree or category visibility controls, a new accessibility claim, API/schema changes,
+backend review changes, native-rule configuration through the UI, or coordination behaviour.
+Keyboard activation of the available camera buttons was verified; it is not a full accessibility
+audit.
