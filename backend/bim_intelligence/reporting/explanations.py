@@ -1,4 +1,10 @@
-"""Grounded, separately labelled explanations for deterministic findings (ADR-009)."""
+"""Grounded, separately labelled explanations for deterministic findings (ADR-009).
+
+An explanation is an interpretation of one immutable ``Finding``; it never creates, edits or
+persists a Finding. Before any evidence is assembled, :func:`resolve_finding_provenance` and
+:func:`verify_index_provenance` confirm that the finding, its check, its confirmed requirement
+revision, its source document and its model elements are exactly those the run recorded.
+"""
 
 from __future__ import annotations
 
@@ -12,13 +18,20 @@ from pydantic import BaseModel, ConfigDict, Field
 from bim_intelligence.bim import UnknownElementError
 from bim_intelligence.bim.model_index import ModelIndex
 from bim_intelligence.llm.client import ChatMessage, LLMClient
-from bim_intelligence.llm.errors import LLMClientError
+from bim_intelligence.llm.errors import (
+    BudgetLimitError,
+    LLMClientError,
+    LLMOutputError,
+    TokenLimitError,
+)
 from bim_intelligence.schemas import (
     ElementRecord,
     EvidenceCitation,
     Explanation,
+    ExplanationFallbackReason,
     Finding,
     Requirement,
+    ReviewRun,
 )
 
 logger = logging.getLogger(__name__)
@@ -32,6 +45,40 @@ class GroundingError(ValueError):
     """An explanation cites facts outside the deterministic evidence bundle."""
 
 
+class FindingNotInRunError(LookupError):
+    """The requested finding is not one the run recorded."""
+
+    def __init__(self, session_id: str, run_id: str, finding_id: str) -> None:
+        super().__init__(
+            f"Session {session_id}: run {run_id} did not record finding {finding_id[:16]}."
+        )
+        self.session_id = session_id
+        self.run_id = run_id
+        self.finding_id = finding_id
+
+
+class ExplanationProvenanceError(ValueError):
+    """The stored evidence no longer matches what the run verified; nothing is explained."""
+
+    def __init__(self, run_id: str, reason: str) -> None:
+        super().__init__(f"Run {run_id}: {reason} No explanation was produced.")
+        self.run_id = run_id
+        self.reason = reason
+
+
+class RunModelMismatchError(ValueError):
+    """The client asserted a model version other than the one the run validated."""
+
+    def __init__(self, run_id: str, expected: str, run_model_hash: str) -> None:
+        super().__init__(
+            f"Run {run_id} validated model version {run_model_hash} but the request names "
+            f"{expected}. Reload the run's model before requesting an explanation."
+        )
+        self.run_id = run_id
+        self.expected = expected
+        self.run_model_hash = run_model_hash
+
+
 class _ExplanationDraft(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -40,6 +87,99 @@ class _ExplanationDraft(BaseModel):
     probable_cause: str = Field(min_length=1)
     corrective_action: str = Field(min_length=1)
     citations: list[EvidenceCitation] = Field(min_length=1)
+
+
+def resolve_finding_provenance(
+    session_id: str,
+    run: ReviewRun,
+    findings: list[Finding],
+    requirements: list[Requirement],
+    finding_id: str,
+) -> tuple[Finding, Requirement]:
+    """The recorded finding and the exact confirmed requirement revision that produced it.
+
+    Raises :class:`FindingNotInRunError` when the run did not record the finding and
+    :class:`ExplanationProvenanceError` when any link between run, check result, finding,
+    requirement, check and source document no longer agrees with the run's input manifest.
+    """
+    if run.session_id != session_id:
+        raise ExplanationProvenanceError(run.id, "The run belongs to a different session.")
+    owning = [result for result in run.check_results if finding_id in result.finding_ids]
+    finding = next((item for item in findings if item.id == finding_id), None)
+    if not owning or finding is None:
+        raise FindingNotInRunError(session_id, run.id, finding_id)
+    if len(owning) != 1:
+        raise ExplanationProvenanceError(run.id, "The finding is attributed to several checks.")
+    result = owning[0]
+    if result.check_id != finding.check_id or result.requirement_id != finding.requirement_id:
+        raise ExplanationProvenanceError(
+            run.id, "The finding does not match the check result that recorded it."
+        )
+    manifest = run.input_manifest
+    revision = manifest.requirement_revisions.get(finding.requirement_id)
+    if revision is None:
+        raise ExplanationProvenanceError(
+            run.id, "The finding's requirement is not in the run's input manifest."
+        )
+    requirement = next(
+        (
+            item
+            for item in requirements
+            if item.id == finding.requirement_id and item.revision == revision
+        ),
+        None,
+    )
+    if requirement is None:
+        raise ExplanationProvenanceError(
+            run.id, "The requirement revision used by this run is no longer available."
+        )
+    if not requirement.is_executable:
+        raise ExplanationProvenanceError(
+            run.id, "The requirement revision used by this run is no longer confirmed."
+        )
+    check = requirement.check
+    if (
+        check.id != finding.check_id
+        or check.rule_id != finding.rule_id
+        or check.rule_version != finding.rule_version
+        or manifest.rule_versions.get(finding.rule_id) != finding.rule_version
+    ):
+        raise ExplanationProvenanceError(
+            run.id, "The confirmed check no longer matches the check that produced the finding."
+        )
+    if requirement.origin != "builtin" and requirement.source is None:
+        raise ExplanationProvenanceError(
+            run.id, "The requirement's source document reference is missing."
+        )
+    if requirement.source is not None and requirement.source.document_id not in set(
+        manifest.ids_hashes
+    ):
+        raise ExplanationProvenanceError(
+            run.id, "The requirement's source document is not in the run's input manifest."
+        )
+    return finding, requirement
+
+
+def verify_index_provenance(run: ReviewRun, finding: Finding, index: ModelIndex) -> None:
+    """Confirm the index is the run's pinned model version and agrees with the finding.
+
+    An element the index does not hold is not a mismatch: findings may cite entities outside
+    the index, and :func:`explain_finding` labels those as ``unsupported_evidence``. An indexed
+    element whose reference differs from the finding's is a mismatch.
+    """
+    if index.summary.model_hash != run.input_manifest.model_hash:
+        raise ExplanationProvenanceError(
+            run.id, "The model index does not match the run's model version."
+        )
+    for element in finding.elements:
+        try:
+            record = index.by_express_id(element.express_id)
+        except UnknownElementError:
+            continue
+        if record.ref != element:
+            raise ExplanationProvenanceError(
+                run.id, "A finding element differs from the run's model version."
+            )
 
 
 def explain_finding(
@@ -51,22 +191,22 @@ def explain_finding(
     run_id: str,
     max_output_tokens: int = 500,
 ) -> Explanation:
-    """Return a verified AI interpretation or a deterministic template, never a Finding."""
+    """Return a verified AI interpretation or a labelled deterministic template, never a Finding."""
     records: list[ElementRecord] = []
     try:
         for element in finding.elements:
             records.append(index.by_express_id(element.express_id))
     except UnknownElementError:
-        return deterministic_explanation(finding)
-    if client is None or any(element.global_id is None for element in finding.elements):
-        return deterministic_explanation(finding)
-    if len(records) != 1:
-        return deterministic_explanation(finding)
+        return deterministic_explanation(finding, reason="unsupported_evidence")
+    if client is None:
+        return deterministic_explanation(finding, reason="ai_disabled")
+    if any(element.global_id is None for element in finding.elements) or len(records) != 1:
+        return deterministic_explanation(finding, reason="unsupported_evidence")
     try:
         prompt = _PROMPT.read_text(encoding="utf-8")
     except OSError:
         logger.warning("Versioned explanation prompt unavailable; deterministic fallback used.")
-        return deterministic_explanation(finding)
+        return deterministic_explanation(finding, reason="ai_request_failed")
     evidence = {
         "finding": finding.model_dump(mode="json"),
         "confirmed_requirement": requirement.model_dump(mode="json"),
@@ -87,9 +227,10 @@ def explain_finding(
             run_id=run_id,
         )
         _verify_grounding(completion.value, finding, requirement, records)
-    except (GroundingError, LLMClientError, OSError):
-        logger.warning("AI explanation rejected; deterministic fallback used.")
-        return deterministic_explanation(finding)
+    except (GroundingError, LLMClientError, OSError) as exc:
+        reason = _fallback_reason(exc)
+        logger.warning("AI explanation rejected (%s); deterministic fallback used.", reason)
+        return deterministic_explanation(finding, reason=reason)
     return Explanation(
         finding_id=finding.id,
         summary=completion.value.summary,
@@ -102,7 +243,10 @@ def explain_finding(
     )
 
 
-def deterministic_explanation(finding: Finding) -> Explanation:
+def deterministic_explanation(
+    finding: Finding, *, reason: ExplanationFallbackReason
+) -> Explanation:
+    """A template restating the verified finding, labelled with why AI was not used."""
     citations = [
         EvidenceCitation(
             finding_id=finding.id,
@@ -126,7 +270,18 @@ def deterministic_explanation(finding: Finding) -> Explanation:
         citations=citations,
         source="deterministic_template",
         grounding_status="fallback",
+        fallback_reason=reason,
     )
+
+
+def _fallback_reason(exc: Exception) -> ExplanationFallbackReason:
+    if isinstance(exc, GroundingError):
+        return "grounding_failed"
+    if isinstance(exc, LLMOutputError):
+        return "ai_output_invalid"
+    if isinstance(exc, (BudgetLimitError, TokenLimitError)):
+        return "budget_limit"
+    return "ai_request_failed"
 
 
 def _verify_grounding(

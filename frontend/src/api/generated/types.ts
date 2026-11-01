@@ -256,6 +256,19 @@ export interface EvidenceCitation {
 export interface Explanation {
   readonly citations: EvidenceCitation[];
   readonly corrective_action: string;
+  /**
+   * Why a deterministic template was returned instead of an AI interpretation: ``ai_disabled`` (no client configured), ``unsupported_evidence`` (evidence cannot be grounded safely), ``budget_limit`` (an application budget, call or token limit), ``ai_request_failed``, ``ai_output_invalid`` (schema-invalid response) or ``grounding_failed``. Always null for ``ai_generated``.
+   */
+  readonly fallback_reason:
+    | (
+        | 'ai_disabled'
+        | 'unsupported_evidence'
+        | 'budget_limit'
+        | 'ai_request_failed'
+        | 'ai_output_invalid'
+        | 'grounding_failed'
+      )
+    | null;
   readonly finding_id: string;
   readonly grounding_status: 'passed' | 'fallback';
   readonly model: string | null;
@@ -426,6 +439,9 @@ export interface ReviewPlan {
  * Optional objective for a bounded AI-selected plan; omitted means deterministic default.
  */
 export interface ReviewRequest {
+  /**
+   * Plain-language review objective. It must contain visible text; whitespace-only objectives are rejected rather than sent to the planner.
+   */
   readonly objective: string | null;
 }
 /**

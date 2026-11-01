@@ -6,7 +6,12 @@ Terminology is fixed here: *Session*, *ElementRef*, *ElementRecord*, *ModelSumma
 the TypeScript contract (``python scripts/export_schemas.py``) and updating the tests.
 """
 
-from bim_intelligence.schemas.ai import BudgetStatus, EvidenceCitation, Explanation
+from bim_intelligence.schemas.ai import (
+    BudgetStatus,
+    EvidenceCitation,
+    Explanation,
+    ExplanationFallbackReason,
+)
 from bim_intelligence.schemas.canonical import canonical_json, compact_canonical_json, content_hash
 from bim_intelligence.schemas.checks import CheckKind, CheckSpec, compute_check_id
 from bim_intelligence.schemas.contracts import (
@@ -71,6 +76,7 @@ __all__ = [
     "ElementRef",
     "EvidenceCitation",
     "Explanation",
+    "ExplanationFallbackReason",
     "Finding",
     "FindingMethod",
     "InputManifest",

@@ -17,8 +17,10 @@ Lifecycle of :func:`run_review`:
 6. Publish ``run.json`` and ``findings.json`` together. The run is ``partial`` when coverage is
    incomplete because a check was skipped, errored or not applicable.
 
-The run is synchronous: the caller receives the terminal ``ReviewRun``. No network access, no
-language model, no background task (ADR-013 remains the design for longer runs).
+The run is synchronous: the caller receives the terminal ``ReviewRun``. An optional objective
+uses the configured client to select confirmed checks before deterministic execution. Off mode
+makes no model call; Live retains the existing approval and budget gates. No background task is
+used (ADR-013 remains the design for longer runs).
 """
 
 from __future__ import annotations
@@ -85,7 +87,7 @@ def run_review(
     objective: str | None = None,
     client: LLMClient | None = None,
 ) -> ReviewOutcome:
-    """Run the default plan against the session's active model and publish the result.
+    """Run a bounded default or objective-selected plan against the active model and publish it.
 
     ``pinned_model_hash`` is the version the caller expects to be validated; a different active
     version is refused. ``observer`` is called with each ``CheckResult`` as it is produced (used
@@ -133,11 +135,17 @@ def run_review(
         manifest = _manifest(store, session_id, version, attributed)
 
         created_at = store.now()
+        unplanned_reason = (
+            "Not selected by the objective-specific review plan."
+            if plan_source == "llm"
+            else f"Skipped because MAX_PLAN_CHECKS={planned_count} was reached."
+        )
         with ValidationTarget.open(version.path_for(MODEL_FILE), load_index(version)) as target:
             results, findings = _execute(
                 target,
                 all_checks,
                 planned_count=planned_count,
+                unplanned_reason=unplanned_reason,
                 max_tool_calls=settings.max_tool_calls_per_run,
                 observer=observer,
             )
@@ -163,6 +171,7 @@ def _execute(
     checks: Sequence[tuple[str, Requirement]],
     *,
     planned_count: int,
+    unplanned_reason: str,
     max_tool_calls: int,
     observer: CheckObserver | None,
 ) -> tuple[list[CheckResult], list[Finding]]:
@@ -171,11 +180,7 @@ def _execute(
     tool_calls = 0
     for position, (check_id, requirement) in enumerate(checks):
         if position >= planned_count:
-            result = _skipped(
-                check_id,
-                requirement.id,
-                f"Skipped because MAX_PLAN_CHECKS={planned_count} was reached.",
-            )
+            result = _skipped(check_id, requirement.id, unplanned_reason)
         elif tool_calls >= max_tool_calls:
             result = _skipped(
                 check_id,

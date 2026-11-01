@@ -4,13 +4,16 @@ import { ApiError } from './client';
 import {
   classifyUploadFile,
   createSession,
+  explainFinding,
   fetchElement,
   fetchRequirements,
   fetchSession,
   isExecutableRequirement,
   loadModel,
   loadReviewWorkspace,
+  MAX_REVIEW_OBJECTIVE_LENGTH,
   ModelVersionMismatchError,
+  startObjectiveReview,
   startStandardReview,
   uploadDocument,
   uploadModel,
@@ -420,5 +423,172 @@ describe('upload classification and requirement execution rules', () => {
     expect(isExecutableRequirement({ ...base, revision: 1, confirmed_revision: 1 })).toBe(true);
     expect(isExecutableRequirement({ ...base, revision: 2, confirmed_revision: 1 })).toBe(false);
     expect(isExecutableRequirement({ ...base, revision: 1, confirmed_revision: null })).toBe(false);
+  });
+});
+
+describe('objective review and finding explanation requests', () => {
+  const llmRun = {
+    ...reviewRun,
+    plan: { checks: [{ check_id: 'check-id', reason: 'Fire safety objective.' }] },
+    plan_source: 'llm' as const,
+  };
+  const aiExplanation = {
+    finding_id: 'finding-id',
+    summary: 'FireRating is missing.',
+    probable_cause: 'The property was not authored.',
+    corrective_action: 'Add the property.',
+    citations: [],
+    source: 'ai_generated' as const,
+    grounding_status: 'passed' as const,
+    model: 'muse-spark-1.3',
+    fallback_reason: null,
+  };
+  const templateExplanation = {
+    ...aiExplanation,
+    source: 'deterministic_template' as const,
+    grounding_status: 'fallback' as const,
+    model: null,
+    fallback_reason: 'grounding_failed' as const,
+  };
+  const explanationPath = '/sessions/session-id/reviews/run-id/findings/finding-id/explanation';
+
+  it('sends the objective as JSON against the summary version and returns plan_source', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json(modelSummary, { headers: { ETag: etag } }))
+      .mockResolvedValueOnce(Response.json(llmRun));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const run = await startObjectiveReview('session-id', 'Check fire ratings only');
+
+    expect(run.plan_source).toBe('llm');
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('/sessions/session-id/reviews'),
+      expect.objectContaining({
+        method: 'POST',
+        headers: { 'If-Match': etag, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ objective: 'Check fire ratings only' }),
+      }),
+    );
+  });
+
+  it('reports a deterministic default run unchanged rather than as AI planning', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(Response.json(modelSummary, { headers: { ETag: etag } }))
+        .mockResolvedValueOnce(Response.json(reviewRun)),
+    );
+
+    const run = await startObjectiveReview('session-id', 'Check fire ratings only');
+
+    expect(run.plan_source).toBe('default');
+  });
+
+  it.each(['', '   ', '\n\t'])('rejects a blank objective %j without a request', async (text) => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(startObjectiveReview('session-id', text)).rejects.toBeInstanceOf(ApiError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects an objective longer than the server limit without a request', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      startObjectiveReview('session-id', 'x'.repeat(MAX_REVIEW_OBJECTIVE_LENGTH + 1)),
+    ).rejects.toMatchObject({ message: expect.stringContaining('limited') });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects an objective review that ran against another model version', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(Response.json(modelSummary, { headers: { ETag: etag } }))
+        .mockResolvedValueOnce(
+          Response.json({
+            ...llmRun,
+            input_manifest: { ...llmRun.input_manifest, model_hash: 'b'.repeat(64) },
+          }),
+        ),
+    );
+
+    await expect(startObjectiveReview('session-id', 'Check fire ratings')).rejects.toBeInstanceOf(
+      ModelVersionMismatchError,
+    );
+  });
+
+  it('requests an explanation pinned to the viewed version and keeps its labels', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(Response.json(aiExplanation));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(explainFinding('session-id', 'run-id', 'finding-id', etag)).resolves.toEqual(
+      aiExplanation,
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(explanationPath),
+      expect.objectContaining({ method: 'POST', headers: { 'If-Match': etag } }),
+    );
+  });
+
+  it('returns a labelled deterministic template with its fallback reason', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(Response.json(templateExplanation)));
+
+    const explanation = await explainFinding('session-id', 'run-id', 'finding-id', etag);
+
+    expect(explanation.source).toBe('deterministic_template');
+    expect(explanation.fallback_reason).toBe('grounding_failed');
+  });
+
+  it.each([
+    { ...aiExplanation, finding_id: 'other-finding' },
+    { ...aiExplanation, fallback_reason: 'grounding_failed' },
+    { ...aiExplanation, model: null },
+    { ...templateExplanation, fallback_reason: null },
+    { ...templateExplanation, fallback_reason: undefined },
+    { ...templateExplanation, fallback_reason: '' },
+    { ...templateExplanation, fallback_reason: 'unrecognised_reason' },
+    { ...templateExplanation, fallback_reason: 42 },
+    { ...templateExplanation, model: 'muse-spark-1.3' },
+    { ...templateExplanation, grounding_status: 'passed' },
+  ])('rejects an explanation with inconsistent provenance %#', async (payload) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(Response.json(payload)));
+
+    await expect(explainFinding('session-id', 'run-id', 'finding-id', etag)).rejects.toBeInstanceOf(
+      ApiError,
+    );
+  });
+
+  it('surfaces a run-version mismatch and a provenance conflict as errors', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          Response.json(
+            { detail: 'Run run-id validated model version a but the request names b.' },
+            { status: 412 },
+          ),
+        )
+        .mockResolvedValueOnce(
+          Response.json(
+            { detail: 'Run run-id: The run belongs to a different session.' },
+            { status: 409 },
+          ),
+        ),
+    );
+
+    await expect(explainFinding('session-id', 'run-id', 'finding-id', etag)).rejects.toBeInstanceOf(
+      ModelVersionMismatchError,
+    );
+    await expect(explainFinding('session-id', 'run-id', 'finding-id', etag)).rejects.toMatchObject({
+      status: 409,
+    });
   });
 });

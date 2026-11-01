@@ -37,7 +37,16 @@ class ReviewPlan(FrozenContractModel):
 class ReviewRequest(FrozenContractModel):
     """Optional objective for a bounded AI-selected plan; omitted means deterministic default."""
 
-    objective: str | None = Field(default=None, min_length=1, max_length=4_000)
+    objective: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=4_000,
+        pattern=r"\S",
+        description=(
+            "Plain-language review objective. It must contain visible text; whitespace-only "
+            "objectives are rejected rather than sent to the planner."
+        ),
+    )
 
 
 class CheckResult(ContractModel):

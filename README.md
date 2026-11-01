@@ -24,14 +24,16 @@ and explanation workflow, complete report export and multi-model coordination ar
 > **Development status: implementation in progress.** Verified slices cover domain contracts and a
 > reproducible fixture, IFC ingestion and version-consistent storage, deterministic IDS/native
 > review, the T-3 viewer, the UI-003 Project Home/workspace, the T-5 offline AI integration path and
-> a locally measured synthetic benchmark. No live Meta request has been authorised or made; API
-> compatibility and frontend AI integration remain unverified. Hosted benchmark CI, report
+> a locally measured synthetic benchmark. The owner reports one approved live Muse Spark
+> structured-output smoke test passed on 1 November 2026; live planning, explanations and frontend
+> AI integration remain unverified. Hosted benchmark CI, report
 > export, viewer recovery controls and demo acceptance remain outstanding. There is no implemented
 > model federation or clash engine. See [Development status](#development-status).
 
 Designed for the Meta Global AI Developer Hackathon (26 October – 4 November 2026), with Meta Muse
-Spark via the Meta Model API as the intended interpretation/planning provider. Live compatibility
-has not been verified.
+Spark via the Meta Model API as the intended interpretation/planning provider. The
+[live smoke evidence](./docs/EVALUATION.md#t-5-live-structured-output-smoke-1-november-2026)
+establishes basic structured-output compatibility, not a verified live BIM workflow.
 
 ---
 
@@ -46,7 +48,7 @@ BIM Intelligence targets that gap for Architects, BIM Managers and BIM Coordinat
 Most AI-in-BIM demonstrations put a language model in front of model data and ask it what is wrong. We do the opposite:
 
 - **Findings are deterministic.** Every defect is produced by IfcTester (buildingSMART IDS) or a versioned Python rule. The model never asserts a model fact.
-- **The model is intended for the parts that are genuinely linguistic:** reading a BEP into candidate requirements (with verbatim source quotes), turning a plain-language objective into a bounded review plan, and explaining findings from a structured evidence bundle. These backend paths have offline Fake/Replay coverage; the user-facing browser workflow is not yet integrated, and live Meta compatibility is unverified.
+- **The model is intended for the parts that are genuinely linguistic:** reading a BEP into candidate requirements (with verbatim source quotes), turning a plain-language objective into a bounded review plan, and explaining findings from a structured evidence bundle. These backend paths have offline Fake/Replay coverage; the user-facing browser workflow is not yet integrated, and live verification is limited to one basic structured-output smoke response.
 - **Any explanation returned by the backend must pass a deterministic grounding check** against its evidence and carry its actual source label. The current browser does not yet fetch or present explanations.
 - **Nothing runs on an unconfirmed requirement.** A human confirms, edits or rejects each extracted requirement before it becomes a check.
 
@@ -97,7 +99,7 @@ flowchart LR
 Only IfcTester or a registered native rule creates a `Finding`; AI explanations are separate, grounded outputs and never become findings. Review runs read the uploaded IFC but do not modify or re-save it.
 
 - **Implemented:** IDS import, narrative-candidate and confirmation endpoints, bounded review execution, deterministic findings, and the current deterministic browser review and 3D inspection.
-- **Offline-tested AI components:** narrative extraction, bounded objective planning and grounded explanations have Fake/Replay coverage. Live Meta API compatibility has not been verified; `LLM_MODE=off` is the default.
+- **Offline-tested AI components:** narrative extraction, bounded objective planning and grounded explanations have Fake/Replay coverage. One owner-reported approved live smoke passed; these BIM workflows still need live verification. `LLM_MODE=off` is the default.
 - **Browser integration still outstanding:** the browser does not yet expose the AI-assisted narrative-candidate and review-planning/explanation workflows.
 
 These boundaries are recorded in [ADR-001](./docs/DECISIONS.md#adr-001-findings-are-deterministic-the-llm-never-asserts-model-facts), [ADR-008](./docs/DECISIONS.md#adr-008-human-confirmation-of-extracted-requirements), [ADR-015](./docs/DECISIONS.md#adr-015-contract-model-immutable-checkspec-content-addressed-finding-per-check-checkresult), [ADR-018](./docs/DECISIONS.md#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock) and [ADR-020](./docs/DECISIONS.md#adr-020-t-5-meta-client-spend-ledger-and-human-gates).
@@ -139,8 +141,8 @@ This is the target workflow, not a claim that every step is currently available 
 | Deterministic IDS validation: IDS 1.0 import as confirmed requirements, per-check IfcTester execution, `Finding` / `CheckResult` normalisation, synchronous review run, `documents` / `requirements` / `reviews` / `findings` endpoints | **Done (Day 4, T-2)** — produces the two expected findings on the minimal fixture with byte-identical `findings.json` across runs; see [ADR-018](./docs/DECISIONS.md#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock) |
 | T-3 viewer: local IFC rendering, GlobalId selection, version-pinned findings and element details | **Verified on the minimal fixture** — see [T-3 evidence](./docs/IMPLEMENTATION_PLAN.md#t-3--interactive-3d-bim-viewer) |
 | T-4 deterministic review workflow: bounded default plan, explicit native classification-consistency check, pinned run and viewer hand-off | **Verified on the minimal fixture** — no LLM calls; T-6 has a local synthetic benchmark result, with hosted CI evidence outstanding |
-| T-5 offline AI interfaces: quote-verified TXT/Markdown candidates, bounded objective planning, grounded explanations, Fake/Replay clients and persistent spend safeguards | **Implemented and offline-tested** — no live API call; only existing confirmed CheckSpecs can be selected; full BEP-to-IDS authoring is out of scope |
-| Meta API compatibility and integrated frontend AI panels | **Not verified / not implemented** — M0 API capability spike remains open; M2 is in progress |
+| T-5 offline AI interfaces: quote-verified TXT/Markdown candidates, bounded objective planning, grounded explanations, Fake/Replay clients and persistent spend safeguards | **Implemented and offline-tested** — only existing confirmed CheckSpecs can be selected; full BEP-to-IDS authoring is out of scope |
+| Meta API compatibility and integrated frontend AI panels | **Basic live smoke passed (owner-reported) / panels not implemented** — live BIM workflows remain unverified; this does not by itself complete M0 or M2 |
 | T-6 synthetic benchmark | **Measured locally** — 15 independently labelled P0 defects, seven clean controls; 1.000 precision/recall/F1 on this narrow IFC4 benchmark, byte-identical repeated findings and 14/14 IfcTester IDS entity agreement. This is not a general BIM accuracy or live model-quality result; hosted CI remains outstanding. See [docs/EVALUATION.md](./docs/EVALUATION.md). |
 | T-7 product integration | **In progress** — UI-003 Project Home, upload and single-model viewer workflow are implemented and merged; report export, user-facing Meta integration, camera recovery controls, browser smoke test and demo acceptance remain outstanding. |
 | Federation and clash detection | **Conditional / not implemented** — a two-model demonstration is gated on verified geometry, coordinate alignment, identity, rights and regression evidence; it is not enterprise clash management. |
@@ -291,7 +293,7 @@ python -m pytest tests/unit/evaluation tests/evaluation/test_run_eval.py -q
 BIMI_LIVE_LLM=1 BIMI_LIVE_APPROVAL=T5-META-MUSE-SPARK-SMOKE pytest tests/live/test_meta_smoke.py -m live
 ```
 
-The live command is an exact one-request smoke test, not general authorisation. It additionally requires `LLM_MODE=live`, `ALLOW_LIVE_LLM=true`, a backend `MODEL_API_KEY`, and sufficient remaining application budget. Do not run it until the project owner approves that session. The repository-local staged hook at `.githooks/pre-commit` is enabled through the repository-local `core.hooksPath` setting and runs the redacted staged Gitleaks scan. This setting overrides the prior global hook path for this repository; the project owner approved that change. The hook was verified against an empty index (no staged files). The same test, lint and type-check commands run in CI on Ubuntu and Windows ([.github/workflows/ci.yml](./.github/workflows/ci.yml)). Evaluation design, metrics and thresholds: [docs/EVALUATION.md](./docs/EVALUATION.md).
+The live command is an exact one-request smoke test, not general authorisation. It additionally requires `LLM_MODE=live`, `ALLOW_LIVE_LLM=true`, a backend `MODEL_API_KEY` (read from the shell environment or the git-ignored `.env` in the working directory; never pass the key on the command line), and sufficient remaining application budget. Do not run it until the project owner approves that session. The repository-local staged hook at `.githooks/pre-commit` is enabled through the repository-local `core.hooksPath` setting and runs the redacted staged Gitleaks scan. This setting overrides the prior global hook path for this repository; the project owner approved that change. The hook was verified against an empty index (no staged files). The same test, lint and type-check commands run in CI on Ubuntu and Windows ([.github/workflows/ci.yml](./.github/workflows/ci.yml)). Evaluation design, metrics and thresholds: [docs/EVALUATION.md](./docs/EVALUATION.md).
 
 ## Documentation
 
@@ -315,8 +317,9 @@ The live command is an exact one-request smoke test, not general authorisation. 
 
 Developed for the Meta Global AI Developer Hackathon, 26 October – 4 November 2026. The design
 retains Meta Muse Spark via the Meta Model API as the intended provider for planning, requirement
-interpretation and explanation. Live API compatibility and event rules remain unverified; any live
-call requires explicit owner approval.
+interpretation and explanation. Live evidence is limited to the owner-reported structured-output
+smoke; the BIM workflows and event rules remain unverified. Any additional live call requires
+separate explicit owner approval.
 
 ## Limitations
 
