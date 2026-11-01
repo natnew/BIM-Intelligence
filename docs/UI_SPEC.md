@@ -748,6 +748,73 @@ evidence remain as recorded, and T-7/M3 remain in progress.
 7. **Accessibility audit**: contrast measurement, screen-reader pass and 200 % zoom check; only
    keyboard activation of finding rows and focus visibility were exercised.
 
+### T-5 Meta-assisted review — frontend integration contract (pending)
+
+Status: **not connected in the UI.** The backend path and the typed API client are implemented
+and offline-tested on the T-5 branch; no component renders them yet. `ModelWorkspace.tsx` and
+the viewer files are excluded from that branch and stay unchanged until integration. Apply these
+changes at the integration stage, keeping the approved Concept C v2 layout:
+
+1. **Objective input** (`ModelWorkspace.tsx`, review controls beside **Run review**): add an
+   optional, labelled `<textarea>` named *Review objective (optional)* with
+   `maxLength={MAX_REVIEW_OBJECTIVE_LENGTH}` and helper text stating that the objective can only
+   narrow the confirmed checks and never changes their criteria. In `runReview()`, call
+   `startObjectiveReview(sessionId, objective, signal)` when the trimmed objective is non-empty.
+   Otherwise keep `startStandardReview(sessionId, signal)` unchanged. Both feed the existing
+   `loadReviewWorkspace` path and handle `ModelVersionMismatchError` in the same way.
+   `startObjectiveReview` throws `ApiError` before any request for a blank or over-long
+   objective; show that message inline.
+2. **True plan source** (`ReviewCoverage.tsx`): the existing *Plan source* row already renders
+   `run.plan_source` (`AI-selected plan` / `Deterministic default`). Keep it as the only plan
+   label. When an objective was submitted and the run reports `default`, add one sentence: *The
+   objective was not used; the deterministic default plan ran.* The cause may be AI off, a budget
+   or call limit, a failed request or a rejected plan. Checks an AI plan did not select are
+   `skipped` with the diagnostic *Not selected by the objective-specific review plan.*, and that
+   run is `partial`. Present this as narrowed scope, never as a pass.
+   `plan_source=llm` means a model-produced plan was accepted, not that a live request occurred.
+   In Replay mode, explicitly label it *Recorded AI-selected plan (Replay; no live call)*.
+3. **Explanation request** (`EvidenceInspector.tsx`, replacing the fixed *not connected* note when
+   a finding is selected): add an explicit **Explain finding** button. It must never fire
+   automatically, because each request may spend part of the per-run call allowance. It calls
+   `explainFinding(sessionId, run.id, finding.id, modelEtag, signal)`, where `modelEtag` is the
+   active model's quoted SHA-256. Disable the button with a version note when
+   `runModelHash !== activeModelHash`; the server also refuses that request with 412. Render
+   loading, error (`ApiError` detail; 404/409/412 never shown as an explanation) and success
+   states. Cache results per `(sessionId, run.id, modelEtag, finding.id)` and abort on selection
+   change. Ignore late responses whose selection/version identity no longer matches.
+4. **Provenance labels**: render the explanation in its own section, below the deterministic
+   evidence and visually distinct from it.
+   - When `source === 'ai_generated'`, label it *AI interpretation · `{model}` · grounding
+     passed*. In Replay mode add *Recorded response (Replay; no live call)*. Use the existing
+     health response's `llm_mode` for the current mode, but do not use it as proof of a historical
+     run's mode: the current contracts do not persist Live/Replay provenance per run or
+     explanation. Never label `fake-model` as Meta or infer live verification from `source`.
+   - When `source === 'deterministic_template'`, label it *Deterministic template · AI not used*
+     and show `fallback_reason` text:
+     - `ai_disabled`: AI is off.
+     - `unsupported_evidence`: this finding cannot be grounded safely, for example a
+       multi-element finding.
+     - `budget_limit`: the spend or call limit was reached.
+     - `ai_request_failed`: the AI request failed.
+     - `ai_output_invalid`: the AI response was invalid.
+     - `grounding_failed`: the AI text cited facts outside the evidence and was discarded.
+   - List `citations` (GlobalId, requirement, rule, expected, observed) as links back to the
+     deterministic evidence. Never style or count an explanation as a `Finding`.
+5. **Call allowance**: the planner and explanations share the per-run cap of
+   `LLM_MAX_CALLS_PER_RUN` (default and ceiling 2). A dispatched live planner request consumes
+   one call before the first explanation; Off/Replay or rejection before reservation consumes
+   no live allowance. Provider failures still count and are charged conservatively when usage
+   is unavailable. Requests beyond the remaining allowance return `budget_limit` templates.
+6. **Tests** (Vitest + React Testing Library): objective vs standard dispatch; blank optional
+   input selects the standard review, while a direct blank `startObjectiveReview` call sends
+   no request; *Plan source* for `llm` and `default`; Replay is not labelled Live; explanation
+   success with each label; a 412 surfaced as a version error; no explanation request without
+   a user action; selection/version changes cannot display stale explanations.
+
+The API functions, generated `Explanation`/`ReviewRequest` types and their tests are in
+`frontend/src/api/bim.ts`, `frontend/src/api/generated/types.ts` and
+`frontend/src/api/bim.test.ts`.
+
 ## 19. Day 7 coordination mode — conditional proposal
 
 The existing single-IFC Project Home and review workspace remain binding. If and only if the

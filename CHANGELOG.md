@@ -4,6 +4,52 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### T-5 / M0, M2 — Verified AI review path and provenance-checked explanations (1 November 2026)
+
+- Verify the existing objective-to-planner path offline. A whitespace-only objective is now refused
+  with 422 before any planner request or run record. Confirmed checks that an accepted AI plan does
+  not select are recorded as skipped with an objective-specific diagnostic, rather than a cap
+  message. Tests assert the real planner request body, default-plan fallback for invalid plans,
+  failed requests and budget refusals, and the reported `plan_source`.
+- Harden `POST /sessions/{sid}/reviews/{runId}/findings/{fid}/explanation`. The endpoint verifies
+  that the finding belongs to the run, the run to the session and the stored run id matches the
+  route id. It also checks the run's requirement revision, confirmation, check identity, rule
+  version, source document and pinned model index before evidence is assembled, and holds the
+  session lock while it does so. IDS/document requirements need a source; confirmed built-ins
+  may omit it, with an API positive-control test using the existing synthetic native-defect
+  generator. The endpoint returns 404 `finding-not-found`, 409 `explanation-provenance-mismatch`, or 412
+  `model-version-mismatch` for an `If-Match` other than the run's model.
+- Add `Explanation.fallback_reason` with a schema validator that keeps `source`,
+  `grounding_status`, `model` and the reason consistent. Regenerate the JSON Schema bundle and
+  frontend types.
+- Add typed frontend API functions `startObjectiveReview` and `explainFinding` with Vitest
+  coverage, including rejection of missing, empty, unknown and non-string template fallback
+  reasons. No UI component or viewer file changes. Record the frontend integration contract in
+  [UI_SPEC.md](./docs/UI_SPEC.md#t-5-meta-assisted-review--frontend-integration-contract-pending).
+- Add a shared offline SDK stub (`tests/support/llm_stub.py`), API tests for explanation provenance
+  and fallbacks, and a guard that the default configuration opens no non-loopback connection.
+- Fix a test-harness defect that made the named live smoke test unreachable: the autouse
+  environment-isolation fixture stripped `LLM_MODE` and `MODEL_API_KEY` from every test, including
+  `live`-marked ones. Tests marked `live` now keep the owner's configuration and retain their own
+  marker, environment and approval-token gates; all other tests stay hermetic. Regression test:
+  `tests/unit/test_live_test_isolation.py`. A socket-blocked offline probe with a placeholder key
+  confirmed the smoke test now reaches the provider boundary without sending anything.
+- Backend: 591 passed, 1 live test explicitly deselected; focused T-5 modules: 67 passed.
+  Frontend: 74 tests passed. Backend lint/format/type checks, generated-schema/type parity and
+  frontend lint/format/type checks/build passed; offline AI evaluation: 9/9 with zero network
+  calls or spend. Existing frontend dependency/chunk warnings remain.
+- Record the owner's observed result from one approved live smoke in a side chat on
+  1 November 2026: `muse-spark-1.3`, `success`, exact `{"status":"T5_SMOKE_OK"}` response,
+  42 input / 0 cached / 293 output tokens, one ledger request, USD 0.00129775 calculated charge
+  against a USD 0.002395 reservation. Configured prices have not been checked against Meta's;
+  this is not independently verified provider billing. See [EVALUATION §8](./docs/EVALUATION.md#t-5-live-structured-output-smoke-1-november-2026).
+- Record R-API-06: the short smoke reply consumed 58.6% of the 500-token output cap, so structured
+  explanation headroom needs separately approved verification. No cap or budget was increased.
+  Correct current README live-status claims without treating the smoke as live BIM-workflow
+  acceptance. This chat did not repeat the smoke or make another paid call. No dependency change,
+  commit, push or merge. UI integration and live explanations remain pending; T-5, M0 and M2 remain
+  in progress.
+
 ### T-7 / M3 — Final delivery decisions and implementation contracts (1 November 2026)
 
 - Append ADR-021–ADR-025 for bounded federation, deterministic clash analysis, visual integrity,

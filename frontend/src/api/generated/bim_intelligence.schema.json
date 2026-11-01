@@ -437,6 +437,26 @@
           "minLength": 1,
           "type": "string"
         },
+        "fallback_reason": {
+          "anyOf": [
+            {
+              "enum": [
+                "ai_disabled",
+                "unsupported_evidence",
+                "budget_limit",
+                "ai_request_failed",
+                "ai_output_invalid",
+                "grounding_failed"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why a deterministic template was returned instead of an AI interpretation: ``ai_disabled`` (no client configured), ``unsupported_evidence`` (evidence cannot be grounded safely), ``budget_limit`` (an application budget, call or token limit), ``ai_request_failed``, ``ai_output_invalid`` (schema-invalid response) or ``grounding_failed``. Always null for ``ai_generated``."
+        },
         "finding_id": {
           "minLength": 1,
           "type": "string"
@@ -483,7 +503,8 @@
         "citations",
         "source",
         "grounding_status",
-        "model"
+        "model",
+        "fallback_reason"
       ],
       "title": "Explanation",
       "type": "object"
@@ -1110,13 +1131,15 @@
             {
               "maxLength": 4000,
               "minLength": 1,
+              "pattern": "\\S",
               "type": "string"
             },
             {
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Plain-language review objective. It must contain visible text; whitespace-only objectives are rejected rather than sent to the planner."
         }
       },
       "required": [

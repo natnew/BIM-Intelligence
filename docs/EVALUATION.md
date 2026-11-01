@@ -170,7 +170,17 @@ deterministic contract checks are:
 
 These checks report 9/9 passing in the recorded run. They are implementation-contract tests, not
 evidence of Muse Spark relevance, structured-output reliability, API compatibility, cost or
-token-use performance. No live Meta request or spend was made.
+token-use performance. No live Meta request or spend was made by this offline evaluation. The
+separate owner-approved live smoke observation is recorded in §8.
+
+A rerun on 1 November 2026 (branch `Working-Muse-Spark`, uncommitted T-5 explanation hardening)
+again reported 9/9, with 0 network calls, 0 live calls and USD 0. In that run, the fallback for
+the "ungrounded explanation" check came from the explanation response schema (`fallback_reason=
+ai_output_invalid`, because its fixture has no citations), not from the grounding checker. The
+check therefore shows that an ungrounded response is rejected, but not specifically by the
+grounding checker. Grounding-checker rejection (`grounding_failed`) is covered by unit tests in
+`tests/unit/llm/test_explanations.py` and API tests in
+`tests/unit/api/test_finding_explanations.py` instead. The metric definition is unchanged.
 
 ## 6. Baseline comparisons
 
@@ -270,6 +280,41 @@ Hosted CI evidence remains outstanding: GitHub Actions run
 `main` commit ended in `startup_failure` with no jobs; it did not execute this uncommitted T-6
 worktree.
 
+### T-5 live structured-output smoke (1 November 2026)
+
+**Evidence source:** the owner's report of one approved run in a side chat on 1 November 2026.
+These are observed results reported by the owner, not a new execution by this implementation chat.
+The side-chat source commit was not supplied; this evidence must not be attributed to the T-6
+commit above or assumed to verify the uncommitted T-5 branch. No raw request, credential or response
+recording was copied into this record, and the ledger was not independently re-read here.
+
+| Observation | Result |
+|---|---|
+| Named test | `tests/live/test_meta_smoke.py::test_meta_muse_spark_structured_output_smoke` |
+| Model | `muse-spark-1.3` |
+| Test / request outcome | Passed / `success` |
+| Structured output | Exact match: `{"status":"T5_SMOKE_OK"}` |
+| Input / cached / output tokens | 42 / 0 / 293 |
+| Application ledger request count | 1 |
+| Reservation | USD 0.002395 |
+| Calculated ledger charge | USD 0.00129775 |
+| Pricing basis | Configured prices; not checked against Meta's prices |
+
+This establishes one successful basic structured-output response through the existing
+OpenAI-compatible client. The client requests JSON-object mode and validates locally with
+Pydantic; this is not evidence for provider-side strict JSON-schema support, live planner relevance,
+grounded explanation quality or the complete browser workflow. The calculated charge is an
+application-ledger observation and approximate provider cost, not verified Meta billing.
+
+The short reply consumed **293 output tokens, 58.6% of the configured 500-token output cap**.
+A longer explanation with citations may have insufficient headroom. This observation neither
+explains the token accounting nor establishes that an explanation was truncated. Keep the cap
+and budgets unchanged; a synthetic grounded-explanation check needs separate owner approval and
+must report schema/grounding outcomes and any cap-related failure. See [R-API-06](./RISKS.md#3-model-and-api-limitations).
+
+**Do not repeat the smoke test under the current request.** Recording this evidence authorises no
+additional live call. Further live workflow evaluation requires separate explicit approval.
+
 ## 9. Known limitations and gaps
 
 - This is one small synthetic IFC4 model. Precision/recall do not generalise to other projects,
@@ -282,7 +327,8 @@ worktree.
 - A benchmark BEP and objective set are generated for future planner evaluation; no planner
   relevance score was measured.
 - Fake/Replay checks do not establish live Muse Spark performance, API compatibility, cost or
-  token economics. Live evaluation still requires explicit project-owner approval.
+  token economics. The separate single live smoke observation in §8 establishes only basic
+  structured-output compatibility; further live evaluation requires explicit project-owner approval.
 - Runtime performance and browser rendering on this benchmark were not evaluated by this runner.
 - The task result does not complete M1, M3 or M4 by itself. Their original exit criteria and
   remaining evidence are tracked in [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md).

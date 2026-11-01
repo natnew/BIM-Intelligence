@@ -461,7 +461,7 @@ Implemented models live in `backend/bim_intelligence/schemas/` and are exported 
 | `DocumentImport` | `sha256`, `kind` ∈ {ids, text, markdown}, `title`, `requirements[]` | what `POST /documents` returns: identity and any requirements established. Narrative uploads return an empty list; candidate extraction is separate. *Implemented (T-2/T-5)* |
 | `ProblemDetail` | `type`, `title`, `status`, `detail`, `instance`, `correlation_id` | RFC 9457 body for every error response |
 | `EvidenceBundle` *(planned)* | `finding_id`, `element_records[]`, `container`, `siblings[]` with status, `property_stats`, `requirement_source` | everything an explanation may cite |
-| `Explanation` | `finding_id`, `summary`, `probable_cause`, `corrective_action`, `citations[]`, `source`, `grounding_status`, optional `model` | separately labelled interpretation; each citation binds the finding, GlobalId, requirement, rule, expected and observed values. Never persisted with deterministic findings. *Implemented (T-5).* |
+| `Explanation` | `finding_id`, `summary`, `probable_cause`, `corrective_action`, `citations[]`, `source`, `grounding_status`, optional `model`, `fallback_reason` | separately labelled interpretation; each citation binds the finding, GlobalId, requirement, rule, expected and observed values. The schema enforces consistent labels: `ai_generated` requires `grounding_status=passed`, a model id and no `fallback_reason`; `deterministic_template` requires `grounding_status=fallback`, no model and one `fallback_reason` (`ai_disabled`, `unsupported_evidence`, `budget_limit`, `ai_request_failed`, `ai_output_invalid`, `grounding_failed`). Never persisted with deterministic findings. *Implemented (T-5).* |
 | `Report` *(planned)* | session metadata, model summary, requirements table, findings with evidence and explanations, traceability matrix, provenance | canonical JSON; Markdown rendered from it |
 | `RunLog` *(planned)* | plan, tool calls (name, args, duration, result size), token usage, grounding results, errors, timings | one per run (NFR-09) |
 
@@ -476,6 +476,18 @@ The report's traceability matrix is generated from these links; nothing in the r
 ### 10.4 Grounding check
 
 The T-5 implementation grounds one element per AI-generated explanation. Every citation must match the deterministic finding id, element GlobalId, requirement id, rule id, expected value and observed value; the GlobalId must resolve in the model index. The prose is rejected if it mentions an unsupported GlobalId, requirement id or numeric value. Multi-element findings use the deterministic template rather than permitting evidence to be mixed between elements. There is no regeneration loop: invalid output, unavailable clients or grounding failure immediately use the deterministic fallback. Explanations remain separate from the immutable finding artifact.
+
+Before any evidence is assembled, the explanation endpoint verifies provenance under the session's model lock. It checks that:
+
+- the stored run id matches the requested run and the run belongs to the session;
+- the finding is recorded by exactly one of the run's check results and agrees with that result's check and requirement ids;
+- the run's input manifest names the requirement revision, which is still stored and confirmed;
+- the confirmed `CheckSpec` id, rule id and rule version match the finding and the manifest;
+- an IDS/document requirement has a source reference, and any source document is among the
+  manifest's document hashes (built-in requirements need no document);
+- the model index is the run's pinned model version and every indexed finding element still has the recorded GlobalId, type, name and storey.
+
+Any disagreement is refused rather than explained. The single bounded model call runs only after the lock is released, because published runs and model versions are immutable. *Implemented and offline-tested (T-5).*
 
 ---
 
@@ -499,11 +511,11 @@ Base path `/api/v1`. JSON everywhere; errors follow a single `ProblemDetail` sch
 | `GET` | `/sessions/{sid}/requirements` ✓ | List requirements with status, revision, source and `CheckSpec` | — |
 | `POST` | `/sessions/{sid}/requirements/native/classification-consistency` ✓ | Explicitly confirm and register the parameter-free P0 native rule as a built-in requirement; 201 when added, 200 when already present; 409 while the session is locked | FR-VAL-04 |
 | `PATCH` | `/sessions/{sid}/requirements/{rid}` | Confirm / edit / reject | FR-REQ-04 |
-| `POST` | `/sessions/{sid}/reviews` ✓ | Start a synchronous run over confirmed requirements. Optional objective allows a bounded model plan; invalid/unavailable plans use the deterministic default. `MAX_PLAN_CHECKS` and `MAX_TOOL_CALLS_PER_RUN` cap execution; 201 with terminal `ReviewRun`; `If-Match` pins the model | FR-REQ-06..07 |
+| `POST` | `/sessions/{sid}/reviews` ✓ | Start a synchronous run over confirmed requirements. An optional `objective` (1–4,000 characters, containing visible text; whitespace-only is 422) is sent to the existing planner, which may select only confirmed, registered checks. `plan_source=llm` only when that plan is accepted; no objective, AI off, budget refusal, request failure or a rejected plan all run the deterministic default with `plan_source=default`. `MAX_PLAN_CHECKS` and `MAX_TOOL_CALLS_PER_RUN` cap execution; confirmed checks an accepted plan did not select are recorded `skipped` and the run ends `partial`. 201 with terminal `ReviewRun`; `If-Match` pins the model | FR-REQ-06..07, FR-AI-01 |
 | `GET` | `/sessions/{sid}/reviews/{runId}/events` | SSE stream of progress events | FR-VIS-05 |
 | `GET` | `/sessions/{sid}/reviews/{runId}` ✓ | The published run: status, plan, per-check results, input manifest | — |
 | `GET` | `/sessions/{sid}/findings?run_id=&severity=&rule_id=&storey=` ✓ | Findings of one run in canonical order; `run_id` required, the other filters optional; 400 malformed run id, 404 unknown run | FR-VIS-02 |
-| `POST` | `/sessions/{sid}/reviews/{runId}/findings/{fid}/explanation` ✓ | Return separately labelled, grounded explanation or deterministic fallback; no write to `findings.json` | FR-EXP-02..05 |
+| `POST` | `/sessions/{sid}/reviews/{runId}/findings/{fid}/explanation` ✓ | Return a separately labelled, grounded explanation or a labelled deterministic fallback for one finding the run recorded (§10.4). 400 malformed session/run id; 404 unknown session, run or finding (including a finding from another run); 409 `explanation-provenance-mismatch` when stored run, requirement, check, source or model evidence disagrees; 412 `model-version-mismatch` when `If-Match` names a version other than the run's model. Never writes `run.json` or `findings.json` | FR-EXP-02..05, FR-AI-01 |
 | `GET` | `/llm/budget` ✓ | Safe aggregate application-level ledger status only; no prompts or secrets. 503 when pricing or ledger state is unavailable | NFR-05 |
 | `GET` | `/sessions/{sid}/findings/{fid}` | Finding with evidence and explanation | FR-VIS-04 |
 | `POST` | `/sessions/{sid}/findings/{fid}/explain` | (Re)generate explanation | FR-EXP-02 |
@@ -614,7 +626,11 @@ Viewer-specific imports remain inside `frontend/src/viewer/`, and the viewer mod
 | Confirmed check's stored payload no longer hashes to its `rule_version` | `CheckResult.status="error"` naming the check; it is never executed as a weaker check. *Implemented (T-2).* |
 | Narrative document invalid UTF-8 or empty | 422 response; no narrative document is stored. |
 | Narrative extraction unavailable / malformed output | The extraction endpoint returns a sanitized 503 or rejects the invalid candidate output; it creates no `Requirement`. |
-| LLM unavailable, output invalid, or plan rejected | Planner keeps the deterministic default plan; explanation returns its deterministic template. Retry count defaults to zero. |
+| LLM unavailable, output invalid, or plan rejected | Planner keeps the deterministic default plan (`plan_source=default`); explanation returns its deterministic template with a `fallback_reason`. Retry count defaults to zero. |
+| Whitespace-only review objective | 422 `request-validation` before any planner request or run is recorded. *Implemented (T-5).* |
+| Explanation requested for a finding the run did not record | 404 `finding-not-found`; nothing is explained. *Implemented (T-5).* |
+| Explanation evidence disagrees with the run (other session, changed requirement revision or check, rejected requirement, source outside the manifest, missing or altered model version) | 409 `explanation-provenance-mismatch`; no evidence is sent to the model. *Implemented (T-5).* |
+| Explanation `If-Match` names a model version other than the run's | 412 `model-version-mismatch` naming the run's model version. *Implemented (T-5).* |
 | Plan contains unknown, duplicate, unconfirmed or excess check | The entire proposal is rejected and the deterministic default plan is used; execution still resolves check ids server-side. |
 | `MAX_PLAN_CHECKS` or `MAX_TOOL_CALLS_PER_RUN` reached | Every confirmed check not executed within a cap is recorded as `CheckResult.status="skipped"`; the run ends `partial`, never `completed`. *Implemented (T-4).* |
 | Grounding failure or multi-element finding | AI text is discarded and a deterministic explanation template is returned; explanations are not written to `findings.json`. *Implemented (T-5).* |

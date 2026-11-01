@@ -1,10 +1,12 @@
 import type {
   DocumentImport,
   ElementRecord,
+  Explanation,
   Finding,
   ModelSummary,
   ProblemDetail,
   Requirement,
+  ReviewRequest,
   ReviewRun,
   Session,
 } from './generated/types';
@@ -296,4 +298,100 @@ export async function fetchElement(
     requestOptions(signal, { 'If-Match': etag }),
   );
   return (await response.json()) as ElementRecord;
+}
+
+/** Upper bound the backend enforces on `ReviewRequest.objective`, in characters. */
+export const MAX_REVIEW_OBJECTIVE_LENGTH = 4000;
+
+/**
+ * Starts a review whose plan the server may narrow to the confirmed checks that suit the
+ * objective. The caller must still read `plan_source`: `default` means the deterministic plan
+ * ran because AI is off, the plan was rejected or the request failed.
+ */
+export async function startObjectiveReview(
+  sessionId: string,
+  objective: string,
+  signal?: AbortSignal,
+): Promise<ReviewRun> {
+  if (!/\S/u.test(objective)) {
+    throw new ApiError('Enter a review objective before starting an objective review.');
+  }
+  // Count code points, as the server does, rather than UTF-16 code units.
+  if ([...objective].length > MAX_REVIEW_OBJECTIVE_LENGTH) {
+    throw new ApiError(
+      `Review objectives are limited to ${MAX_REVIEW_OBJECTIVE_LENGTH} characters.`,
+    );
+  }
+  const { etag } = await getModelSummary(sessionId, undefined, signal);
+  const body: ReviewRequest = { objective };
+  const options = requestOptions(signal, {
+    'If-Match': etag,
+    'Content-Type': 'application/json',
+  });
+  options.method = 'POST';
+  options.body = JSON.stringify(body);
+  const response = await request(`${sessionPath(sessionId)}/reviews`, options);
+  const run = (await response.json()) as ReviewRun;
+  if (run.session_id !== sessionId) {
+    throw new ApiError('The started review does not match the requested session.');
+  }
+  if (`"${run.input_manifest.model_hash}"` !== etag) {
+    throw new ModelVersionMismatchError('The review ran against a different model version.');
+  }
+  return run;
+}
+
+/**
+ * Requests an interpretation of one verified finding. `etag` must be the version the user is
+ * viewing; the server refuses (412) one that is not the run's model. The result is never a
+ * Finding: render `source` and `fallback_reason` so a template is never mistaken for AI output.
+ */
+export async function explainFinding(
+  sessionId: string,
+  runId: string,
+  findingId: string,
+  etag: string,
+  signal?: AbortSignal,
+): Promise<Explanation> {
+  const options = requestOptions(signal, { 'If-Match': etag });
+  options.method = 'POST';
+  const response = await request(
+    `${sessionPath(sessionId)}/reviews/${encodeURIComponent(runId)}/findings/${encodeURIComponent(findingId)}/explanation`,
+    options,
+  );
+  const explanation = (await response.json()) as Explanation;
+  if (explanation.finding_id !== findingId) {
+    throw new ApiError('The explanation does not match the selected finding.');
+  }
+  if (!hasConsistentProvenanceLabels(explanation)) {
+    throw new ApiError('The explanation provenance labels are inconsistent.');
+  }
+  return explanation;
+}
+
+const EXPLANATION_FALLBACK_REASONS: readonly NonNullable<Explanation['fallback_reason']>[] = [
+  'ai_disabled',
+  'unsupported_evidence',
+  'budget_limit',
+  'ai_request_failed',
+  'ai_output_invalid',
+  'grounding_failed',
+];
+
+function hasConsistentProvenanceLabels(explanation: Explanation): boolean {
+  if (explanation.source === 'ai_generated') {
+    return (
+      explanation.grounding_status === 'passed' &&
+      explanation.fallback_reason === null &&
+      typeof explanation.model === 'string' &&
+      explanation.model.length > 0
+    );
+  }
+  return (
+    explanation.source === 'deterministic_template' &&
+    explanation.grounding_status === 'fallback' &&
+    explanation.fallback_reason != null &&
+    EXPLANATION_FALLBACK_REASONS.includes(explanation.fallback_reason) &&
+    explanation.model === null
+  );
 }

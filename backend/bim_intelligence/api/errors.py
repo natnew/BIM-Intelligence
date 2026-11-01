@@ -28,6 +28,11 @@ from bim_intelligence.bim import (
     UnsupportedUploadError,
 )
 from bim_intelligence.orchestration import NoExecutableChecksError
+from bim_intelligence.reporting import (
+    ExplanationProvenanceError,
+    FindingNotInRunError,
+    RunModelMismatchError,
+)
 from bim_intelligence.requirements import InvalidIdsError, RequirementInterpretationError
 from bim_intelligence.schemas import ProblemDetail
 from bim_intelligence.store import (
@@ -88,6 +93,11 @@ DOMAIN_PROBLEMS: dict[type[Exception], ProblemSpec] = {
     NoExecutableChecksError: ProblemSpec(
         409, "no-executable-checks", "No confirmed requirements to review"
     ),
+    FindingNotInRunError: ProblemSpec(404, "finding-not-found", "Finding not found in this run"),
+    ExplanationProvenanceError: ProblemSpec(
+        409, "explanation-provenance-mismatch", "Finding provenance no longer verifiable"
+    ),
+    RunModelMismatchError: ProblemSpec(412, "model-version-mismatch", "Model version mismatch"),
     StorageError: ProblemSpec(500, "storage-failure", "Storage failure", expose_detail=False),
 }
 REQUEST_VALIDATION = ProblemSpec(422, "request-validation", "Request validation failed")
