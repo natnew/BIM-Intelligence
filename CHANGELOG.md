@@ -4,6 +4,26 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### FED-001 / W5 — Two-model federation and clash feasibility experiment (feasibility only)
+
+- Add an isolated feasibility harness under `tests/feasibility/`. It generates deterministic
+  synthetic architectural and building-services IFC4 fixtures into the ignored
+  `datasets/synthetic/generated/fed001/`, with an independent box-arithmetic oracle. The harness
+  gates federation on matching `IfcMapConversion`, CRS, units, engineering frame and manifest
+  hashes. It never transforms or re-saves source geometry.
+- Run a deterministic A/B comparison with IfcOpenShell 0.9.0 (`opencascade` geometry). Exact B-rep
+  selection (`opencascade.brep`) classifies hard intersections and touch/contact. The triangulated
+  BVH engine is recorded as a cross-check because it missed coplanar-face overlaps during
+  exploration. Mesh-only results are reported as `unsupported`, never promoted. Results are raw
+  geometric records keyed by model member, file hash and GlobalId, with
+  `professional_action: not_assessed`. They are not `Finding`s.
+- Add a Node probe (`webifc_viewer_probe.mjs`) to check that the installed web-ifc 0.0.77 places
+  both models in a consistent viewer frame. Add 25 focused tests. The synthetic run and its
+  rerun reproduce the same result digest, and the feasibility decision is GO. Reports are written
+  only to the ignored `local-private/test-results/final-48h/`. No production API, viewer, schema
+  or dependency changes, and no private models were accessed. The mypy override in
+  `pyproject.toml` now includes `feasibility.*`.
+
 ### T-5 / M0, M2 — Verified AI review path and provenance-checked explanations (1 November 2026)
 
 - Verify the existing objective-to-planner path offline. A whitespace-only objective is now refused

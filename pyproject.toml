@@ -96,11 +96,13 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 # ifcopenshell 0.9 ships partial inline annotations; modules that drive it directly may call
-# its untyped functions. Confined to ``bim/``, the fixture and benchmark generators, and tests.
+# its untyped functions. Confined to ``bim/``, the fixture, benchmark and feasibility generators,
+# and tests.
 module = [
   "bim_intelligence.bim.*",
   "fixtures.*",
   "evaluation.*",
+  "feasibility.*",
   "test_minimal_fixture",
   "test_loader",
   "test_model_index",
