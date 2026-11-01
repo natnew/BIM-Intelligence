@@ -15,7 +15,11 @@ import {
   type VersionedModel,
 } from '../api/bim';
 import type { Finding, Requirement, ReviewRun } from '../api/generated/types';
-import { ViewerCanvas } from '../viewer/ViewerCanvas';
+import {
+  ViewerCanvas,
+  type ViewerCanvasHandle,
+  type ViewerLoadState,
+} from '../viewer/ViewerCanvas';
 import { AppHeader } from './AppHeader';
 import { EvidenceInspector, type ElementLoadState } from './EvidenceInspector';
 import { FindingRegister } from './FindingRegister';
@@ -73,9 +77,11 @@ export function ModelWorkspace({
   const [selectedGlobalIds, setSelectedGlobalIds] = useState<string[]>([]);
   const [elementState, setElementState] = useState<ElementLoadState>({ kind: 'idle' });
   const [viewerError, setViewerError] = useState<string | null>(null);
+  const [viewerLoadState, setViewerLoadState] = useState<ViewerLoadState>('preparing');
 
   const reviewRequestRef = useRef<AbortController | null>(null);
   const elementRequestRef = useRef<AbortController | null>(null);
+  const viewerRef = useRef<ViewerCanvasHandle | null>(null);
   // Refs let the viewer callbacks stay referentially stable, so the WebGL viewer is created once
   // per model version rather than on every state change.
   const etagRef = useRef<string | null>(null);
@@ -223,6 +229,19 @@ export function ModelWorkspace({
   );
 
   const handleViewerError = useCallback((message: string) => setViewerError(message), []);
+  const handleViewerLoadStateChange = useCallback(
+    (state: ViewerLoadState) => setViewerLoadState(state),
+    [],
+  );
+
+  function runViewerAction(action: (viewer: ViewerCanvasHandle) => Promise<void>) {
+    const viewer = viewerRef.current;
+    if (!viewer) {
+      return;
+    }
+    setViewerError(null);
+    void action(viewer).catch((error: unknown) => handleViewerError(messageForError(error)));
+  }
 
   function selectFinding(finding: Finding) {
     const globalIds = finding.elements.flatMap((element) =>
@@ -235,6 +254,9 @@ export function ModelWorkspace({
 
   function clearSelection() {
     elementRequestRef.current?.abort();
+    if (viewerLoadState === 'ready') {
+      runViewerAction((viewer) => viewer.clearSelection());
+    }
     setSelectedFindingId(null);
     setSelectedGlobalIds([]);
     setElementState({ kind: 'idle' });
@@ -357,14 +379,14 @@ export function ModelWorkspace({
       {modelState.kind === 'loading' && (
         <p role="status" className="notice workspace-shell__notice">
           {reviewState.kind === 'loading'
-            ? 'Checking the run’s model version and loading the review…'
-            : 'Checking the active model version and downloading the stored IFC…'}
+            ? 'Downloading model and loading the review data for the requested run…'
+            : 'Downloading model…'}
         </p>
       )}
       {modelState.kind === 'error' && (
         <div className="workspace-shell__notice">
           <p role="alert" className="notice notice--error">
-            {modelState.message}
+            Failed to load model: {modelState.message}
           </p>
           <p className="notice">
             The session may have no uploaded model yet. Return to Project Home to upload one or open
@@ -381,9 +403,36 @@ export function ModelWorkspace({
             <div className="viewport__head">
               <h2 id="viewport-heading">3D model</h2>
               <p className="viewport__hints">
-                Left-drag orbit · right-drag pan · wheel zoom · click an element to inspect it. Fit,
-                focus and visibility controls are not exposed by the viewer in this iteration.
+                Left-drag orbit · right-drag pan · wheel zoom · click an element to inspect it.
               </p>
+              <div className="viewport__actions" role="group" aria-label="Camera controls">
+                <button
+                  type="button"
+                  className="button button--ghost"
+                  disabled={viewerLoadState !== 'ready'}
+                  onClick={() => runViewerAction((viewer) => viewer.fitModel())}
+                >
+                  Fit model
+                </button>
+                <button
+                  type="button"
+                  className="button button--ghost"
+                  disabled={viewerLoadState !== 'ready'}
+                  onClick={() => runViewerAction((viewer) => viewer.resetView())}
+                >
+                  Reset view
+                </button>
+                <button
+                  type="button"
+                  className="button button--ghost"
+                  disabled={viewerLoadState !== 'ready' || selectedGlobalIds.length === 0}
+                  onClick={() =>
+                    runViewerAction((viewer) => viewer.focusSelection(selectedGlobalIds))
+                  }
+                >
+                  Focus selected
+                </button>
+              </div>
               {selectedGlobalIds.length > 0 && (
                 <button type="button" className="button button--ghost" onClick={clearSelection}>
                   Clear selection
@@ -396,11 +445,14 @@ export function ModelWorkspace({
               </p>
             )}
             <ViewerCanvas
+              ref={viewerRef}
               bytes={model.bytes}
               modelId={model.summary.model_hash}
+              selectedGlobalIds={selectedGlobalIds}
               highlightedGlobalIds={highlightedGlobalIds}
               onGlobalIdsSelected={selectFromViewer}
               onViewerError={handleViewerError}
+              onLoadStateChange={handleViewerLoadStateChange}
             />
             {reviewState.kind === 'ready' ? (
               <FindingRegister

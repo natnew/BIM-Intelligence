@@ -125,7 +125,7 @@ export function FindingRegister({ findings, selectedFindingId, onSelect }: Findi
             <span>Model element</span>
             <span>Observed → expected</span>
           </div>
-          <ul className="finding-list">
+          <ul className="finding-list" aria-label="Findings" tabIndex={0}>
             {visible.map((finding) => {
               const first = finding.elements[0];
               const extra = finding.elements.length - 1;
