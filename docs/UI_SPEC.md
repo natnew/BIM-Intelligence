@@ -3,6 +3,10 @@
 **Status:** Governance baseline; the owner-approved UI-002 Revision 2 visual direction is recorded
 in §13, and the UI-003 production implementation of that direction is recorded in §18. Further
 functional scope (viewer controls, model tree, catalogue, clashes, AI explanation) remains proposed.
+**Status correction (1 November 2026):** §3 and §4 describe the current UI-003 production
+baseline. The UI-002 proposal in §17 is a dated pre-implementation snapshot; its former statements
+that Project Home and upload were absent are not current production status. The detailed UI-003
+implementation and browser evidence in §18 and `docs/UI_CHANGELOG.md` remain the evidence record.
 **Scope:** Owner-directed interface refinement under T-7, contributing to M3.
 **Authority:** The project owner approves visual decisions. This document records verified
 behaviour, provisional design principles, approved decisions and unresolved questions separately.
@@ -48,8 +52,12 @@ implication.
 
 ### Existing verified behaviour
 
-- Connect to an existing review using a session ID and run ID, or start a standard review for a
-  session.
+- Use Project Home to create a server session or open an existing session by ID; upload one IFC
+  and supported IDS/Markdown/TXT source documents, then open the review workspace.
+- Start the deterministic default **Run review** action from the workspace. A session without
+  confirmed executable checks remains viewable but cannot run a review.
+- Reopen a session and optional review run with the query-string link
+  (`?session_id=…&run_id=…`); no recent-session browser history is currently stored.
 - Load review data only when the review run belongs to the requested session and active model
   version.
 - Inspect the model summary, per-check coverage and findings.
@@ -63,36 +71,41 @@ implication.
 These behaviours are implemented by `App`, `ModelWorkspace`, the version-aware BIM API client and
 the viewer; component and API tests cover the described review, state and selection flows. The T-3
 browser verification on the minimal fixture is recorded in
-[IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md#t-3--interactive-3d-bim-viewer).
+[IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md#t-3--interactive-3d-bim-viewer); the later
+Project Home, upload and workspace browser verification is recorded under UI-003 in
+[UI_CHANGELOG.md](./UI_CHANGELOG.md).
 
 ### Intended product workflow — not yet fully implemented in the UI
 
-The product-level workflow described by the project documents is:
+The broader product workflow remains only partly implemented:
 
-1. Provide an IFC model and project requirement material.
-2. Review requirement candidates with their verbatim source quotes and confirm, edit or reject
-   them.
-3. State a review objective and inspect the bounded plan.
-4. Follow review progress and check coverage.
-5. Triage findings in relation to model elements and inspect deterministic evidence.
-6. Produce a traceable report with provenance.
+1. **Implemented:** create/open a session, upload one `.ifc` and supported requirement material,
+   then inspect the version-pinned model, deterministic review, findings and element evidence.
+2. **Backend exists; frontend workflow not implemented:** extract narrative candidates with
+   verbatim quotes and explicitly confirm them against existing checks.
+3. **Backend path is offline-tested; frontend AI objective and plan display not implemented:**
+   state an objective and inspect the bounded plan.
+4. **Implemented for deterministic review:** run the default review and inspect check coverage;
+   live progress streaming is not available in the current synchronous route.
+5. **Implemented:** select findings/elements and inspect deterministic evidence in the existing
+   viewer.
+6. **Not implemented:** export a complete traceable JSON/Markdown report with provenance.
 
-Backend endpoints currently create an unnamed review session, accept an `.ifc` model and accept
-`.ids`, `.md` or `.txt` requirement material. The frontend does not expose session creation, model
-or document upload, requirement-candidate confirmation, objective planning, an AI explanation
-panel, live progress streaming or report export. IDS specifications are validated as confirmed
-requirements; Markdown and text are stored as untrusted source material and do not create
-requirements until separate interpretation and explicit confirmation. Endpoint capability does not
-make a UI flow available; further work remains subject to implementation approval.
+The backend creates unnamed review sessions, accepts one `.ifc` model and supports `.ids`,
+`.md` or `.txt` requirement material. IDS specifications become confirmed requirements; Markdown
+and text remain untrusted source until separate interpretation and human confirmation. The
+frontend does not currently expose candidate confirmation or a user-facing Meta explanation.
+Endpoint capability does not establish a complete UI workflow or live provider verification.
 
 ## 4. Navigation and workspace information hierarchy
 
 ### Existing verified behaviour
 
-The current application is a single page with a product heading and backend health status, followed
-by the model review workspace. Within that workspace, the session/run form precedes the model
-summary and viewer; a findings and element-details panel sits alongside the viewer on wider screens.
-On narrow screens the model and review panel stack vertically.
+The existing React application has a Project Home and a review workspace within one application
+shell. Project Home creates or opens a session and guides one IFC/document upload. The workspace
+shows model information, a dominant 3D viewport, findings, requirements, review coverage and an
+evidence inspector. Desktop uses the recorded three-column layout; narrower layouts stack the
+panels. Navigation and session/run deep links use the URL, not a stored project catalogue.
 
 ### Owner-approved direction — UI-002 Revision 2
 
@@ -469,10 +482,10 @@ Vitest. Use a manual, repeatable check until an automation change is separately 
    matches the existing demo-plan recording size; it is a verification condition, not an approved
    target layout. Add a narrow viewport capture if the approved scope affects responsive behaviour;
    record its dimensions in the iteration entry.
-2. Use the committed `tests/fixtures/minimal.ifc` and `tests/fixtures/minimal.ids` through the
-   existing API workflow. The frontend has no upload screen. Record the fixture/model hash, browser
+2. Use the committed `tests/fixtures/minimal.ifc` and `tests/fixtures/minimal.ids` through Project
+   Home's existing session and upload workflow. Record the fixture/model hash, browser
    name/version, and session/run IDs in the private evidence record so the selection state can be
-   repeated.
+   repeated. Do not copy fixture or private model bytes into a prototype or evidence directory.
 3. Load the same review run and wait for the viewer and findings to finish loading. Capture an
    unselected baseline, then select the IDS FireRating finding for W-002 (GlobalId
    `0QWMtUzsnUUONCUGc8Sqsa`) and capture the highlighted model and details. Also exercise selection
@@ -573,6 +586,11 @@ approved and tested, use supervised tool approvals, small explicit scopes and fi
 Do not advertise prompt budgets as hard timeouts or these proposals as installed protection.
 
 ## 17. UI-002 Revision 2 — proposed workflow and acceptance criteria
+
+**Historical snapshot:** this section records the UI-002 prototype and production state before
+UI-003 was implemented on 30 October 2026. Rows that say Project Home, upload, recent sessions or
+sample routes are absent describe that earlier state, not the current production baseline.
+UI-003's current behaviour and evidence are recorded in §18 and the append-only UI changelog.
 
 This owner-authorised prototype revision expands the visual design, not production functionality.
 The Project Home and Review Workspace screens are static synthetic examples. Candidate functional
@@ -683,6 +701,10 @@ review. Browser evidence is recorded in
 [UI_CHANGELOG.md](./UI_CHANGELOG.md). This section describes the application as built; it does not
 mark T-7 or M3 complete.
 
+**Status correction (1 November 2026):** PR #18 has since merged into `main`. The branch and
+pending-review wording above is the original implementation snapshot; the UI-003 behaviour and
+evidence remain as recorded, and T-7/M3 remain in progress.
+
 ### Implemented (verified by Vitest/RTL tests and a live browser walkthrough)
 
 | Area | Behaviour | Source |
@@ -725,3 +747,45 @@ mark T-7 or M3 complete.
 6. **Session history / sample catalogue**: requires new API capability.
 7. **Accessibility audit**: contrast measurement, screen-reader pass and 200 % zoom check; only
    keyboard activation of finding rows and focus visibility were exercised.
+
+## 19. Day 7 coordination mode — conditional proposal
+
+The existing single-IFC Project Home and review workspace remain binding. If and only if the
+coordination feasibility gate in [ADR-021–ADR-025](./DECISIONS.md) and
+[FINAL_48_HOUR_PLAN.md](./FINAL_48_HOUR_PLAN.md) passes, expose **Clash Matrix** and **3D
+Investigation** as modes in this same application shell. Do not redesign the product, replace the
+approved colour palette/typography, or create a separate coordination product.
+
+The conditional interaction sequence is:
+
+1. Select a two-model coordination set whose members refer to separate immutable model versions.
+2. Show the common coordinate frame and an explicit alignment-validation outcome before enabling
+   analysis.
+3. Select exactly one A/B pair and run the verified deterministic analysis with visible tolerance,
+   units, exclusions and tested entity scope.
+4. Render a compact matrix from actual run results. Distinguish raw intersections, grouped clashes,
+   and human-assessed coordination issues; show unavailable, not analysed, zero, error and
+   results-available states separately.
+5. Selecting a result uses both model identities/version hashes and actual element references to
+   investigate the computed pair in 3D. Evidence shows the run and both source hashes.
+6. An optional Muse Spark explanation is labelled as AI interpretation, cites this computed
+   evidence and reports whether the actual source was AI or deterministic fallback. It never
+   creates or edits a Finding, clash coordinate, count or check criterion.
+
+Keep the 3D viewport continuous on desktop while the matrix and evidence are inspected. Keep
+selection styling neutral and distinct from issue severity. Provide Fit All, Reset View and Focus
+Selection only when the installed viewer exposes verified support; do not show inactive controls.
+Use honest loading/error states without progress percentages unless they are measured.
+
+The minimum front-end integration boundary is a coordination-set identifier and version-pinned
+matrix/result API response; frontend code must not calculate geometry or infer alignment. The
+proposed API and result fields are documented in [ARCHITECTURE.md §21](./ARCHITECTURE.md#21-day-7-delivery-contract-bounded-coordination-extension);
+they are not current endpoints or generated types. Conditional requirements and status evidence are
+listed separately in [REQUIREMENTS.md §8.3](./REQUIREMENTS.md#83-conditional-two-model-coordination-demonstration).
+
+For sample data, tracked `examples/` content is limited to manifests, attribution/provenance,
+preparation instructions and genuinely redistributable small assets. Private BIM files,
+evaluation materials and unapproved third-party assets remain in the owner-managed ignored
+`local-private/` layout. Duplex Apartment is the preferred external candidate only after
+compatibility and rights checks. The safe fallback is a one-click synthetic single-model review;
+it must not be presented as a clash demonstration.

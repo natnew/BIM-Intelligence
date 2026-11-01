@@ -1,68 +1,102 @@
 # Demo Plan
 
-**Status:** v0.1. Format constraints (video length, live vs recorded, judging criteria) are **unverified** because the hackathon rules were not available at the time of writing (OPEN-02). The plan assumes a three-minute video as stated in the brief.
+**Required output:** one functioning three-minute video. This is the owner-directed delivery
+requirement; confirm the official event rules and eligibility before submission (OPEN-02).
+**Status:** the storyboard below is a recording plan, not evidence that every segment is already
+implemented. Record only paths that pass their stated acceptance tests.
 
-## 1. Storyline (3:00)
+## 1. Product and evidence boundary
 
-**Persona:** a BIM Coordinator preparing an architectural model for a Stage 4 issue.
-**Message:** "Project requirements in, verified findings out — explained, in 3D, and traceable."
+BIM Intelligence is one AI-native AEC model-review application. The existing demonstrable
+workflow is a single IFC session with deterministic IDS/native checks, source-backed findings and
+3D element inspection. UI-003's Project Home, upload and viewer walkthrough is recorded in
+[UI_CHANGELOG.md](./UI_CHANGELOG.md). The T-6 benchmark has a locally recorded result on a small
+synthetic IFC4 model; its limitations and the outstanding hosted-CI status are in
+[EVALUATION.md](./EVALUATION.md).
 
-| Time | Beat | On screen | Narration (key points) |
-|---|---|---|---|
-| 0:00–0:20 | Problem | Title card → split view: a BEP page and a wall of checker output | Pre-issue QA means turning prose requirements into checks and triaging hundreds of unexplained flags. |
-| 0:20–0:45 | Ingest | Upload IFC → model summary; upload BEP | The model is indexed with IfcOpenShell; the BEP is read as text. |
-| 0:45–1:15 | Requirements | Extracted candidates with verbatim quotes and compiled IDS checks; coordinator confirms two, edits one, rejects one | Muse Spark proposes requirements; every proposal carries its source quote; nothing runs until a human confirms. |
-| 1:15–1:40 | Objective and plan | Type "Check fire-rating and classification completeness on external walls and doors for Stage 4" → plan appears with reasons; progress stream | The orchestrator selects checks from a bounded tool registry. Findings come only from IfcTester and deterministic rules. |
-| 1:40–2:20 | Triage in 3D | Findings list → click a finding → affected walls highlight → detail panel shows observed vs expected, the BEP quote, and the AI explanation labelled as AI-generated with a "grounded" badge | Each finding is verified by rule; the explanation can only cite evidence the system has. |
-| 2:20–2:45 | Report | Open Markdown report: traceability matrix requirement → rule → finding → element; provenance block | A traceable report, with model hash, rule versions and the model id used. |
-| 2:45–3:00 | Evidence and close | Evaluation table: measured precision/recall on the labelled benchmark, grounding rate, token cost | State the measured numbers, whatever they are. Close on the design principle. |
+Do not script or narrate the following as working before the gates pass:
 
-## 2. Required functional capabilities
-
-The demo cannot be recorded until each row is implemented and passes its acceptance criterion.
-
-| Beat | Requirements | Milestone |
+| Capability | Current evidence | Recording rule |
 |---|---|---|
-| Ingest | FR-ING-01, FR-ING-02, FR-REQ-01 | M0 / M2 |
-| Requirements | FR-REQ-02, FR-REQ-03, FR-REQ-04 | M2 |
-| Objective and plan | FR-REQ-06, FR-REQ-07, FR-VIS-05 | M2 |
-| Triage | FR-VAL-01..04, FR-EXP-01..03, FR-EXP-05, FR-VIS-01..04 | M1 / M3 |
-| Report | FR-REP-01, FR-REP-02 | M3 |
-| Evidence | NFR-01, NFR-02, NFR-03, NFR-05 measured | M4 |
+| One-IFC Project Home and review workspace | UI-003 tests and recorded browser walkthrough | May show the tested session → IFC/IDS upload → workspace → review path. |
+| Deterministic IDS/native checks and source-backed evidence | Tests and UI-003 browser walkthrough on committed synthetic fixtures | May show only the actual run, check outcomes, selected finding and element evidence. |
+| Muse Spark-assisted workflow | Backend planner/explanation have offline Fake/Replay tests; live API and frontend integration are unverified | Show a Meta-assisted objective/explanation only after a real approved integration test. Label the actual plan/explanation source and any fallback. Never present default, Fake or Replay output as a live inference. |
+| Report/export | Run manifests and evidence exist in API contracts; complete report endpoint/UI remains outstanding | Do not show a fabricated report or download. Include only after the actual export passes provenance checks. |
+| Camera recovery controls | Fit/reset/focus controls are deferred | Do not show mock buttons or narrate unsupported controls. |
+| Recent sessions / sample catalogue | Project Home marks them unavailable | A one-click synthetic sample may be included only after it exists and is tested; until then use the current create/upload workflow. |
+| Two-model federation and clashes | No implementation; feasibility gate not yet passed | Include only after every coordination go/no-go condition passes; otherwise omit all clash/federation claims. |
 
-## 3. Visual sequence and assets
+If coordination is a no-go, the intended delivery fallback is the working IDS/native review with
+the Meta-assisted path only when its frontend integration and required owner-authorised verification
+are real. If Meta integration or live use is not approved/verified, say so plainly; a deterministic
+only recording must not be described as Meta-assisted or as satisfying an unverified eligibility
+rule.
 
-- Screen recording at 1920×1080, browser only (no terminal with environment variables visible).
-- Benchmark model with injected defects (`datasets/synthetic/benchmark.ifc`) — small enough to load in seconds.
-- Pre-scripted objective text and requirement decisions so the run is reproducible.
-- Title and closing cards: project name, one-line description, link to repository, "Built with Meta Muse Spark via the Meta Model API".
-- Lower-third labels on AI-generated content so the audience sees the labelling convention.
+## 2. Three-minute storyboard
 
-## 4. Technical evidence to show
+**Persona:** a BIM Coordinator reviewing an architectural IFC against a confirmed project IDS.
+**Source data:** the committed synthetic minimal IFC/IDS fixture or an approved one-click synthetic
+sample. No private model, client document, unapproved third-party material, credentials or terminal
+output appears in the video.
 
-1. The `Finding.method` value (`ids` or `native`) and rule version chip — proves deterministic origin.
-2. The verbatim BEP quote next to the compiled IDS facet — proves requirement traceability.
-3. The run log excerpt: plan, tool calls, token usage — proves bounded orchestration and cost awareness.
-4. The grounding badge and one example where the grounding check rejected a draft (from the log) — proves the safeguard is real, not decorative.
-5. The evaluation metrics table with commit hash.
+| Time | Beat | On screen | Narration and evidence |
+|---|---|---|---|
+| 0:00–0:12 | Product and scope | BIM Intelligence title; one-line purpose | “BIM Intelligence is an AEC model-review application. This recording shows one version-pinned IFC and deterministic checks; it does not claim enterprise clash management.” |
+| 0:12–0:38 | Start review | Project Home → create a review session → upload the synthetic IFC and IDS → open workspace | Show actual upload/indexed states and the model summary. If a one-click sample is not implemented and tested, use these existing steps; do not imply a catalogue exists. |
+| 0:38–0:54 | Model context | Loaded 3D model, model identity/version, storeys and coverage panels | Show the real viewer and recorded navigation. Do not claim Fit All/Reset/Focus controls. |
+| 0:54–1:20 | Run a review | Run review and inspect the actual plan source/check outcomes | Default route: show `plan_source: default` and deterministic check status. Optional AI route: only if integration is verified and live use is owner-authorised; show actual `plan_source`, model identity, and whether the result was AI or fallback. Do not use Fake/Replay as evidence of live inference. |
+| 1:20–1:55 | Investigate findings | Select a real failed check/finding; highlight the element; inspect observed/expected, source, rule and model version | Distinguish deterministic finding/evidence from any AI explanation. If no approved live explanation is available, show the current evidence inspector without claiming an AI panel. |
+| 1:55–2:15 | Verify provenance | Show the run manifest or existing review coverage and element link | Point to actual model hash, requirement/check identity, rule version and affected element. Do not present an unimplemented export as a report. |
+| 2:15–2:42 | Optional bounded feature slot | Coordination only if the gate passes; otherwise a second real finding or deterministic control | **Go:** show one computed A/B matrix row and select its actual two model-scoped elements. **No-go:** stay in the single-model workflow and show a second verified finding/coverage result. Never simulate a clash. |
+| 2:42–3:00 | Results and close | Small synthetic benchmark scope/limitations; repository name | State only the locally measured T-6 result and its small synthetic scope; disclose outstanding hosted CI and any unavailable/live-unverified feature. End by 3:00. |
 
-## 5. Live-demo fallback strategy
+Keep the final video at exactly three minutes or shorter. A feature segment may replace time in the
+fixed slot; it may not extend the video or be added to make an unverified release appear complete.
 
-| Failure | Fallback |
-|---|---|
-| API unreachable or rate-limited | Start the backend with `LLM_MODE=replay`; recorded responses from the rehearsal replay the identical plan and explanations. |
-| Replay mismatch (changed inputs) | `LLM_MODE=off`; default plan runs; templated explanations; degraded banner is itself a talking point. |
-| Viewer fails to load | Findings panel and report still work; switch to a pre-captured viewer clip. |
-| Complete environment failure | Play the pre-recorded video. |
+## 3. Coordination insert — all conditions required
 
-The primary submission is the **recorded video**; a live walkthrough, if required, follows the same script with the replay fallback armed.
+Include the optional matrix/3D insert only if, by the cutoff in
+[FINAL_48_HOUR_PLAN.md](./FINAL_48_HOUR_PLAN.md):
 
-## 6. Rehearsal checklist (Day 9)
+1. Two separate immutable IFC model versions, hashes, member identities, discipline labels and
+   placement metadata are present; the one-model `Session` contract is unchanged.
+2. Both models have a tested, explicit common coordinate frame; unknown or unsupported alignment
+   is rejected before analysis.
+3. An installed, version-verified deterministic geometric capability passes intersection,
+   no-intersection, tolerance-boundary, exclusions, unsupported-entity, stale-hash and repeated-run
+   tests. No unapproved dependency or private model is used.
+4. The matrix contains only actual computed counts, clearly separates raw intersections, grouped
+   clashes and human-assessed issues, and shows every required unavailable/zero/error state
+   honestly.
+5. Selecting a result loads and highlights the actual model-scoped element pair and shows evidence
+   with both hashes and the run identity.
+6. Rights, attribution, privacy, regression and browser-recording checks pass; all source files are
+   approved for the exact inspection/recording/publication scope.
 
-- [ ] Fresh session; benchmark loads in < 10 s in the browser.
-- [ ] Extraction produces the expected candidates from `benchmark_bep.md` (replay).
-- [ ] Objective produces the expected plan (replay).
-- [ ] Highlight sync works for every finding in the demo path.
-- [ ] Report renders; traceability matrix complete.
-- [ ] Recording captured; replay fixtures committed; `LLM_MODE=replay` tested end to end.
-- [ ] No secrets visible in any frame.
+The preferred external candidate is Duplex Apartment, subject to model compatibility and explicit
+rights verification. Do not inspect `local-private/` without task-specific authorisation. If the
+candidate is unsuitable or rights are unresolved, omit coordination; the one-click synthetic
+single-model sample is the safe product-demo fallback and is not a clash substitute.
+
+## 4. Recording and submission checks
+
+- Record at 1920 × 1080 with browser chrome minimised; no secrets, environment values, private paths,
+  client data or unrelated processes may be visible.
+- Use a fresh, reproducible session and record the exact fixture/model hash, run ID and app commit in
+  private evidence notes. Use only permitted synthetic or explicitly redistributable inputs.
+- Capture only real application states. AI labels, `plan_source`, explanation source and fallback
+  must match the run. Findings remain deterministic.
+- Save the unedited recording and verification notes under an owner-approved ignored/private
+  location, not tracked `docs/`, `examples/` or `datasets/`. Upload/submit only through the
+  owner-approved event process.
+- Recheck video duration, audio, readability, no secret exposure, public repository links,
+  attribution and third-party asset rights. Confirm the official rules and submission format.
+- Do not release, tag, deploy or submit without the project owner's explicit approval.
+
+## 5. Safe fallback
+
+If a live provider, optional coordination path, report, viewer control or recording step fails,
+remove that segment and retain only the last verified single-model review path. A recorded clip is
+not a substitute for an untested product feature. If the remaining recording cannot truthfully
+meet the Meta-assisted or official submission criteria, report that gap to the owner rather than
+claiming success.

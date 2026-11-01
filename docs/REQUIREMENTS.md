@@ -186,3 +186,58 @@ The brief states that the original hackathon application described broader capab
 | OPEN-03 | Confirm API budget authorisation for development and benchmark runs (C-06). | Any live LLM call | Project owner |
 | OPEN-04 | Choose benchmark base model: self-generated synthetic building vs an openly licensed sample IFC (licence check needed). | EVALUATION §2 | Project owner + architect |
 | OPEN-05 | Confirm NFR-04 performance targets are appropriate for the demonstration hardware. | NFR-04 | Project owner |
+
+## 8. Day 7 acceptance and status register
+
+This owner-approved addendum records the product and delivery decisions as of 1 November 2026.
+Statuses below describe evidence present on `main` at
+`1f3d13b78683692317e00f2279c3f0c4ac02f1c2`; they do not imply that a requirement is complete
+because it is documented. The coordination requirements are a separate, conditional demonstration
+scope and are not additions to the deterministic IDS-review MVP exit criteria.
+
+The original **FR-VAL-08** row is retained as historical requirement-baseline text. For this
+delivery, it is **Deferred** and superseded by **FR-COORD-01..05** below: geometric results are
+not `Finding` records and cannot be accepted as part of the current review MVP.
+
+### 8.1 Existing product and bounded UI requirements
+
+| ID | Requirement and acceptance test | Priority | Status | Evidence / gap |
+|---|---|---:|---|---|
+| FR-UI-01 | Retain one product identity: **BIM Intelligence**, an AI-native AEC model-review application. The coordination demonstration, if enabled, is a mode in this application, not a second product or rebrand. | P0 | Implemented | Project Home and shell exist in `frontend/src/App.tsx` and `frontend/src/components/ProjectHome.tsx`; README describes architectural BIM review. UI-003 is recorded in `docs/UI_CHANGELOG.md`. |
+| FR-VIS-08 | Provide Fit All, Reset View and Focus Selection where the installed viewer supports them. Each control must act on the displayed model and preserve version/selection integrity; unsupported actions must not appear as active controls. | P1 | Deferred | The viewer initially frames geometry, but no user-facing camera recovery controls exist. UI-003 browser evidence records camera controls as deferred; see `frontend/src/viewer/IfcViewer.ts` and `docs/UI_SPEC.md` §18. |
+| FR-VIS-09 | Keep viewer and application selection coherent: selecting a finding or element updates the corresponding application state, clearing selection clears linked state, and focus styling remains neutral and distinct from deterministic issue severity. Test both selection directions, clearing, keyboard operation and styling against findings of different severities. | P0 | In progress | Bidirectional selection and keyboard-operable findings are tested and were exercised in the UI-003 browser walkthrough. The library's green selection persists after clear and no neutral styling contract is yet implemented; see `docs/UI_CHANGELOG.md` and `frontend/src/components/ModelWorkspace.tsx`. |
+| FR-VIS-10 | At desktop viewports of 1280 px or wider, keep the 3D viewport rendered and usable while a user selects a finding and inspects its evidence; evidence must not replace the viewport or silently reset the model camera. | P0 | Implemented | UI-003's three-column desktop workspace and finding-to-evidence browser walkthrough are recorded in `docs/UI_CHANGELOG.md`; `frontend/src/components/ModelWorkspace.tsx` renders `ViewerCanvas` with the evidence inspector. |
+| FR-VIS-11 | Show truthful upload, indexing, viewer-loading, empty and error states. Progress may be reported only when measured; no invented percentage is displayed. Acceptance uses a fresh upload and a delayed/failed viewer or API response. | P0 | Implemented | Upload/rejection states are tested in the UI-003 workflow; `frontend/src/components/ReviewSetup.tsx` and `frontend/src/viewer/ViewerCanvas.tsx` expose status/error copy without percentages. |
+| FR-UI-02 | Offer a recent-session list backed initially by browser-local storage only. Store only non-sensitive session identifiers and minimal user-visible labels; make clear that history is local to this browser and never imply server-wide project persistence. | P1 | Deferred | Project Home explicitly says recent sessions are unavailable; there is no session-list API or browser-local history. `frontend/src/components/ProjectHome.tsx`; `docs/UI_CHANGELOG.md` §UI-003. |
+| FR-UI-03 | Provide a one-click synthetic sample review as the safe demonstration fallback. It must identify the synthetic inputs and provenance, use the existing single-IFC/IDS workflow, and make no network or paid-model call unless separately approved. | P0 | Deferred | UI-003 marks sample projects unavailable. The synthetic minimal IFC/IDS fixture exists, but no product sample route or one-click workflow is implemented; see `tests/fixtures/` and `frontend/src/components/ProjectHome.tsx`. |
+
+### 8.2 Meta-assisted review and traceable output
+
+| ID | Requirement and acceptance test | Priority | Status | Evidence / gap |
+|---|---|---:|---|---|
+| FR-AI-01 | Integrate a bounded, user-facing objective plan and/or grounded finding explanation through the existing Meta Model API client. Show the actual `ReviewRun.plan_source`, the actual explanation source (`ai_generated` or `deterministic_template`), and the fallback state. Test Live only after explicit owner approval; test Off/Replay without network. AI must never create a `Finding` or alter confirmed check criteria. | P0 | In progress | T-5 client/planner/explanation and budget safeguards are offline-tested, but the UI states that AI explanation is not connected; Meta live compatibility is unverified. See ADR-020, `backend/bim_intelligence/api/reviews.py`, and UI-003 evidence. |
+| FR-REP-04 | Present or export a run result traceable from model hash and run identity through confirmed requirement/check and rule versions to deterministic findings, affected element references and evidence. A report must distinguish execution status, zero findings, errors and optional AI interpretation. Test a complete result and a partial/error result. | P0 | In progress | `ReviewRun` and its `InputManifest` carry model/IDS hashes, requirement revisions and rule versions, and the UI presents per-check outcomes. A report/export endpoint and complete report surface are not implemented; see `backend/bim_intelligence/schemas/runs.py`, `backend/bim_intelligence/api/reviews.py`, and T-7 in `docs/IMPLEMENTATION_PLAN.md`. |
+
+### 8.3 Conditional two-model coordination demonstration
+
+These P2 requirements are **not part of the existing MVP acceptance criteria**. They remain
+Conditional until the feasibility and go/no-go gates in [ADR-021](./DECISIONS.md#adr-021-bounded-model-federation-is-separate-from-a-session),
+[ADR-022](./DECISIONS.md#adr-022-deterministic-geometric-coordination-results) and
+[FINAL_48_HOUR_PLAN.md](./FINAL_48_HOUR_PLAN.md) pass. Failure of any gate means the features are
+omitted, not simulated.
+
+| ID | Requirement and acceptance test | Priority | Status | Evidence / gap |
+|---|---|---:|---|---|
+| FR-COORD-01 | A separate coordination-set manifest references exactly two separately uploaded, immutable IFC versions with model identity/hash, explicit discipline labels and placement metadata. Preserve the one-active-IFC `Session` contract; never replace one model to represent the second. Test distinct duplicate GlobalIds and model-version changes. | P2 | Conditional | `Session` contains one `model_hash`; no coordination-set contract or two-model workflow exists. See `backend/bim_intelligence/schemas/sessions.py`, `backend/bim_intelligence/bim/ingest.py`, ADR-021. |
+| FR-COORD-02 | Validate both sources against one declared common coordinate frame, units and supported placements before analysis. Reject unknown, unsupported, ambiguous or stale alignment; test valid transform, mismatch, missing metadata and unsupported placement. | P2 | Conditional | No alignment validator is implemented. No geometry-only or filename-based alignment assumption is permitted. |
+| FR-COORD-03 | Run deterministic geometric analysis on one explicitly selected A/B pair only. Record both model hashes/member IDs, run ID, algorithm/version, explicit tolerance and units, exclusions, placement assumptions and tested IFC entity scope. Test reproducibility, positive/negative/boundary/tolerance/exclusion cases and explicit unavailable/not-analysed/zero/error/results states. | P2 | Conditional | No clash engine is implemented. On the checked-out environment IfcOpenShell 0.9.0.post1 and IfcTester 0.9.0 are installed; no IfcClash distribution/import is installed. |
+| FR-COORD-04 | Display a compact matrix whose rows and counts come only from completed computed runs. Keep raw intersections, deterministic groups and human-assessed coordination issues as distinct values; do not treat every intersection as an actionable error. | P2 | Conditional | No matrix or computed coordination result is implemented. |
+| FR-COORD-05 | Selecting a computed matrix result identifies and highlights the actual intersecting elements in the 3D investigation and exposes evidence traceable to both model versions and the run. Test duplicate GlobalIds across models, missing GlobalId fallback, selection clearing and stale model rejection. | P2 | Conditional | Current viewer and API handle one IFC at a time; no federated selection or clash evidence contract is implemented. |
+
+Federated element identity is `(model_member_id, model_hash, GlobalId)` or, when GlobalId is absent,
+`(model_member_id, model_hash, ifc_type, express_id)`. A `GlobalId` alone is never sufficient.
+Coordination output remains distinct from information-quality Findings. The preferred external
+candidate is **Duplex Apartment**, subject to compatibility, provenance and redistribution-rights
+verification. Do not inspect or copy private materials without the specific authorisation required
+by `AGENTS.md`. If the rights or feasibility gate fails, use the documented one-click synthetic
+demo only; do not imply that it demonstrates federation or clash detection.
