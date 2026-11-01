@@ -801,3 +801,127 @@ The Python project is defined once at the repository root with `package-dir = {"
 | Three.js | 0.182.0; MIT | frontend package lock; registry.npmjs.org |
 | web-ifc | 0.0.77; MPL-2.0 | frontend package metadata; [upstream project](https://github.com/ThatOpen/engine_web-ifc) |
 | FastAPI / Pydantic | 0.162.0 / 2.14.1; `model_json_schema()` | pypi.org, docs.pydantic.dev |
+
+---
+
+## 21. Day 7 delivery contract: bounded coordination extension
+
+**Status (1 November 2026):** The existing single-model review flow remains the implemented
+baseline. The following two-model coordination path is an owner-approved, conditional proposal,
+not an implemented feature or a change to the current session contract. Its feasibility gate and
+delivery limits are recorded in [DECISIONS.md ADR-021–ADR-025](./DECISIONS.md) and the
+[48-hour plan](./FINAL_48_HOUR_PLAN.md).
+
+### 21.1 Preserve the existing single-model flow
+
+The existing flow remains:
+
+```text
+one IFC upload -> one Session -> one immutable active model version
+-> ModelIndex -> confirmed IDS/native checks -> deterministic Findings
+-> version-pinned viewer and element evidence
+```
+
+The `Session` continues to reference one active IFC version. Existing model ETags, atomic
+publication, read-only IFC handling, confirmed check semantics, finding identity and the T-3/T-4
+viewer workflow are unchanged. A second discipline is never uploaded by replacing the first
+model's active version.
+
+### 21.2 Conditional ModelSet data flow
+
+Only if the feasibility gate passes, the narrow extension is:
+
+```mermaid
+flowchart LR
+    A["ModelSet manifest: two immutable model refs"] --> B["Resolve model versions by session and hash"]
+    B --> C["Validate declared coordinate frame and placements"]
+    C --> D["Deterministic clash run for one A/B pair"]
+    D --> E["Matrix of actual computed results"]
+    E --> F["Select model-scoped element references"]
+    F --> G["3D investigation and hash/run-linked evidence"]
+    G --> H["Optional grounded Muse Spark explanation"]
+```
+
+The manifest is separate from `Session` and references two already uploaded immutable model
+versions by `(session_id, model_hash)`. Each member also has a manifest-scoped member ID, an
+explicit discipline label, its declared source frame and units, and placement metadata sufficient
+to validate its transform into the set's common frame. The common frame has an explicit ID and
+units. Placement representation and supported IFC placement cases must be verified in the
+feasibility spike; do not assume support or invent library calls. Missing, stale, unsupported or
+ambiguous placement fails closed before geometry runs.
+
+An element identity is scoped as `(member_id, model_hash, GlobalId)`. If the IFC entity has no
+GlobalId, the only permitted fallback is `(member_id, model_hash, ifc_type, express_id)`. Neither
+GlobalId nor express ID alone is unique across models or versions.
+
+### 21.3 Smallest proposed API boundary (not implemented)
+
+No Pydantic model, generated TypeScript type or endpoint is added by this documentation change.
+After feasibility and contract review, the minimum proposed interface is:
+
+| Operation | Proposed input | Required behaviour |
+|---|---|---|
+| `POST /coordination-sets` | Two member references `{member_id, session_id, model_hash, discipline, source_frame, placement}` and `{common_frame_id, common_units}` | Persist only the manifest and immutable references; reject missing/stale versions, unsupported member count, invalid labels or unsafe sizes. Do not copy or modify IFC bytes. |
+| `POST /coordination-sets/{set_id}/clash-runs` | Explicit pair `{member_a_id, member_b_id}`, algorithm/version, tolerance with units, exclusions and declared entity scope | Verify both model hashes and alignment; run one deterministic pair only; reject unknown or unsupported alignment and incomplete settings. |
+| `GET /coordination-sets/{set_id}/clash-runs/{run_id}` | Set and run identity | Return the exact run state, provenance, computed matrix rows, raw intersections/groups and model-scoped element references. A failed or unrun analysis never returns success-shaped zero counts. |
+
+The manifest contract must state whether transforms are relative or absolute and how their
+coordinate frame and units are represented. The selected algorithm must define its accepted entity
+scope, tolerance semantics, exclusions, deterministic grouping and error mapping before a version
+is fixed. Unknown properties remain forbidden, consistent with the existing schema policy. These
+are proposal fields, not confirmed implementation details or confirmed IfcOpenShell methods.
+
+Each run/result records: set and run IDs; both member IDs and immutable SHA-256 hashes; algorithm
+name/version; explicit tolerance and units; exclusions; placement assumptions; tested IFC entity
+scope; status; and the actual computed counts and element references. Distinguish:
+
+- **Raw intersections:** computed geometric contacts/overlaps for the selected pair.
+- **Grouped clashes:** deterministic clusters of raw intersections under a declared grouping rule.
+- **Coordination issues:** human-assessed actionable work; never inferred from every intersection.
+
+Expose distinct states for unavailable, not analysed, completed with zero clashes, analysis error,
+and results available. A count exists only for a successful run. Do not manufacture a clash
+coordinate, intersection, count, grouping or status from an LLM.
+
+### 21.4 Frontend integration boundary
+
+If enabled, **Clash Matrix** and **3D Investigation** are modes within the existing BIM
+Intelligence application shell and retain its approved palette, typography, Project Home and
+single-model review workflow. They do not replace the information-quality findings register or
+create a second product. A selected matrix row carries the exact run ID, two member IDs, two model
+hashes and the actual element references; the 3D investigation loads only those pinned versions.
+Evidence stays available alongside the viewport on desktop.
+
+Use the existing viewer integration boundary in `frontend/src/viewer/`. Do not assume that
+That Open Components 3.6 can load or transform two models together until a focused spike verifies
+the installed API. Selection styling is neutral and distinct from deterministic issue severity.
+Fit All, Reset View and Focus Selection are exposed only if supported and tested. Keep explicit
+loading/error/unavailable/zero/results states, and never show invented loading percentages.
+
+The existing dashboard remains the only source of information-quality `Finding` records.
+Coordination results have their own traceable contract and no authority to alter confirmed
+`CheckSpec` criteria. Optional Muse Spark explanations use the existing client and grounding/
+budget safeguards, cite computed evidence, and remain visibly separate from both Findings and
+geometric result data.
+
+### 21.5 Feasibility evidence at the checked-out baseline
+
+The current `pyproject.toml` permits IfcOpenShell and IfcTester but does not declare IfcClash.
+The checked-out Windows virtual environment reports IfcOpenShell **0.9.0.post1**, IfcTester
+**0.9.0**, and no installed `ifcclash` distribution/import. The repository has no ModelSet,
+alignment validator, clash runner, result matrix or federated viewer contract. The exact geometric
+capability and two-model viewer behaviour are therefore **not yet demonstrated**. No package is
+installed and no API method is asserted here. A dependency addition needs explicit owner approval,
+licence review, an ADR and a bounded test plan; otherwise the coordination gate is no-go.
+
+### 21.6 Sample and private-data boundary
+
+`examples/` does not exist on the checked-out baseline. If a rights-cleared example is approved,
+use it for tracked manifests, attribution/provenance, preparation instructions and only genuinely
+redistributable small assets. Do not broaden binary IFC allow-lists or copy private models merely
+to populate that directory. Keep private IFCs, evaluation inputs and unapproved third-party assets
+in the owner-managed, git-ignored `local-private/` layout; no placeholder directories are created.
+The preferred external federation candidate is Duplex Apartment, subject to model compatibility
+and explicit rights verification. The one-click synthetic demo is the safe fallback and must
+identify its inputs as synthetic; it does not demonstrate federation unless two separately
+verified models and an actual clash run are present.

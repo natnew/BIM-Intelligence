@@ -5,6 +5,10 @@
 
 Requirement IDs refer to [REQUIREMENTS.md](./REQUIREMENTS.md); architectural decisions refer to [DECISIONS.md](./DECISIONS.md). The design baseline and implementation evidence are documented in [ARCHITECTURE.md](./ARCHITECTURE.md), and evaluation objectives and results in [EVALUATION.md](./EVALUATION.md).
 
+The owner-directed final 48-hour delivery overlay, internal 3 November target and conditional
+coordination gate are recorded in [FINAL_48_HOUR_PLAN.md](./FINAL_48_HOUR_PLAN.md). This overlay
+does not complete T-7/M3 or T-8/M4 and does not move the 4 November submission date.
+
 ## 1. Delivery framework
 
 **Milestones describe delivery capabilities; tasks describe engineering work.** A task can contribute to more than one milestone, and a milestone can depend on several tasks. A completed task is evidence toward a milestone, not proof that its exit criteria have been met.
@@ -137,7 +141,7 @@ No milestone is complete solely because its contributing task labels exist. Orig
 - **Evidence:** [T-3](#t-3--interactive-3d-bim-viewer) and [T-4](#t-4--end-to-end-deterministic-review-workflow) record verified interface slices; [UI_SPEC.md](./UI_SPEC.md) defines the owner-directed governance framework. The complete integrated workflow, report and demo evidence remain outstanding.
 - **Framework extension (30 October 2026):** constitution-driven, bounded concept/prototype evaluation and separate implementation approval are documented; optional Copilot guards are proposed, not installed. Reference metadata checks located an ignored singular-path library; image/provider permissions remain unverified. No UI-001 or visual redesign starts here. T-7/M3 status, dependencies, exit criteria and delivery dates are unchanged.
 - **UI-002 Revision 2 (30 October 2026):** owner-approved visual direction retains Concept C v2's palette, adds Project Home and specifies a desktop-first review layout. An isolated synthetic prototype and design acceptance criteria are recorded under `local-private/ui-prototypes/ui-002/` and `docs/UI_SPEC.md` §17. Project names/history, sample-project loading, category visibility, camera controls, geometric clashes and frontend upload/session workflows remain proposed; no production files changed, no task/milestone status or schedule changed, and T-7/M3 remain in progress.
-- **UI-003 (30 October 2026):** owner-approved production implementation of the Concept C v2 direction on branch `feature/ui-003-production-integration` (baseline `a3e701f`). The frontend now provides Project Home (session creation, IFC and requirements upload via existing endpoints, open existing session) and a three-column review workspace with real `ModelSummary`, `ReviewRun`, `Finding`, `Requirement` and `ElementRecord` data, explicit review/coverage/mismatch/error states and client-side finding filters. Evidence: 54 frontend tests pass; a live browser walkthrough on `tests/fixtures/minimal.ifc` + `minimal.ids` (create → upload → render → orbit/pan/zoom → run review → finding ↔ element → return home) with 1920×1080, 1440×900 and 390×844 captures is recorded in [UI_CHANGELOG.md](./UI_CHANGELOG.md) §UI-003 and [UI_SPEC.md](./UI_SPEC.md) §18. This contributes to the M3 browser-walkthrough criterion but does not satisfy M3: reporting with provenance, AI explanation surface, viewer camera/visibility controls, the Playwright smoke test and demo rehearsal remain outstanding. Backend, viewer modules, schemas, fixtures and dependencies are unchanged; owner review and merge remain pending; the schedule is unchanged.
+- **UI-003 (30 October 2026):** owner-approved production implementation of the Concept C v2 direction on branch `feature/ui-003-production-integration` (baseline `a3e701f`). The frontend now provides Project Home (session creation, IFC and requirements upload via existing endpoints, open existing session) and a three-column review workspace with real `ModelSummary`, `ReviewRun`, `Finding`, `Requirement` and `ElementRecord` data, explicit review/coverage/mismatch/error states and client-side finding filters. Evidence: 54 frontend tests pass; a live browser walkthrough on `tests/fixtures/minimal.ifc` + `minimal.ids` (create → upload → render → orbit/pan/zoom → run review → finding ↔ element → return home) with 1920×1080, 1440×900 and 390×844 captures is recorded in [UI_CHANGELOG.md](./UI_CHANGELOG.md) §UI-003 and [UI_SPEC.md](./UI_SPEC.md) §18. PR #18 merged into `main` on 30 October 2026. This contributes to the M3 browser-walkthrough criterion but does not satisfy M3: reporting with provenance, AI explanation surface, viewer camera/visibility controls, the Playwright smoke test and demo rehearsal remain outstanding. Backend, viewer modules, schemas, fixtures and dependencies were unchanged by UI-003; T-7/M3 remain in progress.
 
 ### T-8 — Final Hardening, Documentation and Submission
 
@@ -163,11 +167,11 @@ The original ten-day window is retained. The weekday labels below are corrected 
 | 26 Oct | Monday — Day 1 | Architecture baseline and initial LLM/viewer spikes planned. | Architecture baseline is recorded in Git on 27 Oct ([PR #1](https://github.com/natnew/BIM-Intelligence/pull/1)); neither integration spike is evidenced as complete. |
 | 27 Oct | Tuesday — Day 2 | Repository foundations and T-0. | T-0 and the scaffold landed; see [T-0 commit](https://github.com/natnew/BIM-Intelligence/commit/be45c7c) and [PR #2](https://github.com/natnew/BIM-Intelligence/pull/2). |
 | 28 Oct | Wednesday — Day 3 | IFC ingestion and model indexing. | T-1 delivered via [PR #4](https://github.com/natnew/BIM-Intelligence/pull/4). |
-| 29 Oct | Thursday — Day 4 | Original plan targeted benchmark/evaluation; its metric exit was not achieved. | T-1.1 and T-2 delivered via [PR #5](https://github.com/natnew/BIM-Intelligence/pull/5) and [PR #6](https://github.com/natnew/BIM-Intelligence/pull/6). No benchmark or measured metric exists. |
+| 29 Oct | Thursday — Day 4 | Original plan targeted benchmark/evaluation; its metric exit was not achieved by the original target. | T-1.1 and T-2 delivered via [PR #5](https://github.com/natnew/BIM-Intelligence/pull/5) and [PR #6](https://github.com/natnew/BIM-Intelligence/pull/6). A T-6 local benchmark result was recorded later on 29 October; hosted CI remains outstanding. |
 | 30 Oct | Friday — Day 5 | Original plan targeted the requirements interpreter. | Target: advance T-4 deterministic workflow; start T-3 viewer and T-6 benchmark preparation; verify Meta API capability only with required owner approval. |
 | 31 Oct–1 Nov | Saturday–Sunday — Days 6–7 | Original plan targeted orchestration and frontend integration. | Target: progress T-3 and T-6 in parallel; integrate T-5 after T-4 is testable; record API verification outcome or blocker. |
 | 2 Nov | Monday — Day 8 | Original plan targeted report, hardening and docs. | Target: T-7 integration of available viewer/workflow/evaluation pieces; complete T-3 and T-6 acceptance where feasible. |
-| 3 Nov | Tuesday — Day 9 | Original plan reserved a buffer and rehearsal. | Target: T-7 demo rehearsal; T-8 regression, documentation, setup and security checks. Protect this as the only full buffer day. |
+| 3 Nov | Tuesday — Day 9 | Original plan reserved a buffer and rehearsal. | Owner's internal completion target: T-7 demo rehearsal and T-8 regression, documentation, setup and security checks must be completed by this date; unresolved optional scope is dropped. |
 | 4 Nov | Wednesday — Day 10 | Submission deadline. | T-8 final evidence and demo; any release or submission action only with owner approval. **Deadline unchanged.** |
 
 This is a dependency-aware target, not a claim that the remaining work will fit. The original M1 benchmark exit was due on 29 October and remains unmet; preserve that historical fact in status and later reporting.
@@ -241,4 +245,23 @@ Optional P1/P2 rules, BCF export, explanation grouping/cache, PDF requirement in
 - The implementation plan previously described as “nothing implemented” is stale. T-0, T-1, T-1.1 and T-2 are verified against implementation records, tests and PR evidence.
 - The pasted reconciliation request asks to verify “all eleven task identifiers”, but its enumerated framework defines T-0 through T-8 (nine IDs) plus T-1.1 (one more): **ten distinct task identifiers**. No eleventh task is defined. This register covers all ten rather than inventing an ID.
 - The hackathon rules and any eligibility criteria remain unverified; see [REQUIREMENTS.md §7](./REQUIREMENTS.md#7-open-items). No submission eligibility claim is made here.
-- No evaluation has been run; [EVALUATION.md §8](./EVALUATION.md#8-results) remains authoritative for measured results.
+- A local T-6 evaluation was recorded on 29 October; [EVALUATION.md §8](./EVALUATION.md#8-results) is authoritative for its measured scope and limitations. Hosted CI remains outstanding. The earlier “No evaluation has been run” wording was stale and is superseded by this dated reconciliation.
+
+## 7. 1 November final delivery overlay
+
+The project owner's internal completion deadline is **3 November 2026**. The official submission
+date remains **4 November 2026**. The [final 48-hour plan](./FINAL_48_HOUR_PLAN.md) defines the
+workstream order, owners, rollback, exact coordination gate and recording evidence. It is an
+implementation plan, not completion evidence.
+
+The two-model federation/clash demonstration is separately conditional and does not become an
+existing M1/M2/M3 MVP criterion. Its go/no-go cutoff is **2 November 2026, 12:00 UTC**. A failed
+gate drops the coordination branch and preserves the single-IFC IDS/native review. Meta-assisted
+recording remains subject to real UI integration and explicit owner approval for any live call.
+Official hackathon rules, eligibility and public asset rights must be checked before submission.
+
+At this reconciliation, the current main commit is
+`1f3d13b78683692317e00f2279c3f0c4ac02f1c2` (31 October 2026). UI-003 is merged, but T-7/M3 and
+T-8/M4 remain **In progress** because reporting, integrated user-facing AI, remaining viewer
+controls, acceptance evidence, recording and submission checks are incomplete. No task or
+milestone is marked complete by this plan.

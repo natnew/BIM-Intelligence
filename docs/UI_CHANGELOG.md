@@ -513,3 +513,9 @@ like the original approval; add a subsequent entry and link it to the earlier it
   `ModelBrowser.tsx`, `FindingRegister.tsx`, `ReviewCoverage.tsx`, `EvidenceInspector.tsx`,
   `state/useAppLocation.ts`, `App.test.tsx`, `test/hygiene.test.ts`), then remove this entry.
   Private evidence under `local-private/test-results/ui-003/` is owner-managed and ignored.
+
+### UI-003 merge-status correction — 1 November 2026
+
+The UI-003 entry above records the state when it was written. PR #18 has since merged into `main`;
+the Project Home, upload and single-model review workflow described there is the current baseline.
+This correction preserves the original review history rather than rewriting it.

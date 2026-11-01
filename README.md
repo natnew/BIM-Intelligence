@@ -1,7 +1,7 @@
 <div align="center">
   <img src="assets/BIM-Intelligence%20Architectural%20Logo.png" alt="BIM Intelligence architectural logo" width="33%">
 
-**From architectural requirements to verifiable model intelligence.**
+**AI-native AEC model review, with deterministic evidence at its core.**
 
 An AI-native BIM review system combining IFC analysis, buildingSMART IDS validation and deterministic checking with intelligent review workflows. Identify model deficiencies, examine affected building elements in 3D, and trace findings to their source requirements and supporting evidence.
 
@@ -16,11 +16,22 @@ An AI-native BIM review system combining IFC analysis, buildingSMART IDS validat
 
 # BIM-Intelligence
 
-**AI-native architectural BIM model review.** Upload an IFC model and your project's BIM Execution Plan, state what you want reviewed in plain language, and get deterministic, traceable findings — explained in context, highlighted in 3D, and exported as a review report.
+**BIM Intelligence is one AI-native AEC model-review application.** Its verified browser workflow
+creates a review session, uploads one IFC and supported requirement material, runs deterministic
+IDS/native checks and links findings to model elements in 3D. A user-facing Meta-assisted objective
+and explanation workflow, complete report export and multi-model coordination are not yet available.
 
-> **Development status: implementation in progress.** Verified slices cover domain contracts and a reproducible fixture, IFC ingestion and version-consistent storage, deterministic IDS/native review, the T-3 viewer, and the T-5 offline AI integration path. No live Meta request has been authorised or made; API compatibility remains unverified, the frontend AI panels and benchmark remain outstanding, and no benchmark metrics have been measured. See [Development status](#development-status).
+> **Development status: implementation in progress.** Verified slices cover domain contracts and a
+> reproducible fixture, IFC ingestion and version-consistent storage, deterministic IDS/native
+> review, the T-3 viewer, the UI-003 Project Home/workspace, the T-5 offline AI integration path and
+> a locally measured synthetic benchmark. No live Meta request has been authorised or made; API
+> compatibility and frontend AI integration remain unverified. Hosted benchmark CI, report
+> export, viewer recovery controls and demo acceptance remain outstanding. There is no implemented
+> model federation or clash engine. See [Development status](#development-status).
 
-Built for the Meta Global AI Developer Hackathon (26 October – 4 November 2026) using Meta Muse Spark via the Meta Model API.
+Designed for the Meta Global AI Developer Hackathon (26 October – 4 November 2026), with Meta Muse
+Spark via the Meta Model API as the intended interpretation/planning provider. Live compatibility
+has not been verified.
 
 ---
 
@@ -35,11 +46,11 @@ BIM Intelligence targets that gap for Architects, BIM Managers and BIM Coordinat
 Most AI-in-BIM demonstrations put a language model in front of model data and ask it what is wrong. We do the opposite:
 
 - **Findings are deterministic.** Every defect is produced by IfcTester (buildingSMART IDS) or a versioned Python rule. The model never asserts a model fact.
-- **The model works on the parts that are genuinely linguistic:** reading the BEP into candidate requirements (with verbatim source quotes), turning a plain-language objective into a bounded review plan, and explaining findings from a structured evidence bundle.
-- **Every explanation is grounded by a deterministic check** against that evidence before it is shown, and is labelled as AI-generated.
+- **The model is intended for the parts that are genuinely linguistic:** reading a BEP into candidate requirements (with verbatim source quotes), turning a plain-language objective into a bounded review plan, and explaining findings from a structured evidence bundle. These backend paths have offline Fake/Replay coverage; the user-facing browser workflow is not yet integrated, and live Meta compatibility is unverified.
+- **Any explanation returned by the backend must pass a deterministic grounding check** against its evidence and carry its actual source label. The current browser does not yet fetch or present explanations.
 - **Nothing runs on an unconfirmed requirement.** A human confirms, edits or rejects each extracted requirement before it becomes a check.
 
-The result is intended to be an assistant that behaves like a careful coordinator: it reads the project's own rules, runs the right checks, shows you the affected elements, and tells you why — without inventing anything.
+The intended result is an assistant that behaves like a careful coordinator: it reads the project's own rules, runs the right checks, shows the affected elements, and explains them without inventing anything. The current browser workflow delivers the deterministic review and 3D evidence path; the AI-assisted explanation workflow remains outstanding.
 
 ## High-level architecture
 
@@ -96,19 +107,24 @@ These boundaries are recorded in [ADR-001](./docs/DECISIONS.md#adr-001-findings-
 | Layer | Choice | Why |
 |---|---|---|
 | LLM | Meta **Muse Spark** (`muse-spark-1.3`) via the **Meta Model API**, called with the OpenAI Python SDK (`base_url=https://api.meta.ai/v1`) | Tool calling, JSON-schema structured output, 1M-token context; Standard mode does not train on submitted content |
-| BIM processing | **IfcOpenShell** 0.9, **IfcTester** 0.9 (IDS 1.0), optional `ifcclash`, `bcf-client` | Reference openBIM tooling, pip-installable |
-| Backend | **Python 3.12**, **FastAPI**, **Pydantic v2**, **pytest** | Typed schemas shared with the frontend; simple async API with SSE progress |
+| BIM processing | **IfcOpenShell** 0.9, **IfcTester** 0.9 (IDS 1.0) | Implemented IFC ingestion and deterministic IDS/native validation |
+| Backend | **Python 3.12**, **FastAPI**, **Pydantic v2**, **pytest** | Typed schemas shared with the frontend; synchronous review routes with explicit loading and result states |
 | Frontend | **React**, **TypeScript**, **Three.js**, **That Open Components** 3.6 (`web-ifc`) | Browser-side IFC Fragments viewer with GlobalId selection and deterministic finding highlights |
 | Evaluation | Synthetic benchmark generated with `ifcopenshell.api`, defect injection, replayable LLM recordings | Reproducible precision/recall and grounding metrics without API spend |
 
 Verified versions and sources: [docs/ARCHITECTURE.md — Appendix B](./docs/ARCHITECTURE.md#appendix-b--verified-technology-facts-26-october-2026-viewer-packages-checked-29-october-2026).
 
+IfcClash and `bcf-client` are optional future candidates, not installed application dependencies
+or implemented features at the checked-out baseline.
+
 ## Intended user workflow
+
+This is the target workflow, not a claim that every step is currently available in the browser.
 
 1. **Upload** an IFC (IFC2X3 or IFC4) and a simplified BEP (Markdown/TXT/PDF) and/or an IDS file.
 2. **Confirm requirements** — review extracted candidates with their source quotes and compiled checks; confirm, edit or reject.
 3. **State an objective** — e.g. "Check fire-rating and classification completeness on external walls and doors for Stage 4 issue."
-4. **Watch the plan run** — the orchestrator selects checks from a bounded tool registry; progress streams live.
+4. **Run the review** — the orchestrator selects checks from a bounded tool registry; the current review route is synchronous and does not stream progress.
 5. **Triage in 3D** — select a finding to highlight affected elements; see observed vs expected, the BEP quote and the grounded explanation.
 6. **Export** a traceable report (requirement → rule → finding → element) with provenance.
 
@@ -122,15 +138,21 @@ Verified versions and sources: [docs/ARCHITECTURE.md — Appendix B](./docs/ARCH
 | IFC ingestion: session store, read-only IFC loading and Model Index, `sessions` / `model` / `elements` endpoints with RFC 9457 errors | **Done (Day 3, T-1)** — tested on the minimal fixture and in-memory variants only; see [ADR-016](./docs/DECISIONS.md#adr-016-ingestion-contract-staged-upload-content-hash-etag-and-identifier-handling) |
 | Deterministic IDS validation: IDS 1.0 import as confirmed requirements, per-check IfcTester execution, `Finding` / `CheckResult` normalisation, synchronous review run, `documents` / `requirements` / `reviews` / `findings` endpoints | **Done (Day 4, T-2)** — produces the two expected findings on the minimal fixture with byte-identical `findings.json` across runs; see [ADR-018](./docs/DECISIONS.md#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock) |
 | T-3 viewer: local IFC rendering, GlobalId selection, version-pinned findings and element details | **Verified on the minimal fixture** — see [T-3 evidence](./docs/IMPLEMENTATION_PLAN.md#t-3--interactive-3d-bim-viewer) |
-| T-4 deterministic review workflow: bounded default plan, explicit native classification-consistency check, pinned run and viewer hand-off | **Verified on the minimal fixture** — no LLM calls; benchmark evaluation remains open under T-6 |
+| T-4 deterministic review workflow: bounded default plan, explicit native classification-consistency check, pinned run and viewer hand-off | **Verified on the minimal fixture** — no LLM calls; T-6 has a local synthetic benchmark result, with hosted CI evidence outstanding |
 | T-5 offline AI interfaces: quote-verified TXT/Markdown candidates, bounded objective planning, grounded explanations, Fake/Replay clients and persistent spend safeguards | **Implemented and offline-tested** — no live API call; only existing confirmed CheckSpecs can be selected; full BEP-to-IDS authoring is out of scope |
 | Meta API compatibility and integrated frontend AI panels | **Not verified / not implemented** — M0 API capability spike remains open; M2 is in progress |
-| T-6 synthetic benchmark | **Measured locally** — 15 independently labelled P0 defects, seven clean controls; 1.000 precision/recall/F1 on this narrow IFC4 benchmark, byte-identical repeated findings and 14/14 IfcTester IDS entity agreement. This is not a general BIM accuracy or live model-quality result; see [docs/EVALUATION.md](./docs/EVALUATION.md). |
+| T-6 synthetic benchmark | **Measured locally** — 15 independently labelled P0 defects, seven clean controls; 1.000 precision/recall/F1 on this narrow IFC4 benchmark, byte-identical repeated findings and 14/14 IfcTester IDS entity agreement. This is not a general BIM accuracy or live model-quality result; hosted CI remains outstanding. See [docs/EVALUATION.md](./docs/EVALUATION.md). |
+| T-7 product integration | **In progress** — UI-003 Project Home, upload and single-model viewer workflow are implemented and merged; report export, user-facing Meta integration, camera recovery controls, browser smoke test and demo acceptance remain outstanding. |
+| Federation and clash detection | **Conditional / not implemented** — a two-model demonstration is gated on verified geometry, coordinate alignment, identity, rights and regression evidence; it is not enterprise clash management. |
 | Hackathon rule verification | Outstanding (see [docs/REQUIREMENTS.md — Open items](./docs/REQUIREMENTS.md#7-open-items)) |
 
 ## Development roadmap
 
 See the authoritative [implementation plan](./docs/IMPLEMENTATION_PLAN.md), [changelog](./CHANGELOG.md) and [consolidated architecture review](./docs/BAKEOFF_ARCHITECTURE_REVIEW.md). M0–M4 are delivery milestones; T-0–T-8 are engineering tasks that contribute to one or more milestones, with T-1.1 as a corrective subtask. Read the mapping and task register before taking implementation work.
+
+The owner-directed internal completion target is 3 November 2026; the submission date remains
+4 November. The conditional scope, cutoff and delivery evidence are in
+[docs/FINAL_48_HOUR_PLAN.md](./docs/FINAL_48_HOUR_PLAN.md). Neither T-7/M3 nor T-8/M4 is complete.
 
 ## Repository layout
 
@@ -282,6 +304,7 @@ The live command is an exact one-request smoke test, not general authorisation. 
 | [docs/EVALUATION.md](./docs/EVALUATION.md) | Benchmark design, metrics, reproduction |
 | [docs/RISKS.md](./docs/RISKS.md) | Risk register |
 | [docs/DEMO_PLAN.md](./docs/DEMO_PLAN.md) | Three-minute demo storyline and fallbacks |
+| [docs/FINAL_48_HOUR_PLAN.md](./docs/FINAL_48_HOUR_PLAN.md) | Final delivery dependencies, conditional gates, owners and release checklist |
 | [docs/UI_SPEC.md](./docs/UI_SPEC.md) | Owner-directed UI specification, protected behaviour and visual verification process |
 | [docs/UI_REFERENCES.md](./docs/UI_REFERENCES.md) | Owner-supplied UI reference and feedback register |
 | [docs/UI_CHANGELOG.md](./docs/UI_CHANGELOG.md) | Append-only UI iteration decisions and evidence |
@@ -290,11 +313,17 @@ The live command is an exact one-request smoke test, not general authorisation. 
 
 ## Hackathon context
 
-Developed for the Meta Global AI Developer Hackathon, 26 October – 4 November 2026. The design uses Meta Muse Spark via the Meta Model API for planning, requirement interpretation and explanation. Event rules, judging criteria and submission constraints had not been verified at the time of writing and are tracked as open items.
+Developed for the Meta Global AI Developer Hackathon, 26 October – 4 November 2026. The design
+retains Meta Muse Spark via the Meta Model API as the intended provider for planning, requirement
+interpretation and explanation. Live API compatibility and event rules remain unverified; any live
+call requires explicit owner approval.
 
 ## Limitations
 
-- The MVP targets one architectural IFC, one simplified BEP and one IDS; multidisciplinary clash detection, voice input and image analysis are future work.
+- The implemented browser workflow handles one architectural IFC and IDS/Markdown/TXT source
+  documents; narrative confirmation, user-facing Meta assistance and report export remain
+  incomplete. Multidisciplinary clash detection is conditional and currently not implemented;
+  voice input and image analysis are future work.
 - Detection coverage is bounded by the rule library and IDS facets; the system does not "notice" defect types it has no rule for.
 - The ≥ 90 % precision and recall target was met on the 15-instance synthetic IFC4 benchmark; this small result is scoped to its labelled defects and does not establish accuracy on other models or live Muse Spark quality. See [docs/EVALUATION.md](./docs/EVALUATION.md#8-results).
 - No authentication or hosted deployment; local use only.
@@ -305,7 +334,8 @@ Project code is released under the [MIT License](./LICENSE).
 
 | Dependency | Licence | Note |
 |---|---|---|
-| IfcOpenShell, IfcTester, IfcClash, bcf-client | LGPL-3.0-or-later | Used as installed packages; no source vendored (IfcTester classifier to be confirmed) |
+| IfcOpenShell, IfcTester | LGPL-3.0-or-later | Used as installed packages; no source vendored (IfcTester classifier to be confirmed) |
+| IfcClash, `bcf-client` | Not installed | Optional candidates only; verify package/version and licence before any approved addition |
 | That Open Components (`@thatopen/*`) | MIT | |
 | Three.js | MIT | |
 | `web-ifc` 0.0.77 | MPL-2.0 | Required by the selected IFC viewer stack. This is an exception to the repository's permissive-or-LGPL dependency preference; no source is vendored. Review the [upstream project](https://github.com/ThatOpen/engine_web-ifc) before distributing builds. |

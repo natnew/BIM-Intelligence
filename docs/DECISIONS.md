@@ -26,6 +26,11 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 | [ADR-018](#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock) | IDS import establishes confirmed requirements; checks are hydrated per run; reviews run under the session lock | Adopted |
 | [ADR-019](#adr-019-t-4-native-rule-scope-and-bounded-deterministic-execution) | T-4 native rule scope and bounded deterministic execution | Adopted |
 | [ADR-020](#adr-020-t-5-meta-client-spend-ledger-and-human-gates) | T-5 Meta client, spend ledger and human gates | Adopted |
+| [ADR-021](#adr-021-bounded-model-federation-is-separate-from-a-session) | Bounded model federation is separate from a session | Adopted; implementation conditional on feasibility |
+| [ADR-022](#adr-022-deterministic-geometric-coordination-results) | Deterministic geometric coordination results | Adopted; implementation conditional on feasibility |
+| [ADR-023](#adr-023-ui-004-viewer-integrity-and-visual-continuity) | UI-004 viewer integrity and visual continuity | Adopted |
+| [ADR-024](#adr-024-muse-spark-remains-an-optional-grounded-interpretation-provider) | Muse Spark remains an optional, grounded interpretation provider | Adopted |
+| [ADR-025](#adr-025-hackathon-release-gate-and-demonstration-fallback) | Hackathon release gate and demonstration fallback | Adopted |
 
 ---
 
@@ -409,3 +414,192 @@ Before each live call, reserve application budget using configured per-million t
 | OQ-05 | `ifctester` licence string | ADR-004 | Before publishing licence table |
 | OQ-06 | Hackathon rules and submission constraints | — | Before demo recording |
 | OQ-07 | API spend authorisation and budget | ADR-002 | Before any live call |
+
+---
+
+## ADR-021 Bounded model federation is separate from a session
+
+**Status: Adopted 1 November 2026; implementation is conditional on the feasibility gate in
+[FINAL_48_HOUR_PLAN.md](./FINAL_48_HOUR_PLAN.md).**
+
+**Decision.** Preserve the existing `Session` contract: one session has at most one active IFC
+model version. Do not overload a session or replace its uploaded IFC to represent another
+discipline. Only after a bounded feasibility check succeeds may the application add a separate
+`ModelSet`/coordination-set manifest referencing immutable IFC versions. The initial demonstration
+is exactly two model sources and one explicitly selected A/B pair.
+
+Each manifest member records a stable member identity, source session, immutable model SHA-256,
+explicit discipline label, source coordinate-frame description, and relative or absolute placement
+metadata. The set declares one common coordinate frame, including its units and the evidence used
+to validate placement. Unknown, unsupported, or ambiguous alignment is rejected; it is never
+assumed from model extents, filenames, or discipline names.
+
+Every federated element reference is scoped by model-member identity and immutable model hash, then
+by `GlobalId` when available. A documented fallback is `(ifc_type, express_id)` within that model
+hash only. `GlobalId` alone is never a federation key. Model bytes remain read-only and existing
+per-file upload limits apply; the demo also has an explicit two-model and aggregate-size cap.
+Private or third-party source files require the provenance, rights, storage, and transmission
+approvals in `AGENTS.md`; local availability is not permission to inspect, transmit, or publish.
+
+**Alternatives.** Expanding `Session` to contain several models would break its current contract
+and version guards. Replacing the active IFC would lose the first discipline's version identity.
+Guessing alignment from geometry would create plausible but unverified intersections.
+
+**Trade-offs.** A separate manifest and read-only references add a narrow coordination boundary.
+They do not provide general project management, model authoring, or enterprise federation. This
+decision does not approve an API schema or implementation before feasibility is demonstrated.
+
+**Evidence.** `backend/bim_intelligence/schemas/sessions.py` defines one `model_hash` per
+`Session`; `backend/bim_intelligence/bim/ingest.py` atomically activates one immutable model
+version. No model-set contract is implemented.
+
+**Unresolved.** Whether the currently installed geometry stack can load and compare the selected
+IFC pair in a verified common frame within the deadline; whether the preferred external candidate
+has redistribution rights.
+
+---
+
+## ADR-022 Deterministic geometric coordination results
+
+**Status: Adopted 1 November 2026; implementation is conditional on ADR-021 and a successful
+feasibility gate.**
+
+**Decision.** A coordination run may use only an installed, version-verified IfcOpenShell/IfcClash
+capability or another deterministic geometric capability whose provenance, API and behaviour have
+been verified before implementation. At the checked-out baseline, IfcOpenShell 0.9.0.post1 and
+IfcTester 0.9.0 are installed, but no `ifcclash` distribution or import is present. No package is
+to be installed speculatively; a dependency change requires a separately approved dependency and
+licence decision.
+
+The first run evaluates one declared A/B model pair only after both immutable hashes and their
+common coordinate frame have been validated. Each run records its run identity, both model hashes
+and member identities, algorithm and version, explicit distance tolerance and units, exclusions,
+placement assumptions, and tested IFC entity scope. There is no implicit tolerance or alignment
+default; missing or unsupported inputs produce a visible non-analysis/error state.
+
+Keep three concepts separate: raw computed geometric intersections, deterministic groups of those
+intersections, and coordination issues assessed by a human. A geometric intersection is not
+automatically an actionable defect. Coordination output is not written as an information-quality
+`Finding`, does not change IDS/native criteria, and does not become an AI-authored model fact. AI
+must not create clash coordinates, intersections, counts, or issue states.
+
+The externally visible run state distinguishes `unavailable`, `not_analysed`, `zero_clashes`,
+`analysis_error`, and `results_available`. Counts are emitted only from a successfully completed
+run; a zero is never substituted for unavailable or failed analysis. Repeated inputs and settings
+must produce stable results within the verified algorithm's stated limits.
+
+**Alternatives.** Treat every intersection as a defect (misleading); use LLM-generated
+coordinates (unverifiable); or reuse `Finding` for clashes (conflates separate result semantics).
+
+**Trade-offs.** This is a small geometric coordination demonstration, not enterprise clash
+management, issue assignment, lifecycle management, federation-wide search, or code compliance.
+The capability and entity scope remain unverified and therefore cannot be promised or recorded in
+a demonstration until tested.
+
+**Evidence.** The current repository contains deterministic IDS/native validation and a synthetic
+information-quality benchmark, but no clash implementation or clash results. The local Python
+environment does not contain IfcClash.
+
+**Unresolved.** Feasible engine and tested IFC entity scope; grouping rule; suitable tolerance and
+units; approved sample model and redistribution rights.
+
+---
+
+## ADR-023 UI-004 viewer integrity and visual continuity
+
+**Status: Adopted 1 November 2026; implementation remains subject to the T-7 UI change-control
+process.**
+
+**Decision.** Retain the current BIM Intelligence application shell, owner-approved architectural
+colour palette and typography, Project Home, and working single-IFC workflow. A bounded Clash
+Matrix and 3D Investigation, if the coordination gate passes, are modes within this application;
+they are not a second product or a redesign.
+
+The viewer/application selection state must remain coherent. Selection styling is neutral and
+visibly distinct from deterministic issue severity/highlighting. Evidence inspection must not
+replace or unexpectedly reset the desktop viewport. Provide Fit All, Reset View and Focus
+Selection only where the installed viewer supports them and they pass regression tests; never
+display inert controls. Model loading is described by observed states, without invented percentage
+progress.
+
+**Alternatives.** A separate coordination application would duplicate the shell and fragment
+review context. Severity-coloured selection would conflate user focus with verified defect status.
+Fabricated progress or unsupported camera controls would misrepresent behaviour.
+
+**Trade-offs.** Camera recovery and coordinated multi-model selection may require a separately
+verified viewer API. Existing selection, finding identity, viewer lifecycle, version guards,
+read-only model handling, accessibility and palette take precedence over adding controls.
+
+**Evidence.** UI-003 is implemented on `main` and its browser walkthrough is recorded in
+`docs/UI_CHANGELOG.md`. The current viewer exposes orbit, pan, zoom and selection; fit/reset/focus
+controls are explicitly deferred.
+
+**Unresolved.** Which camera operations the installed viewer version safely exposes for a federated
+scene; final keyboard and accessibility acceptance for any new controls.
+
+---
+
+## ADR-024 Muse Spark remains an optional, grounded interpretation provider
+
+**Status: Adopted 1 November 2026.**
+
+**Decision.** Retain Meta Muse Spark via the existing Meta Model API client as the intended provider
+for bounded objective planning and grounded finding explanations. Reuse the existing planner,
+explanation path, model-output validation, grounding check, budget ledger, and deterministic
+fallback. The first user-facing integration may expose a bounded review objective and/or a
+grounded explanation; it must show the actual `ReviewRun.plan_source`, the actual explanation
+`source`, and whether the deterministic fallback was used.
+
+Verified model evidence and deterministic `Finding` records remain separate from AI interpretation.
+The model cannot create or edit a `Finding`, coordinates, results, or approved check criteria.
+`LLM_MODE=off` remains the default. Live API verification or inference requires explicit owner
+approval for that session and secured backend credentials; no live call is authorised by this ADR
+or by the current documentation task.
+
+**Alternatives.** Claiming a live AI result from a default/offline plan, presenting a deterministic
+template as AI, or allowing AI to change validation semantics would misstate provenance and breach
+the finding contract.
+
+**Trade-offs.** Offline deterministic review remains demonstrable when the provider is unavailable.
+It is not a substitute for proving live API compatibility or a user-facing Meta-assisted workflow.
+
+**Evidence.** ADR-020 and the T-5 register record offline Fake/Replay tests, default-off behaviour,
+grounded explanations and spend safeguards. The frontend currently shows a fixed note that the AI
+explanation is not connected; live API compatibility remains unverified.
+
+**Unresolved.** Live endpoint compatibility, owner-approved credentials/spend, and the final
+user-facing integration.
+
+---
+
+## ADR-025 Hackathon release gate and demonstration fallback
+
+**Status: Adopted 1 November 2026.**
+
+**Decision.** The internal completion target is 3 November 2026; the hackathon submission date
+remains 4 November 2026. A functioning three-minute video is mandatory for the delivery plan.
+Federation and clash detection are an optional, conditional demonstration, with a no-later-than
+2 November 2026 12:00 UTC go/no-go cutoff. Include coordination only if every technical, evidence,
+rights, privacy, regression and recording condition in `docs/FINAL_48_HOUR_PLAN.md` passes.
+
+If that gate fails, do not show or narrate unverified coordination. Keep the primary demonstration
+on the working deterministic IDS/native review, with the Meta-assisted path included only if its
+frontend integration and the required owner-authorised live/replay evidence are real and labelled
+accurately. If the Meta gate also fails, disclose that limitation; do not imply that the
+deterministic-only recording is Meta-assisted or that hackathon eligibility is established.
+Unverified features are omitted from the recording. Check public-repository and third-party asset
+rights before submission.
+
+**Alternatives.** Stretch coordination regardless of evidence, or represent a planned feature as
+working, would jeopardise a credible submission. Removing the verified deterministic workflow to
+make time for optional scope is rejected.
+
+**Trade-offs.** The plan protects the known working workflow and allows the coordination branch to
+stop without blocking it. Official rules and eligibility remain subject to owner verification.
+
+**Evidence.** The main branch contains the single-model review workflow, offline-tested T-5
+components and recorded T-6 synthetic benchmark results. It does not contain a clash engine,
+browser AI integration or a complete release demonstration.
+
+**Unresolved.** The official event rules/eligibility and owner approval for any live Meta call,
+external model use, recording, and final submission.

@@ -4,6 +4,17 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### T-7 / M3 — Final delivery decisions and implementation contracts (1 November 2026)
+
+- Append ADR-021–ADR-025 for bounded federation, deterministic clash analysis, visual integrity,
+  Muse Spark boundaries and the conditional hackathon release gate. Add evidence-based, prioritised
+  requirements and preserve the existing single-model review contract.
+- Document the proposed coordination flow, narrow API/UI boundary, sample-data and private-material
+  policy, conditional go/no-go criteria, final 48-hour workstreams and truthful three-minute demo.
+- Reconcile the current UI-003 merge status and outdated README/UI instructions without rewriting
+  historical decision records. Documentation only: no production code, dependencies, IFC data, live
+  API calls, release or submission actions. T-7/M3 and T-8/M4 remain in progress.
+
 ### T-8 / M4 — Open-source documentation foundation
 
 - Add root-level contribution, security, support and software-citation guidance based on the
