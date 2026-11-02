@@ -978,3 +978,91 @@ status and milestone criteria.
   docs/UI_CHANGELOG.md CHANGELOG.md`, then delete `frontend/src/components/home/` (three new
   files). Private evidence under `local-private/test-results/ui-005b/` may be deleted
   independently.
+
+## UI-005C — Project Home core product features
+
+### [UI-005C] — Four capabilities for AEC model review
+
+- **UI iteration ID:** UI-005C (T-7 / M3; cosmetic refinement only).
+- **Date (YYYY-MM-DD):** 2026-11-02.
+- **Design objective:** Add four clearly separated product-capability cards between the existing
+  workflow and footer without changing navigation, data, validation or AI behaviour.
+- **Source reference IDs and locations:** No feature-card screenshot was attached or inspected.
+  The owner explicitly chose the written brief as the sole visual reference; the four monochrome
+  SVGs are original. No private reference image or proprietary illustration was opened, copied or
+  transmitted.
+- **Explicit owner request and approved scope:** The UI-005C brief specifies branch
+  `feature/ui-005c-home-features`, the exact feature copy, the paths listed below, three required
+  viewport sizes, one implementation pass and at most one focused corrective pass. Browser
+  evidence is authorised under `local-private/test-results/ui-005c/`; no dependencies, paid calls,
+  backend changes, commit, push or pull request are authorised.
+- **Baseline:** `a5135eb`, the merge of UI-005B pull request #34 into `main`. The earlier UI-005B
+  entry records a pre-merge, pending-review state; GitHub reported no formal review when checked.
+  The current owner request identifies the merged work as the baseline. The earlier entry has not
+  been rewritten.
+- **Files changed:** `frontend/src/components/ProjectHome.tsx`,
+  `frontend/src/components/ProjectHome.test.tsx`, `frontend/src/index.css`,
+  `frontend/src/components/home/ProductFeatures.tsx` (new),
+  `frontend/src/components/home/FeatureIcon.tsx` (new), `docs/UI_SPEC.md`,
+  `docs/UI_CHANGELOG.md`, `CHANGELOG.md`.
+- **Reason for each significant change:**
+  - `ProjectHome.tsx` places the section after the workflow and before the existing footer.
+  - `home/ProductFeatures.tsx` presents the four requested captions and a configuration/live-provider
+    qualification on the AI card; `home/FeatureIcon.tsx` supplies original decorative line icons.
+  - `index.css` adds scoped card styling and responsive columns using existing tokens.
+  - `ProjectHome.test.tsx` checks copy, order, the complete footer text, four distinct decorative
+    icons with consistent stroke/view box, absence in setup, lack of new controls and absence of
+    new session requests.
+  - `UI_SPEC.md`, `UI_CHANGELOG.md` and `CHANGELOG.md` record the bounded iteration and evidence.
+- **Protected behaviour:** The banner, workflow, start routes, recent sessions, upload and setup,
+  workspace, viewer, deterministic findings, AI logic, backend, contracts and dependencies are
+  unchanged. The new section has no state, network calls or interactive controls.
+- **Tests executed (from `frontend/`):**
+  - `npm test -- ProjectHome.test.tsx` — before implementation: one expected failure for the
+    missing section and 15 passes; after implementation: 16 passed.
+  - `npm run lint` — passed.
+  - `npm run format:check` — passed after formatting the two new components with targeted
+    Prettier; no broad write-mode formatting was run.
+  - `npm run typecheck` — passed.
+  - `npm run types:check` — passed; generated types were up to date.
+  - `npm test` — 8 files and 112 tests passed.
+  - `npm run build` — passed. The existing `three` / `@thatopen` undefined-import and large-chunk
+    warnings remain.
+- **Visual before/after evidence:** `local-private/test-results/ui-005c/` contains full-page
+  `before-*` and `after-*-full.png` screenshots and `after-*-features.png` crops. Captures used an
+  isolated headless Microsoft Edge 156.0.4314.50 profile, synthetic health response, no real
+  session or model, and CSS viewports 1920 × 1080, 1440 × 900, 1024 × 768 and 390 × 844 at
+  device scale 1. The actual merged-main `ProjectHome.tsx` and `index.css` were loaded from Git
+  and transformed in memory for the baseline; no source files were replaced. External browser
+  requests were blocked; none were attempted.
+- **Measured layout:** The four sizes produced 4 / 4 / 2 / 1 columns. Card heights were equal
+  within each row; at 390 px the AI card was taller because of its qualification. At every size,
+  document `scrollWidth` equalled `clientWidth`, and card/text dimensions showed no clipping.
+  All four icons used the same `96 × 76` view box and navy stroke. Banner, hero, routes and
+  workflow bounding rectangles matched the baseline at each size. Screenshot pixels above the
+  workflow bottom matched at desktop and tablet sizes; at 390 px, 122 pixels differed in the
+  final two workflow-edge rows despite matching geometry. No cause was established.
+- **Accessibility regression results:** A labelled section and unordered list contain four
+  headings and decorative, non-focusable SVGs; no new keyboard stops were added. Browser Tab
+  checks reached the existing skip link, Project Home, create action and both session fields.
+  The card body colour measured 4.64:1 against its background. A 960 × 540 CSS viewport at
+  device scale 2 provided an approximate 200% reflow check with two columns and no measured
+  overflow; this is not a native browser-zoom or screen-reader audit. The existing narrow-banner
+  small-text limitation remains.
+- **Functional regression results:** With isolated synthetic API responses, browser checks
+  exercised recent-session reopen and forget, new-session setup, invalid model rejection, mocked
+  IFC and IDS uploads, the enabled workspace action and opening an existing session. These do not
+  establish real backend, native file-dialog or rendered IFC-viewer behaviour; those paths were
+  not re-exercised in this cosmetic iteration. The full Vitest suite provides the recorded
+  automated regression evidence.
+- **Owner decision:** Pending review.
+- **Branch, commit and PR references:** `feature/ui-005c-home-features` from `a5135eb`; not
+  committed or pushed; no pull request opened.
+- **Rollback instructions:** After reviewing the diff and preserving any later work, remove only
+  the UI-005C import and render from `ProjectHome.tsx`, the new feature test and setup-view
+  assertion from `ProjectHome.test.tsx`, and the `.features*` / `.feature-*` rules and
+  breakpoints from `index.css`. Remove the two new files `home/ProductFeatures.tsx` and
+  `home/FeatureIcon.tsx` only if nothing else depends on them. Remove this UI-005C entry and the
+  corresponding UI-005C additions in `UI_SPEC.md` and `CHANGELOG.md`; retain prior iteration
+  records and unrelated untracked files. The owner may separately retain or delete the ignored
+  UI-005C screenshots.

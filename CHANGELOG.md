@@ -4,6 +4,18 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### UI-005C / T-7 / M3 — Core product features on Project Home (2 November 2026)
+
+- Add four non-interactive capability cards below the review workflow, with original monochrome
+  SVG icons, existing design tokens and a configuration/verification qualification for AI
+  interpretation. No backend, API, viewer or application behaviour changes.
+- Frontend lint, formatting, typecheck, generated-types check, 112 tests and production build
+  pass; existing viewer-dependency and chunk-size build warnings remain. Isolated synthetic
+  browser checks cover 1920 × 1080, 1440 × 900, 1024 × 768 and 390 × 844. See
+  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#ui-005c--project-home-core-product-features) for
+  measurements, regression evidence and limitations. Owner review is pending; T-7 and M3 remain
+  in progress.
+
 ### UI-005B / T-7 / M3 — Review workflow cards on Project Home (2 November 2026)
 
 - Add a *How BIM Intelligence works* section directly below *Choose how to begin*: four
