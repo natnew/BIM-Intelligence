@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ids xmlns="http://standards.buildingsmart.org/IDS"
+     xmlns:xs="http://www.w3.org/2001/XMLSchema"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://standards.buildingsmart.org/IDS http://standards.buildingsmart.org/IDS/1.0/ids.xsd">
+    <info>
+        <title>Molio exploratory benchmark - DRAFT</title>
+        <version>0.1.0</version>
+        <description>Generic candidate checks, not approved project requirements. Collection models have not been inspected or tested. Review every specification before import.</description>
+        <purpose>Exploratory draft only; not evidence of project compliance.</purpose>
+    </info>
+    <specifications>
+        <specification name="DRAFT: Project identity" ifcVersion="IFC2X3 IFC4 IFC4X3_ADD2" identifier="draft-project-identity" description="Proposed generic check; owner approval is required before import.">
+            <applicability minOccurs="1" maxOccurs="unbounded">
+                <entity><name><simpleValue>IFCPROJECT</simpleValue></name></entity>
+            </applicability>
+            <requirements>
+                <attribute cardinality="required"><name><simpleValue>Name</simpleValue></name></attribute>
+                <attribute cardinality="required"><name><simpleValue>GlobalId</simpleValue></name></attribute>
+            </requirements>
+        </specification>
+        <specification name="DRAFT: Space identity" ifcVersion="IFC2X3 IFC4 IFC4X3_ADD2" identifier="draft-space-identity" description="Proposed generic check; owner approval is required before import.">
+            <applicability minOccurs="1" maxOccurs="unbounded">
+                <entity><name><simpleValue>IFCSPACE</simpleValue></name></entity>
+            </applicability>
+            <requirements>
+                <attribute cardinality="required"><name><simpleValue>Name</simpleValue></name></attribute>
+                <attribute cardinality="required"><name><simpleValue>GlobalId</simpleValue></name></attribute>
+            </requirements>
+        </specification>
+        <specification name="DRAFT: Selected building and services element identity" ifcVersion="IFC2X3 IFC4 IFC4X3_ADD2" identifier="draft-element-identity" description="Proposed generic check for the listed entity classes; owner approval is required before import.">
+            <applicability minOccurs="1" maxOccurs="unbounded">
+                <entity>
+                    <name>
+                        <xs:restriction base="xs:string">
+                            <xs:pattern value="IFC(WALL|WALLSTANDARDCASE|DOOR|DOORSTANDARDCASE|WINDOW|WINDOWSTANDARDCASE|COLUMN|COLUMNSTANDARDCASE|BEAM|BEAMSTANDARDCASE|SLAB|SLABSTANDARDCASE|FLOWSEGMENT|FLOWTERMINAL|DUCTSEGMENT|PIPESEGMENT|LIGHTFIXTURE)"/>
+                        </xs:restriction>
+                    </name>
+                </entity>
+            </applicability>
+            <requirements>
+                <attribute cardinality="required"><name><simpleValue>Name</simpleValue></name></attribute>
+                <attribute cardinality="required"><name><simpleValue>GlobalId</simpleValue></name></attribute>
+            </requirements>
+        </specification>
+        <specification name="DRAFT: Classification reference location" ifcVersion="IFC2X3 IFC4 IFC4X3_ADD2" identifier="draft-classification-location" description="Proposed presence check only; owner approval is required before import.">
+            <applicability minOccurs="1" maxOccurs="unbounded">
+                <entity><name><simpleValue>IFCCLASSIFICATIONREFERENCE</simpleValue></name></entity>
+            </applicability>
+            <requirements>
+                <attribute cardinality="required"><name><simpleValue>Location</simpleValue></name></attribute>
+            </requirements>
+        </specification>
+    </specifications>
+</ids>
