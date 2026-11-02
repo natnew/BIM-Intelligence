@@ -1,9 +1,12 @@
-# BIM Intelligence — Example IFC Projects
-
+# BIM Intelligence — Example IFC Project
 This library describes three example-project collections for exploring IFC models and evaluating
+
+This library describes intended example-project collections for exploring IFC models and evaluating
+
 BIM Intelligence. Architects can inspect geometry and elements; BIM Managers and BIM Coordinators
 can examine model information against project requirements; developers can assess ingestion, viewing
 and performance.
+
 
 The owner keeps local copies of the IFC models in each collection directory. Git ignores `*.ifc`
 files under `examples/`, so the models are not tracked or published with the repository. This is
@@ -44,6 +47,23 @@ The owner must review, edit and approve each specification before importing it: 
 treats imported IDS specifications as confirmed. Each session contains one IFC, so checks for
 entities absent from that file can be reported as not applicable and the review can be partial.
 
+The collections currently contain descriptions only. They are not an implemented example
+catalogue, and one-click example loading is not available.
+
+## Project collections
+
+| Collection | Expected disciplines | Intended evaluation |
+|---|---|---|
+| [Duplex Apartment](./duplex-apartment/README.md) | Architectural, electrical, mechanical/MEP and plumbing; rooms and spaces | Model and property inspection, IDS validation, and future multidisciplinary coordination |
+| [Medical Dental Clinic](./medical-dental-clinic/README.md) | Architectural | Geometry, navigation, rendering and project-specific IDS validation |
+| [Molio](./molio/README.md) | To be confirmed; information and reference example | Metadata, properties, references and applicable information-quality checks |
+| [Schependomlaan](./schependomlaan/README.md) | Architectural | Ingestion, viewer robustness, information inspection, performance and future coordination |
+
+These are intended inputs and uses, not verified descriptions of model contents.
+**Availability, source URLs, licences and redistribution rights, file hashes, IFC versions and
+application compatibility:** **Pending verification.**
+
+
 ## Exploration and information-quality review
 
 An Industry Foundation Classes (IFC) file exchanges a BIM model and its available geometry and
@@ -67,7 +87,11 @@ during evaluation.
 
 | Location | Purpose |
 |---|---|
+
 | `examples/<collection>/` | Project descriptions, draft IDS inputs, future catalogue manifests and the owner's local, Git-ignored copies of the example IFC models |
+
+| `examples/` | Project descriptions and future catalogue manifests, not model storage |
+
 | `local-private/bim-models/<collection>/` | Owner-managed IFC files for local evaluation, including private or not-yet-cleared inputs |
 | `local-private/bim-documents/<collection>/` | Associated private or not-yet-cleared IDS files and supporting documents |
 | `datasets/permitted/<collection>/` | Openly licensed sample IFC files and associated evaluation assets verified for redistribution |
