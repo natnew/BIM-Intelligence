@@ -4,6 +4,21 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### UI-005B / T-7 / M3 — Review workflow cards on Project Home (2 November 2026)
+
+- Add a *How BIM Intelligence works* section directly below *Choose how to begin*: four
+  informational, non-interactive cards (Import your model, Validate information, Investigate in
+  3D, Interpret with AI) with original inline-SVG isometric line drawings and existing design
+  tokens. Each caption maps to current functionality; the AI card notes that availability depends
+  on server configuration and that AI output never creates findings. No assets, dependencies, API
+  requests or behavioural change.
+- Frontend lint, format, typecheck, 111 tests (one new) and the production build pass. Verified
+  in headless Edge at 1920 × 1080, 1440 × 900, 1024 × 768 and 390 × 844: 4/4/2/1 columns, equal
+  card heights per row, no horizontal overflow. See
+  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#ui-005b--project-home-review-workflow-cards). Branch
+  `feature/ui-005b-home-workflows`, uncommitted, pending owner review; T-7 and M3 remain in
+  progress.
+
 ### UI-005A / T-7 / M3 — Architectural banner on Project Home (2 November 2026)
 
 - Add the owner-supplied architectural banner above the *Project workspace* hero as one

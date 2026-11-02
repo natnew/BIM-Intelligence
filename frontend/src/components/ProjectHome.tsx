@@ -4,6 +4,7 @@ import { ApiError } from '../api/client';
 import { createSession, fetchSession } from '../api/bim';
 import type { Session } from '../api/generated/types';
 import { HealthPanel } from './HealthPanel';
+import { HowItWorks } from './home/HowItWorks';
 import { ReviewSetup } from './ReviewSetup';
 
 interface ProjectHomeProps {
@@ -427,6 +428,8 @@ export function ProjectHome({ onOpenWorkspace }: ProjectHomeProps) {
           </article>
         </div>
       </section>
+
+      <HowItWorks />
 
       <footer className="home__footer">
         <p>

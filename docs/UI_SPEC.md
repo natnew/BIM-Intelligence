@@ -990,3 +990,17 @@ stays legible on a high-density display, but the tagline does not meet a comfort
 CSS cannot fix this without cropping the architecture or the type. A separately approved
 narrow-screen variant, cropped to the text region or recomposed by the owner, would be needed;
 none has been created. The `alt` text conveys the full wording to assistive technology.
+
+## 24. UI-005B — Project Home review workflow cards
+
+**Status:** implemented on branch `feature/ui-005b-home-workflows` from `bf7cf95` (2 November
+2026); not committed, not merged, pending owner review. Cosmetic T-7 / M3 refinement only.
+
+| Area | Behaviour | Source |
+|---|---|---|
+| Placement | A *How BIM Intelligence works* section is the next sibling of the *Choose how to begin* section and precedes the footer, in Project Home's start view only. The UI-005A banner and start routes are unchanged. | `components/ProjectHome.tsx` |
+| Content | Four ordered steps — 01 *Import your model*, 02 *Validate information*, 03 *Investigate in 3D*, 04 *Interpret with AI* — using the owner-approved captions. Step 04 adds: *Availability depends on the server's model configuration. AI output never creates findings.* | `components/home/HowItWorks.tsx` |
+| Caption traceability | 01: IFC upload and IDS import (`ReviewSetup`). 02: IDS imports become confirmed executable requirements; coverage panel (`ReviewSetup`, `ReviewCoverage`). 03: element selection, property sets and *Source requirement* (`EvidenceInspector`). 04: optional objective and per-finding explanation with grounding status (FINAL-UI-001, §22). | existing components |
+| Illustrations | Original inline SVG isometric line drawings generated from a small projection helper; no raster assets, external artwork or licensed material. Solid outlines denote deterministic artefacts; dashed outlines mark uncovered checks, the selection frame and the AI interpretation, keeping it visually separate from evidence. | `components/home/WorkflowIllustration.tsx`, `components/home/isometric.ts` |
+| Layout | Four columns above `70rem`, two columns from `56rem` to `69.99rem`, one column below `56rem`; equal card heights per row. Existing tokens only (`--line`, `--surface`, `--surface-soft`, `--blue-soft`, `--teal`, `--teal-soft`, `--navy`, `--muted`); no shadow, gradient, hover state or animation. | `index.css` |
+| Accessibility | `section` labelled by its `h2`; an `ol` of four `li` cards; each `h3` has the accessible name *Step NN: Title*. Illustrations are decorative (`aria-hidden="true"`, `focusable="false"`) because the adjacent text carries the meaning. Cards contain no buttons, links or tab stops, so keyboard order is unchanged. | `components/home/HowItWorks.tsx` |

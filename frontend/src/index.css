@@ -521,6 +521,183 @@ select {
   font-size: 0.82rem;
 }
 
+/* UI-005B: informational workflow overview; cards are deliberately not interactive. */
+.workflow {
+  margin-top: 2.75rem;
+}
+
+.workflow__heading {
+  margin-bottom: 1rem;
+}
+
+.workflow__heading h2 {
+  font-size: 1.15rem;
+}
+
+.workflow__lede {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workflow-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.workflow-card__art {
+  border-bottom: 1px solid var(--line);
+  padding: 0.75rem 0.75rem 0.5rem;
+  background: var(--surface-soft);
+  color: var(--navy);
+}
+
+.workflow-card__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 1.1rem 1.15rem;
+}
+
+.workflow-card__title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: 1rem;
+}
+
+.workflow-card__number {
+  color: var(--teal);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.workflow-card__body p {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.workflow-card__body .workflow-card__note {
+  margin-top: auto;
+  border-top: 1px solid var(--line);
+  padding-top: 0.6rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.iso {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 9.5rem;
+}
+
+.iso polygon,
+.iso line,
+.iso polyline,
+.iso circle {
+  stroke: currentColor;
+  stroke-width: 1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.iso-face--top,
+.iso-sheet,
+.iso-check {
+  fill: var(--surface);
+}
+
+.iso-face--left {
+  fill: var(--surface-soft);
+}
+
+.iso-face--right {
+  fill: var(--blue-soft);
+}
+
+.iso-box--accent .iso-face {
+  stroke: var(--teal);
+}
+
+.iso-box--accent .iso-face--top,
+.iso-box--accent .iso-face--left {
+  fill: var(--teal-soft);
+}
+
+.iso-box--accent .iso-face--right {
+  fill: var(--teal);
+  fill-opacity: 0.22;
+}
+
+.iso-sheet--fold {
+  fill: var(--surface-soft);
+}
+
+.iso .iso-line {
+  stroke-opacity: 0.45;
+}
+
+.iso .iso-line--accent,
+.iso .iso-tick {
+  stroke: var(--teal);
+  stroke-opacity: 1;
+  stroke-width: 1.5;
+}
+
+.iso-tick,
+.iso-lens {
+  fill: none;
+}
+
+.iso .iso-check--open,
+.iso-selection .iso-face,
+.iso .iso-sheet--interpretation,
+.iso .iso-line--link {
+  stroke-dasharray: 3 2.5;
+}
+
+.iso-selection .iso-face {
+  fill: none;
+  stroke: var(--teal);
+}
+
+.iso .iso-lens {
+  stroke-width: 1.5;
+}
+
+.iso .iso-lens-handle {
+  stroke-width: 3;
+}
+
+.iso-node {
+  fill: var(--teal);
+  stroke: none;
+}
+
+@media (max-width: 69.99rem) {
+  .workflow-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* Review setup sequence */
 .setup {
   border: 1px solid var(--line);
@@ -1864,7 +2041,8 @@ select {
   }
 
   .hero,
-  .route-grid {
+  .route-grid,
+  .workflow-grid {
     grid-template-columns: 1fr;
   }
 
