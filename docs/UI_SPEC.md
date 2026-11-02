@@ -1023,3 +1023,22 @@ The preceding UI-005B record describes its earlier pending state. Pull request #
 merged into `main` at `a5135eb`; GitHub showed no formal review at the time of this check. The
 owner's UI-005C request identifies that merged work as the baseline. Detailed verification and
 limitations are recorded in [UI_CHANGELOG.md](./UI_CHANGELOG.md#ui-005c--project-home-core-product-features).
+
+## 26. UI-005D — Architectural image reel and research statistics
+
+**Status:** implemented on `feature/ui-005d-architectural-reel-and-statistics` from `9531d51`
+(2 November 2026); owner visual review was pending at the time of this record. This is a cosmetic
+T-7 / M3 refinement, not task or milestone completion.
+
+| Area | Behaviour | Source |
+|---|---|---|
+| Placement | The architectural reel follows *Choose how to begin* and precedes *How BIM Intelligence works* in Project Home's start view. It is not shown in review setup; the existing banner and routes are unchanged. | `components/ProjectHome.tsx` |
+| Scenes | Six owner-supplied AI-generated scenes appear in order: Architectural Vision, Architectural Design, Design Collaboration, Construction Delivery, Digital Twin and BIM Intelligence. The last is labelled as a concept visualisation, not a screenshot of the implemented application. | `components/home/ArchitecturalReel.tsx` |
+| Layout and loading | The centred reel is half its original width; its responsive 16:9 image frame scales proportionally. The frame uses `cover` for landscape scenes and `contain` for the portrait concept. Controls reflow at narrow widths and retain their labels and usable targets. Only the selected image is rendered; the first is eager and subsequent scenes use lazy loading when selected. A visible error invites selection of another scene if an image fails to load. | `components/home/ArchitecturalReel.tsx`, `index.css` |
+| Navigation and access | Previous/next buttons, six labelled pagination buttons, left/right arrow keys and horizontal touch swipes change the scene. The selected button exposes its pressed state and the caption is announced politely. There is no autoplay; the brief transition is disabled for reduced motion. | `components/home/ArchitecturalReel.tsx`, `index.css` |
+| Research graphics | Two owner-supplied graphics and the requested captions appear at the end of *The professional problem* in the README. Their claims and sources have not been independently verified; the descriptive alt text is not a full text equivalent of their numerical contents. | `README.md`, `docs/assets/research/` |
+
+Provenance, local browser evidence, verification limitations and rollback instructions are in
+[UI_CHANGELOG.md](./UI_CHANGELOG.md#ui-005d--architectural-image-reel-and-research-statistics).
+The images and screenshots have not been inspected by the model; owner visual review remains
+necessary.

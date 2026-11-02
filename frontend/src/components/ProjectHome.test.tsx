@@ -97,12 +97,24 @@ describe('ProjectHome', () => {
     expect(screen.queryByRole('heading', { name: /AI-native/ })).not.toBeInTheDocument();
   });
 
-  it('explains the review workflow in four informational cards directly after the start routes', () => {
+  it('places the architectural reel between the start routes and review workflow', () => {
     render(<ProjectHome onOpenWorkspace={vi.fn()} />);
 
     const routes = screen.getByRole('region', { name: 'Choose how to begin' });
+    const reel = screen.getByRole('region', { name: 'Architectural image reel' });
     const workflow = screen.getByRole('region', { name: 'How BIM Intelligence works' });
-    expect(routes.nextElementSibling).toBe(workflow);
+    expect(routes.nextElementSibling).toBe(reel);
+    expect(reel.nextElementSibling).toBe(workflow);
+
+    fireEvent.click(within(reel).getByRole('button', { name: 'Next image' }));
+    expect(createSession).not.toHaveBeenCalled();
+    expect(fetchSession).not.toHaveBeenCalled();
+  });
+
+  it('explains the review workflow in four informational cards', () => {
+    render(<ProjectHome onOpenWorkspace={vi.fn()} />);
+
+    const workflow = screen.getByRole('region', { name: 'How BIM Intelligence works' });
     expect(
       within(workflow).getByText(
         'From IFC model ingestion to verified findings and intelligent interpretation.',
@@ -201,6 +213,9 @@ describe('ProjectHome', () => {
     ).toBeInTheDocument();
     expect(
       screen.queryByRole('region', { name: 'Features for intelligent AEC model review' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('region', { name: 'Architectural image reel' }),
     ).not.toBeInTheDocument();
     expect(createSession).toHaveBeenCalledWith(expect.any(AbortSignal));
     expect(screen.getByText(session.id)).toBeInTheDocument();
