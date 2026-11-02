@@ -1211,3 +1211,101 @@ status and milestone criteria.
   added wrapping/maximum-width declarations and the narrow-screen arrow and caption-height
   rules. Update this revision record and the matching UI_SPEC and root changelog text. Preserve
   the rest of UI-005D, its images, other page content and earlier evidence.
+
+## UI-006B — Human-readable building storeys
+
+### [UI-006B] — Improve storey presentation in the Model Browser
+
+- **UI iteration ID and date:** UI-006B, T-7 / M3; 2026-11-02.
+- **Objective and approval:** The owner authorised a presentation-only Storeys refinement,
+  the six paths listed in the brief, local screenshots, one implementation pass and at most one
+  focused corrective pass. IFC ingestion, schemas, API, model and finding selection, deterministic
+  checks, Meta integration and other UI components remain protected. At that time, no commit, push,
+  pull request, merge or paid model call was authorised.
+- **Baseline:** `50d846f`, the updated `main` from which
+  `feature/ui-006b-storey-readability` was created.
+- **Files and purpose:**
+  - `frontend/src/components/ModelBrowser.tsx`: preserve supplied names and order; show an
+    accessible, independently expandable identity panel for each storey.
+  - `frontend/src/index.css`: constrain and align Storeys rows and wrap expanded details without
+    changing the Model Browser's width or other styles.
+  - `frontend/src/components/ModelBrowser.test.tsx`: focused name, identity, keyboard and
+    model-version regression tests.
+  - `docs/UI_SPEC.md` §27, `docs/UI_CHANGELOG.md` (this entry) and `CHANGELOG.md`: document
+    behaviour, evidence and limitations.
+- **Behaviour:** Non-blank names, including repeated and non-English names, are displayed in
+  supplied order without translation or inferred levels. Missing or blank names use *Unnamed
+  storey*. Long names remain complete in the title and details. A row is not a navigation
+  control; its separate *Details* button reveals the original name, IFC class, full GlobalId if
+  present and STEP Express ID. Missing GlobalIds are labelled *Not available*; the Express ID
+  remains available. No copy control is offered. Open details reset for a different model hash.
+- **Focused correction:** Browser measurement found the initial Details label smaller than
+  comparable disclosure controls. The single corrective pass changed only its font size from
+  `0.75rem` to the existing `0.8rem` control size; the final desktop measurement is 11.2 CSS px.
+- **Automated verification:** From `frontend/`, all of the following passed:
+  - `npm test -- src\components\ModelBrowser.test.tsx` — 10 focused tests.
+  - `npm run lint`, `npm run format:check`, `npm run typecheck` and `npm run types:check`.
+  - `npm test` — 128 tests in 10 files.
+  - `npm run build` — passed with the previously recorded That Open/`three` undefined-import
+    and large-chunk warnings.
+  - Backend tests were not run because no backend code or contract changed.
+- **Browser evidence and provenance:** Headless Microsoft Edge 156.0.4314.50 rendered the
+  committed synthetic `tests/fixtures/minimal.ifc` (SHA-256
+  `f2bd00074c54866d95c5c344a1c604e01cdb8ea394b9b20937952b7b38c74348`). A read-only local
+  mock supplied the nine-storey summary, synthetic session/run and review responses; these are not
+  results from backend indexing or an IDS run. Before and after used the same mock, fixture and
+  selection states; the baseline served the original component and CSS from `50d846f`. A
+  provisional mock incorrectly supplied a FireRating for the selected fixture wall; it was
+  corrected to match the fixture before the final captures. Non-local browser traffic used a
+  dead proxy, and no live model call was made.
+- **Layout measurements:** At 1920 × 1080 the Model Browser stayed 210 CSS px wide. The
+  baseline's long row was 332.4 px high and its 163 px list had 1,328 px scroll width; all nine
+  final collapsed rows were 36 px high and the 178 px list had no horizontal overflow. Nine
+  technical identifiers were visible in the baseline rows and none in final collapsed rows.
+  At 390 × 844, final collapsed, missing-identifier and long-name details had no measured page
+  or list overflow; the expanded long-name value also retained its complete 224 characters.
+  Expanded details also had no measured overflow at 360 × 800. A 960 × 540 CSS viewport at
+  device scale 2 had no measured page overflow; this is not a native browser-zoom test.
+- **Accessibility and interaction checks:** Tab reached the Details control with a visible
+  3 px outline; Enter opened it and Space closed it. Its minimum measured height was 28 CSS px.
+  Computed text contrast was 12.93:1 in the normal state and 11.19:1 when expanded. Tests cover
+  unique names for duplicate-storey controls and a missing GlobalId's Express-ID fallback.
+  This was not a screen-reader or comprehensive accessibility audit.
+- **Protected-function regression:** The real fixture geometry reached viewer *Ready* with the
+  mock responses. Finding-to-model and model-to-finding selection, the evidence inspector and
+  Focus selected, Fit model and Reset view were exercised. Canvas frames were stable before input
+  and changed after orbit, pan and wheel zoom; no viewer alert was observed. This is a limited
+  local rendering check, not verification of the real backend or all viewer states.
+- **Visual evidence and privacy:** Matched desktop, selected and mobile before/after screenshots,
+  plus final normal, long-name and missing-identifier details, are in the owner-managed,
+  Git-ignored `local-private/test-results/ui-006b/` under `before-final-*` and `after-final-*`.
+  No private source model or unrelated private material was inspected. Screenshot pixels were
+  not sent to a model or image service; the owner controls their retention. The temporary
+  browser helper was not added to the repository. Owner visual inspection was outstanding at
+  the time of this record; the subsequent decision is recorded below.
+- **Decision and delivery:** At the time of this record, implementation was ready for owner review;
+  no commit, push, pull request or merge had been made. This supports presentation of FR-ING-01
+  and checks protected FR-VIS-08/09/10 interactions, without claiming their broader acceptance.
+  T-7 and M3 remain in progress; `docs/IMPLEMENTATION_PLAN.md` is unchanged because task scope
+  did not change.
+- **Rollback:** After owner approval, inspect the diff and preserve any later work. In
+  `frontend/src/components/ModelBrowser.tsx`, restore the baseline Storeys mapping and remove
+  `StoreyRow` and its added imports. In `frontend/src/index.css`, remove only the UI-006B
+  Storeys rules and restore the baseline name and identifier rules. Remove the new
+  `frontend/src/components/ModelBrowser.test.tsx` only if no later work depends on it. Update
+  `docs/UI_SPEC.md` §27 and the UI-006B entry in `CHANGELOG.md` to reflect the rollback; append
+  the decision here rather than rewriting the iteration history. Do not disturb other UI changes
+  or the owner's unrelated files.
+
+### UI-006B — Owner visual-review decision
+
+- On 2 November 2026, the owner confirmed that the presented synthetic desktop before/after and
+  mobile after captures were acceptable. This decision does not establish a backend or IDS review
+  and does not imply review of the other captured states.
+- Screenshot pixels remained local and were not inspected by a model. This visual decision did
+  not grant permission to commit, push, open a pull request, merge or make a paid model call.
+
+### UI-006B — Owner publication authorisation
+
+- On 2 November 2026, the owner requested that the scoped changes be committed and pushed and
+  that a pull request be opened. This does not authorise a merge, deployment or paid model call.

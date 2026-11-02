@@ -4,6 +4,19 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### UI-006B / T-7 / M3 — Human-readable building storeys (2 November 2026)
+
+- Show original storey names in supplied order, with an *Unnamed storey* fallback and compact,
+  keyboard-operable details for the full IFC identity. Long names remain available without
+  dominating the collapsed list; storey rows do not imply viewer navigation. No backend or
+  schema changes.
+- Frontend lint, format, typecheck, generated-types check, 128 tests and production build pass;
+  existing dependency/chunk warnings remain. Local synthetic browser checks cover desktop,
+  390 px and 360 px layouts, details and protected viewer interactions. The mock is not an
+  end-to-end backend review; the owner accepted the desktop comparison and mobile after capture. See
+  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#ui-006b--human-readable-building-storeys) for
+  evidence and rollback. T-7 and M3 remain in progress.
+
 ### UI-005D / T-7 / M3 — Architectural reel and research graphics (2 November 2026)
 
 - Add an owner-supplied six-scene Project Home reel and the two requested README graphics, with

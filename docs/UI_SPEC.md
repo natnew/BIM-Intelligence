@@ -1042,3 +1042,20 @@ Provenance, local browser evidence, verification limitations and rollback instru
 [UI_CHANGELOG.md](./UI_CHANGELOG.md#ui-005d--architectural-image-reel-and-research-statistics).
 The images and screenshots have not been inspected by the model; owner visual review remains
 necessary.
+
+## 27. UI-006B — Human-readable building storeys
+
+**Status:** implemented on `feature/ui-006b-storey-readability` from `50d846f`
+(2 November 2026). The owner accepted the synthetic desktop before/after and mobile after
+captures; this is a T-7 / M3 presentation refinement, not task or milestone completion.
+
+| Area | Behaviour |
+|---|---|
+| Storey rows | *Storeys* retains the supplied IFC order, duplicate names and original non-blank spelling. A missing or blank name is displayed as *Unnamed storey*; names are not translated, sorted or interpreted as elevations. |
+| Long names | The collapsed row uses a single-line ellipsis. The complete original name remains available in the title and the expanded details. |
+| Technical identity | Each row has a keyboard-operable *Details* button. Its expanded panel gives the original name, IFC class, full GlobalId when available and STEP Express ID. When GlobalId is unavailable, the panel says so and retains the Express ID. There is no copy control. |
+| Interaction boundary | Storey rows do not select, isolate, hide or navigate to elements. This change does not alter IFC values, the API contract, findings or the viewer's existing selection behaviour. |
+
+Focused tests and local, synthetic browser measurements are recorded in
+[UI_CHANGELOG.md](./UI_CHANGELOG.md#ui-006b--human-readable-building-storeys). They do not replace
+owner visual inspection or establish an end-to-end backend review.

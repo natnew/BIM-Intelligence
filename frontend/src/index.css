@@ -1313,12 +1313,73 @@ select {
 }
 
 .storey-list__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.storey-list li {
+  display: block;
+  min-width: 0;
+}
+
+.storey-list__row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 0.6rem;
+}
+
+.storey-list__toggle {
+  flex-shrink: 0;
+  min-height: 2rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--navy);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.storey-list__toggle:hover,
+.storey-list__toggle[aria-expanded='true'] {
+  border-color: var(--navy);
+  background: var(--teal-soft);
+}
+
+.storey-list__details {
+  margin: 0.4rem 0;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.storey-list__details:not([hidden]) {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.storey-list__details div {
+  min-width: 0;
+}
+
+.storey-list__details dt {
+  color: var(--muted);
+  font-size: 0.72rem;
   font-weight: 600;
 }
 
-.storey-list__id {
-  color: var(--quiet);
-  font-size: 0.72rem;
+.storey-list__details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .class-list__count {
