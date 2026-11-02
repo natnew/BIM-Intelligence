@@ -1,9 +1,51 @@
-# BIM Intelligence — Example IFC Projects
+# BIM Intelligence — Example IFC Project
+This library describes three example-project collections for exploring IFC models and evaluating
 
 This library describes intended example-project collections for exploring IFC models and evaluating
+
 BIM Intelligence. Architects can inspect geometry and elements; BIM Managers and BIM Coordinators
 can examine model information against project requirements; developers can assess ingestion, viewing
 and performance.
+
+
+The owner keeps local copies of the IFC models in each collection directory. Git ignores `*.ifc`
+files under `examples/`, so the models are not tracked or published with the repository. This is
+not an implemented example catalogue, and one-click example loading is not available.
+
+Other file types, such as spreadsheets, images, PDFs and IDS files, are not covered by the IFC
+ignore rule and may be visible to Git. Keep private or rights-uncleared inputs in `local-private/`
+and check their status before publication.
+
+## Project collections
+
+| Collection | Disciplines suggested by filenames | Intended evaluation | Expected IFC inputs | Benchmark IDS |
+|---|---|---|---|---|
+| [Duplex Apartment](./duplex-apartment/README.md) | Architectural, electrical, mechanical/MEP and plumbing; rooms and spaces | Model and property inspection, IDS validation, future multidisciplinary coordination | `Duplex_A_20110907.ifc`, `Duplex_Electrical_20121207.ifc`, `Duplex_M_20111024_ROOMS_AND_SPACES.ifc`, `Duplex_MEP_20110907.ifc`, `Duplex_Plumbing_20121113.ifc` | [Draft](./duplex-apartment/benchmark.ids) |
+| [Medical Dental Clinic](./medical-dental-clinic/README.md) | Architectural, structural, HVAC, electrical and plumbing | Geometry, navigation, rendering, project-specific IDS validation, future multidisciplinary coordination | `Clinic_Architectural.ifc`, `Clinic_Electrical.ifc`, `Clinic_HVAC.ifc`, `Clinic_Plumbing.ifc`, `Clinic_Structural.ifc` | [Draft](./medical-dental-clinic/benchmark.ids) |
+| [Molio](./molio/README.md) | To be confirmed; information and reference example | Metadata, properties, references and IDS validation against an applicable specification | `Molio_with_URIs.ifc` | [Draft](./molio/benchmark.ids) |
+
+The disciplines are taken from the file names and collection notes, not from verified model
+contents. The Medical Dental Clinic README records a CC BY 4.0 licence statement and attribution
+requirement from its source. **Source URLs, licences and redistribution rights for every
+collection, file hashes, IFC versions, IDS applicability and application compatibility:**
+**Pending verification.**
+
+## Exploratory benchmark drafts
+
+Each collection contains a `benchmark.ids` with generic candidate checks based on the synthetic
+benchmark's IDS format. The Duplex and Clinic drafts propose checking names and GlobalIds for
+projects, storeys, spaces and a limited selection of building and services elements. The Molio
+draft proposes project and element identity checks and a classification-reference location check;
+the latter checks presence only, not whether a URI is valid or reachable.
+
+These are **draft examples, not verified or approved project requirements**. They were not derived
+from, or run against, the collection models. Their applicability, coverage and results remain
+unverified; no ground truth, accuracy or compliance claim is implied. Entity selectors cover only
+the listed IFC classes, not every possible class or subtype.
+
+The owner must review, edit and approve each specification before importing it: the application
+treats imported IDS specifications as confirmed. Each session contains one IFC, so checks for
+entities absent from that file can be reported as not applicable and the review can be partial.
 
 The collections currently contain descriptions only. They are not an implemented example
 catalogue, and one-click example loading is not available.
@@ -20,6 +62,7 @@ catalogue, and one-click example loading is not available.
 These are intended inputs and uses, not verified descriptions of model contents.
 **Availability, source URLs, licences and redistribution rights, file hashes, IFC versions and
 application compatibility:** **Pending verification.**
+
 
 ## Exploration and information-quality review
 
@@ -44,7 +87,11 @@ during evaluation.
 
 | Location | Purpose |
 |---|---|
+
+| `examples/<collection>/` | Project descriptions, draft IDS inputs, future catalogue manifests and the owner's local, Git-ignored copies of the example IFC models |
+
 | `examples/` | Project descriptions and future catalogue manifests, not model storage |
+
 | `local-private/bim-models/<collection>/` | Owner-managed IFC files for local evaluation, including private or not-yet-cleared inputs |
 | `local-private/bim-documents/<collection>/` | Associated private or not-yet-cleared IDS files and supporting documents |
 | `datasets/permitted/<collection>/` | Openly licensed sample IFC files and associated evaluation assets verified for redistribution |
