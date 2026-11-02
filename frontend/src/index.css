@@ -521,6 +521,190 @@ select {
   font-size: 0.82rem;
 }
 
+/* UI-005D: architectural scenes remain separate from the functional workflow. */
+.architectural-reel {
+  width: 50%;
+  margin: 2.75rem auto 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.architectural-reel__frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: var(--navy-deep);
+}
+
+.architectural-reel__media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  touch-action: pan-y;
+}
+
+.architectural-reel__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: architectural-reel-fade 180ms ease-out;
+}
+
+.architectural-reel__image--contain {
+  object-fit: contain;
+}
+
+.architectural-reel__error {
+  padding: 1rem;
+  color: #fff;
+  text-align: center;
+}
+
+.architectural-reel__arrow {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  padding: 0.65rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--navy-deep);
+  transform: translateY(-50%);
+}
+
+.architectural-reel__previous {
+  left: 0.75rem;
+}
+
+.architectural-reel__next {
+  right: 0.75rem;
+}
+
+.architectural-reel__arrow svg {
+  width: 100%;
+  height: 100%;
+}
+
+.architectural-reel__next svg {
+  transform: rotate(180deg);
+}
+
+.architectural-reel__details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.7rem 1rem;
+}
+
+.architectural-reel__caption {
+  flex: 1 1 16rem;
+}
+
+.architectural-reel__label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  color: var(--ink-strong);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.architectural-reel__count {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.architectural-reel__note {
+  min-height: 2.9em;
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.architectural-reel__pagination {
+  display: flex;
+  flex-wrap: wrap;
+  max-width: 100%;
+  gap: 0.15rem;
+}
+
+.architectural-reel__dot {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.architectural-reel__dot:hover:not(:disabled) {
+  background: var(--surface-soft);
+}
+
+.architectural-reel__dot span {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--quiet);
+}
+
+.architectural-reel__dot[aria-pressed='true'] span {
+  background: var(--teal);
+}
+
+@keyframes architectural-reel-fade {
+  from {
+    opacity: 0.86;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .architectural-reel__image {
+    animation: none;
+  }
+}
+
+@media (max-width: 32rem) {
+  .architectural-reel__arrow {
+    width: 2rem;
+    height: 2rem;
+    padding: 0.4rem;
+  }
+
+  .architectural-reel__details {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .architectural-reel__caption {
+    flex-basis: auto;
+  }
+
+  /* Keep scene changes from shifting the page when the narrower text wraps. */
+  .architectural-reel__label {
+    min-height: 2.9em;
+  }
+
+  .architectural-reel__note {
+    min-height: 5.8em;
+  }
+}
+
 /* UI-005B: informational workflow overview; cards are deliberately not interactive. */
 .workflow {
   margin-top: 2.75rem;

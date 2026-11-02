@@ -1066,3 +1066,148 @@ status and milestone criteria.
   corresponding UI-005C additions in `UI_SPEC.md` and `CHANGELOG.md`; retain prior iteration
   records and unrelated untracked files. The owner may separately retain or delete the ignored
   UI-005C screenshots.
+
+## UI-005D — Architectural image reel and research statistics
+
+### [UI-005D] — Project Home architectural imagery and external research graphics
+
+- **UI iteration ID:** UI-005D (T-7 / M3; cosmetic refinement only).
+- **Date (YYYY-MM-DD):** 2026-11-02.
+- **Objective and approval:** The owner authorised the six-scene Project Home reel, the two
+  specified README graphics and captions, the paths in the UI-005D brief, three viewport sizes,
+  one implementation pass and at most one focused corrective pass. Backend, viewer, API,
+  dependencies, existing navigation and the architectural hero remain protected. At that stage,
+  no commit, push, pull request, deployment or paid API call was authorised. The owner later
+  authorised the commit, push and pull request; deployment and paid API calls remain unauthorised.
+- **Baseline:** `9531d51`, the latest `main` and `origin/main` when the branch
+  `feature/ui-005d-architectural-reel-and-statistics` was created.
+- **Security and provenance review `GOV-UI-005D`:** The owner identified all eight supplied
+  images as AI-generated with ChatGPT image generation, confirmed the necessary public
+  redistribution rights and authorisation for optimised derivatives, and confirmed that they
+  contain no private or client material. The owner identified the unnumbered files as the four
+  requested carousel scenes and confirmed which supplied graphic is the cards image and which is
+  the graph. The original source files are untracked but **not** Git-ignored; they are left
+  untouched for the owner to relocate or retain. Git ignore is not an access control.
+- **Processing and retention:** The owner did **not** authorise model-visible images. Image
+  conversion and screenshot capture are local only; image pixels and screenshots must not be sent
+  to a model or image/OCR service. Only file metadata and non-image browser measurements may be
+  inspected. Synthetic browser evidence is authorised under the Git-ignored
+  `local-private/test-results/ui-005d/` for owner review; the owner controls subsequent retention
+  or deletion. No unrelated private material may be inspected. The supplied research claims and
+  publication sources have not been independently fact-checked.
+- **Files and purpose:**
+  - `frontend/src/components/home/ArchitecturalReel.tsx` and
+    `frontend/src/components/home/ArchitecturalReel.test.tsx`: ordered scenes, accessible controls,
+    touch navigation, image-failure recovery and focused interaction tests.
+  - `frontend/src/components/ProjectHome.tsx`,
+    `frontend/src/components/ProjectHome.test.tsx` and `frontend/src/index.css`: placement,
+    setup-state regression coverage and responsive styling.
+  - `frontend/public/images/home/reel/architectural-vision.webp`, `architectural-design.webp`,
+    `design-collaboration.webp`, `construction-delivery.webp`, `digital-twin.webp` and
+    `bim-intelligence-concept.webp`: the six approved reel images in display order.
+  - `docs/assets/research/construction-industry-statistics.png` and
+    `docs/assets/research/ai-adoption-barriers.png`: the requested README graphics.
+    `README.md` adds only their image references and specified captions.
+  - `docs/UI_SPEC.md` §26, `docs/UI_CHANGELOG.md` (this entry) and `CHANGELOG.md`: the
+    implementation, evidence and limitations. `docs/IMPLEMENTATION_PLAN.md` is unchanged:
+    the approved task scope and milestone mapping did not change.
+- **Image processing:** Local FFmpeg conversion to WebP quality 82 retained all six source
+  dimensions. The five landscape images use `cover`; the portrait uses `contain` and is labelled
+  as a concept, not the implemented interface. The six WebPs total 1,242,522 bytes, compared
+  with 13,881,533 bytes for their sources, a 91.0% reduction. The two research PNGs are
+  byte-identical copies of the owner-identified files. No image pixel or screenshot was sent to a
+  model or image/OCR service.
+- **Focused correction:** The first browser pass measured a small mobile caption-height change
+  on the portrait scene. The one permitted corrective pass reserved sufficient caption height;
+  final measurements show constant caption-region height across all six scenes at each requested
+  viewport.
+- **Automated verification:** From `frontend/`, the following commands passed:
+  - `npm test -- 'src\components\home\ArchitecturalReel.test.tsx' 'src\components\ProjectHome.test.tsx'`
+    — 22 tests.
+  - `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm run types:check`
+    and `npm test` — all passed; the full suite contained 118 tests in nine files.
+  - `npm run build` — passed with the previously recorded That Open/`three` undefined-import
+    and large-chunk warnings.
+- **Browser and README evidence:** Isolated Microsoft Edge 156.0.4314.50 used synthetic API
+  responses and blocked external browser requests. Baseline and final captures and non-image
+  measurements are retained in `local-private/test-results/ui-005d/`. At 1920 × 1080,
+  1440 × 900 and 390 × 844, all six images loaded in order with no measured horizontal overflow;
+  the frame, caption region and scroll position remained stable during scene changes. The
+  portrait bitmap was fully contained, and calculated bounds left the arrow hit areas clear.
+  Previous/next, pagination, arrow keys, Enter, a mobile swipe and reduced-motion behaviour were
+  exercised. Synthetic create/open-session routes entered setup and hid the reel. These checks do
+  not establish real backend, native file-dialog or IFC-viewer behaviour.
+- **Accessibility evidence:** Actual Tab traversal reached previous, next and all six pagination
+  buttons with visible focus; Enter selected the focused scene. A 960 × 540 CSS viewport at device
+  scale 2 approximated 200% reflow without measured overflow. Arrow and pagination hit areas were
+  42 × 42 and 28 × 28 CSS px respectively; calculated contrast was 14.87:1 for the arrow,
+  5.01:1 for the active dot and 3.07:1 for the inactive dot against their backgrounds. This was
+  not a native browser-zoom, screen-reader or comprehensive accessibility audit.
+- **Verification notes:** A local CommonMark-rendered README preview loaded the two PNGs in
+  order with the exact captions; GitHub's renderer was not exercised. A repeat capture using an
+  existing evidence label stopped at the helper's exclusive-write safeguard; no screenshot was
+  overwritten. A subsequent uniquely labelled run passed. Two attempts to fulfil a synthetic
+  health response reported `Invalid InterceptionId` in that run; no unexpected API or external
+  requests were recorded, and all final browser assertions passed. The one-off local browser
+  helper is not a checked-in, reproducible browser test. The browser commands, from the repository
+  root, were:
+  - `node '.\local-private\test-results\ui-005d\browser-check.mjs' after after-final` — passed.
+  - `node '.\local-private\test-results\ui-005d\browser-check.mjs' after keyboard keyboard-only`
+    — passed.
+  - `node '.\local-private\test-results\ui-005d\browser-check.mjs' after zoom-approximation zoom-only`
+    — passed.
+  - `node '.\local-private\test-results\ui-005d\browser-check.mjs' after readme-final readme-only`
+    — passed.
+  - `node '.\local-private\test-results\ui-005d\browser-check.mjs' after after-verified` — stopped
+    with an existing-file error during the repeat capture described above.
+- **Unresolved review:** The owner must visually review the screenshots and source images. The
+  research graphics' numerical claims, underlying publications and full text equivalents remain
+  unverified. Their alt text describes each graphic but does not enumerate its statistics.
+- **Branch, task and decision:** `feature/ui-005d-architectural-reel-and-statistics`; owner
+  review pending. T-7 and M3 remain in progress. This preserves the FR-UI-01 product identity
+  and does not change validation, viewer, API, backend or IFC behaviour.
+- **Rollback instructions:** After reviewing the diff and preserving later work, remove only the
+  `ArchitecturalReel` import and render in `ProjectHome.tsx`, the UI-005D placement/setup
+  assertions in `ProjectHome.test.tsx`, and the `.architectural-reel*` rules, keyframes and
+  associated media queries in `index.css`. Remove `home/ArchitecturalReel.tsx`,
+  `home/ArchitecturalReel.test.tsx` and the six named WebPs if no later work depends on them.
+  Remove only the two UI-005D image/caption pairs from `README.md` and the two named PNG copies.
+  Remove UI_SPEC §26, this UI-005D entry and the corresponding `CHANGELOG.md` entry. Preserve
+  prior records, the existing hero, unrelated assets and the owner's original source files.
+  The owner may separately retain or delete the ignored UI-005D evidence.
+
+### UI-005D — Owner-requested half-size reel revision
+
+- **Scope and baseline:** On 2 November 2026, the owner requested the slideshow at half its
+  width and height, centred, with no other page changes. This revision builds on the uncommitted
+  UI-005D work above on the same branch; it changes only the reel's CSS and the related
+  documentation records. Images, copy, navigation logic and other page sections are unchanged.
+- **Implementation:** The reel takes 50% of its former available width; its 16:9 image frame
+  scales proportionally. Pagination wraps as needed, and narrow-screen arrow targets are
+  28 × 28 CSS px. Caption space is reserved to prevent scene changes from shifting the page.
+  The caption and controls are not scaled to half size.
+- **Measured layout:** Before the change the half-width check failed; it passed afterwards.
+  At 1920 × 1080 and 1440 × 900, the image frame changed from 992 × 558 to
+  495 × 278.44 CSS px. At 390 × 844 it changed from 345 × 194.06 to
+  171.5 × 96.47 CSS px. The one-pixel difference from exact half-width is due to the reel
+  borders. DOM checks in same-origin iframes also covered widths 1024, 800, 600, 513, 512 and
+  320 CSS px: frames were centred, all six scenes kept stable caption-region heights and scroll
+  positions, dots stayed within the reel, and the portrait remained clear of the arrows. No
+  horizontal overflow was measured at the requested viewports. At 320 px, the existing 15 px
+  document overflow was observed both before and after this revision and was not changed.
+- **Interaction checks:** In the VS Code integrated browser (Chrome 150.0.7871.250 /
+  Electron 43.8.3), synthetic previous/next clicks, arrow-key events and touch swipes selected
+  the expected scenes at 1920, 390 and 320 px. Measured target sizes and clearance accommodate
+  the existing focus outline; this was not a new keyboard-only, screen-reader or native-zoom
+  audit. The preview used a local backend with `LLM_MODE=off` and isolated storage. No image
+  pixels or screenshots were sent to a model; the earlier screenshots above predate this
+  sizing revision.
+- **Frontend checks:** From `frontend/`, `npm run lint`, `npm run format:check`,
+  `npm run typecheck`, `npm run types:check`, `npm test` and `npm run build` all passed.
+  Vitest reported 118 tests in nine files; the build retained the previously recorded
+  That Open/`three` undefined-import and large-chunk warnings.
+- **Revision rollback:** To undo only this sizing revision, restore the reel's original
+  `margin-top` and remove its `width` and auto margins in `frontend/src/index.css`; remove the
+  added wrapping/maximum-width declarations and the narrow-screen arrow and caption-height
+  rules. Update this revision record and the matching UI_SPEC and root changelog text. Preserve
+  the rest of UI-005D, its images, other page content and earlier evidence.

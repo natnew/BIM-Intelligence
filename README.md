@@ -44,6 +44,14 @@ Before an architectural model is issued, someone has to confirm that it carries 
 
 BIM Intelligence targets that gap for Architects, BIM Managers and BIM Coordinators.
 
+![Four research statistics on construction, BIM and AI skills](./docs/assets/research/construction-industry-statistics.png)
+
+Sources: Autodesk, Springer Nature Link and RICS.
+
+![Reported barriers to AI adoption in construction](./docs/assets/research/ai-adoption-barriers.png)
+
+Source: RICS, AI in Construction 2025. Categories are not mutually exclusive.
+
 ## Core innovation
 
 Most AI-in-BIM demonstrations put a language model in front of model data and ask it what is wrong. We do the opposite:

@@ -4,6 +4,18 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### UI-005D / T-7 / M3 — Architectural reel and research graphics (2 November 2026)
+
+- Add an owner-supplied six-scene Project Home reel and the two requested README graphics, with
+  a concept-image disclaimer, keyboard/touch controls and responsive layout. Frontend checks,
+  118 tests and the production build pass; existing dependency/chunk warnings remain. Local
+  synthetic browser checks cover 1920 × 1080, 1440 × 900 and 390 × 844. Image pixels were not
+  inspected by the model; owner visual review and research-claim verification remain open.
+  See [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#ui-005d--architectural-image-reel-and-research-statistics)
+  for evidence and limitations. T-7 and M3 remain in progress.
+- At the owner's request, centre the reel at half its original width with proportional image
+  height; retain accessible controls and responsive reflow without changing other page sections.
+
 ### UI-005C / T-7 / M3 — Core product features on Project Home (2 November 2026)
 
 - Add four non-interactive capability cards below the review workflow, with original monochrome
