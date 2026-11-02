@@ -1,4 +1,6 @@
-import type { ModelSummary } from '../api/generated/types';
+import { useId, useState } from 'react';
+
+import type { ElementRef, ModelSummary } from '../api/generated/types';
 
 interface ModelBrowserProps {
   readonly summary: ModelSummary;
@@ -51,12 +53,7 @@ export function ModelBrowser({ summary }: ModelBrowserProps) {
         ) : (
           <ol className="storey-list" aria-label="Building storeys in file order">
             {summary.storeys.map((storey) => (
-              <li key={storey.global_id ?? `#${storey.express_id}`}>
-                <span className="storey-list__name">{storey.name ?? storey.ifc_type}</span>
-                <code className="storey-list__id">
-                  {storey.global_id ?? `#${storey.express_id}`}
-                </code>
-              </li>
+              <StoreyRow key={`${summary.model_hash}:${storey.express_id}`} storey={storey} />
             ))}
           </ol>
         )}
@@ -92,6 +89,54 @@ export function ModelBrowser({ summary }: ModelBrowserProps) {
         iteration; the summary above is the only hierarchy the API exposes.
       </p>
     </aside>
+  );
+}
+
+function StoreyRow({ storey }: { readonly storey: ElementRef }) {
+  const [expanded, setExpanded] = useState(false);
+  const detailsId = useId();
+  const hasName = storey.name !== null && storey.name.trim().length > 0;
+  const name = hasName ? storey.name : 'Unnamed storey';
+  const hasGlobalId = storey.global_id !== null && storey.global_id.trim().length > 0;
+
+  return (
+    <li>
+      <div className="storey-list__row">
+        <span className="storey-list__name" title={hasName ? storey.name : undefined}>
+          {name}
+        </span>
+        <button
+          type="button"
+          className="storey-list__toggle"
+          aria-label={`Details for ${name}, STEP #${storey.express_id}`}
+          aria-expanded={expanded}
+          aria-controls={detailsId}
+          onClick={() => setExpanded((current) => !current)}
+        >
+          Details
+        </button>
+      </div>
+      <dl id={detailsId} className="storey-list__details" hidden={!expanded}>
+        <div>
+          <dt>Original name</dt>
+          <dd>{hasName ? storey.name : 'Not provided or blank'}</dd>
+        </div>
+        <div>
+          <dt>IFC class</dt>
+          <dd>{storey.ifc_type}</dd>
+        </div>
+        <div>
+          <dt>GlobalId</dt>
+          <dd>{hasGlobalId ? <code>{storey.global_id}</code> : 'Not available'}</dd>
+        </div>
+        <div>
+          <dt>STEP Express ID</dt>
+          <dd>
+            <code>#{storey.express_id}</code>
+          </dd>
+        </div>
+      </dl>
+    </li>
   );
 }
 
