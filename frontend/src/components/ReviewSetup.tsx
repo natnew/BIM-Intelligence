@@ -178,30 +178,41 @@ export function ReviewSetup({ session, onOpenWorkspace, onStartOver }: ReviewSet
             </p>
           )}
           {modelStep.kind === 'ready' && modelStep.summary && (
-            <dl className="setup-summary" aria-label="Uploaded model summary">
-              <div>
-                <dt>File</dt>
-                <dd>{modelStep.filename}</dd>
-              </div>
-              <div>
-                <dt>Project</dt>
-                <dd>{modelStep.summary.project_name ?? 'Unnamed in file'}</dd>
-              </div>
-              <div>
-                <dt>Schema</dt>
-                <dd>{modelStep.summary.ifc_schema}</dd>
-              </div>
-              <div>
-                <dt>Storeys</dt>
-                <dd>{modelStep.summary.storeys.length}</dd>
-              </div>
-              <div>
-                <dt>Model version</dt>
-                <dd>
-                  <code>{modelStep.summary.model_hash.slice(0, 12)}</code>
-                </dd>
-              </div>
-            </dl>
+            <>
+              <p role="status" className="notice setup-confirmation">
+                <strong>{modelStep.filename}</strong> was stored byte-for-byte and indexed as model
+                version <code>{modelStep.summary.model_hash.slice(0, 12)}</code>. The workspace will
+                show this version.
+              </p>
+              <dl className="setup-summary" aria-label="Uploaded model summary">
+                <div>
+                  <dt>File</dt>
+                  <dd>{modelStep.filename}</dd>
+                </div>
+                <div>
+                  <dt>Project</dt>
+                  <dd>{modelStep.summary.project_name ?? 'Unnamed in file'}</dd>
+                </div>
+                <div>
+                  <dt>Schema</dt>
+                  <dd>{modelStep.summary.ifc_schema}</dd>
+                </div>
+                <div>
+                  <dt>Storeys</dt>
+                  <dd>{modelStep.summary.storeys.length}</dd>
+                </div>
+                <div>
+                  <dt>Indexed instances</dt>
+                  <dd>{countInstances(modelStep.summary)}</dd>
+                </div>
+                <div>
+                  <dt>Model version</dt>
+                  <dd>
+                    <code>{modelStep.summary.model_hash.slice(0, 12)}</code>
+                  </dd>
+                </div>
+              </dl>
+            </>
           )}
         </li>
 
@@ -218,10 +229,11 @@ export function ReviewSetup({ session, onOpenWorkspace, onStartOver }: ReviewSet
             </span>
           </div>
           <p className="setup-step__body">
-            <code>.ids</code> specifications become confirmed, executable requirements.{' '}
-            <code>.md</code> and <code>.txt</code> briefs are stored as untrusted source text only;
-            they create no requirements until separately interpreted and confirmed, which this
-            interface does not yet offer.
+            An <abbr title="Information Delivery Specification (buildingSMART)">IDS</abbr>{' '}
+            <code>.ids</code> specification becomes confirmed, <em>executable</em> requirements:
+            checks the deterministic review can run. <code>.md</code> and <code>.txt</code> briefs
+            are stored as untrusted source text only; they create no requirements until separately
+            interpreted and confirmed, which this interface does not yet offer.
           </p>
           <label className="file-field">
             <span className="file-field__label">Add requirements document</span>
@@ -246,18 +258,41 @@ export function ReviewSetup({ session, onOpenWorkspace, onStartOver }: ReviewSet
             <ul className="document-list" aria-label="Imported requirements documents">
               {documents.map((item) => (
                 <li key={`${item.result.sha256}-${item.filename}`} className="document-list__item">
-                  <div>
-                    <strong>{item.filename}</strong>
-                    <span className="document-list__meta">
-                      {' '}
-                      · {item.result.kind.toUpperCase()} · {item.result.title}
+                  <div className="document-list__summary">
+                    <div>
+                      <strong>{item.filename}</strong>
+                      <span className="document-list__meta">
+                        {' '}
+                        · {item.result.kind.toUpperCase()} · {item.result.title}
+                      </span>
+                    </div>
+                    <span className="document-list__count">
+                      {item.result.kind === 'ids'
+                        ? `${item.result.requirements.filter(isExecutableRequirement).length} executable requirement${item.result.requirements.filter(isExecutableRequirement).length === 1 ? '' : 's'}`
+                        : 'Source text stored · no requirements created'}
                     </span>
                   </div>
-                  <span className="document-list__count">
-                    {item.result.kind === 'ids'
-                      ? `${item.result.requirements.filter(isExecutableRequirement).length} executable requirement${item.result.requirements.length === 1 ? '' : 's'}`
-                      : 'Source text stored · no requirements created'}
-                  </span>
+                  {item.result.requirements.length > 0 && (
+                    <details className="document-list__requirements">
+                      <summary>
+                        Requirements in this document ({item.result.requirements.length})
+                      </summary>
+                      <ul aria-label={`Requirements imported from ${item.filename}`}>
+                        {item.result.requirements.map((requirement) => (
+                          <li key={requirement.id}>
+                            <code>{requirement.id}</code> {requirement.title}
+                            <span className="document-list__meta">
+                              {' '}
+                              ·{' '}
+                              {isExecutableRequirement(requirement)
+                                ? 'executable'
+                                : requirement.status}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
                 </li>
               ))}
             </ul>
@@ -305,6 +340,10 @@ function ModelStatusPill({ step }: { readonly step: ModelStep }) {
     case 'error':
       return <span className="status-pill status-pill--error">Rejected</span>;
   }
+}
+
+function countInstances(summary: ModelSummary): number {
+  return Object.values(summary.counts).reduce<number>((total, count) => total + (count ?? 0), 0);
 }
 
 function messageForError(error: unknown): string {

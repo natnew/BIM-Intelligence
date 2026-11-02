@@ -4,6 +4,26 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### FINAL-UI-001 / T-5, T-7 / M3 — Meta-assisted review interface and Project Home completion (2 November 2026)
+
+- Connect the existing T-5 API client to the Concept C review workspace: an optional review
+  objective dispatches to `startObjectiveReview` (blank keeps the standard deterministic review),
+  the coverage panel shows the server's actual `plan_source` with an explicit *objective was not
+  used* sentence, and an explicit **Explain finding** action renders `source`, `grounding_status`,
+  `fallback_reason`, `model` and evidence citations separately from deterministic evidence. No
+  explanation is requested automatically; results are cached per session/run/version/finding and
+  aborted on selection change. Replay is labelled as recorded, never live.
+- Complete Project Home: subtitle *AEC Model Review*, browser-local recent sessions (session and
+  run identifiers only, revalidated through the session API), clearer upload confirmation,
+  per-document requirement listing and IDS terminology. The one-click synthetic sample was not
+  implemented because it needs files outside the approved paths; the page says so.
+- Frontend tests grow from 91 to 109; lint, format, typecheck, generated-types check and build
+  pass; focused backend API/scenario tests pass (46). Browser verification with `LLM_MODE=off`
+  is recorded in [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#final-ui-001--meta-assisted-review-integration-project-home-completion)
+  and [EVALUATION.md](./docs/EVALUATION.md#final-ui-001-frontend-integration-verification--2-november-2026).
+  Branch `FINAL-UI-001`, submitted for owner review as a pull request; T-5, T-7 and M3
+  remain in progress.
+
 ### RELEASE-001 / T-7, T-8 / M3, M4 — Synthetic release baseline (1 November 2026)
 
 - Record UI-004A's merge into `main` and verify the existing synthetic single-IFC/IDS workflow in
@@ -62,7 +82,7 @@ Significant implementation, architectural and delivery-framework changes are rec
 - Add typed frontend API functions `startObjectiveReview` and `explainFinding` with Vitest
   coverage, including rejection of missing, empty, unknown and non-string template fallback
   reasons. No UI component or viewer file changes. Record the frontend integration contract in
-  [UI_SPEC.md](./docs/UI_SPEC.md#t-5-meta-assisted-review--frontend-integration-contract-pending).
+  [UI_SPEC.md](./docs/UI_SPEC.md#t-5-meta-assisted-review--frontend-integration-contract).
 - Add a shared offline SDK stub (`tests/support/llm_stub.py`), API tests for explanation provenance
   and fallbacks, and a guard that the default configuration opens no non-loopback connection.
 - Fix a test-harness defect that made the named live smoke test unreachable: the autouse

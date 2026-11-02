@@ -17,13 +17,188 @@ type StartState =
   | { readonly kind: 'error'; readonly message: string }
   | { readonly kind: 'setup'; readonly session: Session };
 
+/**
+ * One recently opened session as remembered by this browser. Only server identifiers and a
+ * timestamp are stored: never model bytes, file names, project names or any model metadata.
+ */
+interface RecentSession {
+  readonly sessionId: string;
+  readonly runId: string | null;
+  readonly openedAt: string;
+}
+
+const RECENT_SESSIONS_STORAGE_KEY = 'bimi.recent-sessions.v1';
+const MAX_RECENT_SESSIONS = 8;
+const MAX_IDENTIFIER_LENGTH = 128;
+
+function storage(): Storage | null {
+  try {
+    return typeof window === 'undefined' ? null : window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function isIdentifier(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && value.length <= MAX_IDENTIFIER_LENGTH;
+}
+
+/** Reads the remembered sessions, discarding anything malformed rather than trusting it. */
+function readRecentSessions(): RecentSession[] {
+  const store = storage();
+  if (!store) {
+    return [];
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(store.getItem(RECENT_SESSIONS_STORAGE_KEY) ?? '[]');
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+  const seen = new Set<string>();
+  const entries: RecentSession[] = [];
+  for (const item of parsed) {
+    if (typeof item !== 'object' || item === null) {
+      continue;
+    }
+    const candidate = item as Record<string, unknown>;
+    if (!isIdentifier(candidate.sessionId) || seen.has(candidate.sessionId)) {
+      continue;
+    }
+    if (candidate.runId !== null && !isIdentifier(candidate.runId)) {
+      continue;
+    }
+    if (typeof candidate.openedAt !== 'string') {
+      continue;
+    }
+    seen.add(candidate.sessionId);
+    entries.push({
+      sessionId: candidate.sessionId,
+      runId: candidate.runId,
+      openedAt: candidate.openedAt,
+    });
+  }
+  return entries.slice(0, MAX_RECENT_SESSIONS);
+}
+
+function writeRecentSessions(entries: readonly RecentSession[]): void {
+  const store = storage();
+  if (!store) {
+    return;
+  }
+  try {
+    store.setItem(
+      RECENT_SESSIONS_STORAGE_KEY,
+      JSON.stringify(entries.slice(0, MAX_RECENT_SESSIONS)),
+    );
+  } catch {
+    // Storage may be full or disabled; recent sessions are a convenience, not a record.
+  }
+}
+
+/**
+ * Moves the session to the front, keeping a known run id when the new entry has none. Exported
+ * for the workspace, which records the session and its latest run as they are opened; the
+ * FINAL-UI-001 path allow-list keeps this helper beside the component that reads it.
+ */
+// oxlint-disable-next-line react/only-export-components
+export function rememberRecentSession(sessionId: string, runId: string | null): void {
+  if (!isIdentifier(sessionId) || (runId !== null && !isIdentifier(runId))) {
+    return;
+  }
+  const existing = readRecentSessions();
+  const previous = existing.find((entry) => entry.sessionId === sessionId);
+  const entry: RecentSession = {
+    sessionId,
+    runId: runId ?? previous?.runId ?? null,
+    openedAt: new Date().toISOString(),
+  };
+  writeRecentSessions([entry, ...existing.filter((item) => item.sessionId !== sessionId)]);
+}
+
+function forgetRecentSession(sessionId: string): void {
+  writeRecentSessions(readRecentSessions().filter((entry) => entry.sessionId !== sessionId));
+}
+
+function clearRecentSessions(): void {
+  writeRecentSessions([]);
+}
+
+type RecentCheck =
+  | { readonly kind: 'checking' }
+  | { readonly kind: 'available'; readonly session: Session }
+  | { readonly kind: 'missing' }
+  | { readonly kind: 'error'; readonly message: string };
+
+interface RecentEntry extends RecentSession {
+  readonly check: RecentCheck;
+}
+
+function withCheck(entries: RecentEntry[], sessionId: string, check: RecentCheck): RecentEntry[] {
+  return entries.map((entry) => (entry.sessionId === sessionId ? { ...entry, check } : entry));
+}
+
 export function ProjectHome({ onOpenWorkspace }: ProjectHomeProps) {
   const [state, setState] = useState<StartState>({ kind: 'idle' });
   const [existingSessionId, setExistingSessionId] = useState('');
   const [existingRunId, setExistingRunId] = useState('');
+  const [recents, setRecents] = useState<RecentEntry[]>(() =>
+    readRecentSessions().map((entry) => ({ ...entry, check: { kind: 'checking' } })),
+  );
   const requestRef = useRef<AbortController | null>(null);
 
   useEffect(() => () => requestRef.current?.abort(), []);
+
+  // Revalidate each remembered session against the server; the stored list is never trusted as
+  // proof that a session still exists.
+  useEffect(() => {
+    const controller = new AbortController();
+    for (const entry of readRecentSessions()) {
+      void fetchSession(entry.sessionId, controller.signal)
+        .then((session) => {
+          if (!controller.signal.aborted) {
+            setRecents((previous) =>
+              withCheck(previous, entry.sessionId, { kind: 'available', session }),
+            );
+          }
+        })
+        .catch((caught: unknown) => {
+          if (controller.signal.aborted) {
+            return;
+          }
+          const check: RecentCheck =
+            caught instanceof ApiError && caught.status === 404
+              ? { kind: 'missing' }
+              : { kind: 'error', message: messageForError(caught) };
+          setRecents((previous) => withCheck(previous, entry.sessionId, check));
+        });
+    }
+    return () => controller.abort();
+  }, []);
+
+  function reopenRecent(entry: RecentEntry) {
+    if (entry.check.kind !== 'available') {
+      return;
+    }
+    if (entry.check.session.status === 'model_ready') {
+      onOpenWorkspace(entry.sessionId, entry.runId);
+    } else {
+      setState({ kind: 'setup', session: entry.check.session });
+    }
+  }
+
+  function forgetRecent(sessionId: string) {
+    forgetRecentSession(sessionId);
+    setRecents((previous) => previous.filter((entry) => entry.sessionId !== sessionId));
+  }
+
+  function clearRecents() {
+    clearRecentSessions();
+    setRecents([]);
+  }
 
   const busy = state.kind === 'creating' || state.kind === 'opening';
 
@@ -97,7 +272,8 @@ export function ProjectHome({ onOpenWorkspace }: ProjectHomeProps) {
           <p className="hero__lede">
             Upload an IFC model and its requirement documents, run a deterministic review, and
             inspect each finding against the element it concerns. Findings come from IDS and
-            registered native rules only; AI explanation is never presented as evidence.
+            registered native rules only. An optional review objective can narrow the checks, and an
+            AI explanation can be requested per finding; neither is ever presented as evidence.
           </p>
         </div>
         <aside className="hero__aside" aria-label="Backend status">
@@ -112,6 +288,8 @@ export function ProjectHome({ onOpenWorkspace }: ProjectHomeProps) {
           <p className="routes__lede">
             Accepted inputs: <code>.ifc</code> models and <code>.ids</code>, <code>.md</code> or{' '}
             <code>.txt</code> requirement documents. Native RVT, NWD and PDF files are not ingested.
+            An <abbr title="Information Delivery Specification (buildingSMART)">IDS</abbr> file is
+            the machine-readable requirements format that produces executable checks.
           </p>
         </div>
 
@@ -173,14 +351,66 @@ export function ProjectHome({ onOpenWorkspace }: ProjectHomeProps) {
             </form>
           </article>
 
-          <article className="route-card route-card--muted" aria-labelledby="catalogue-heading">
-            <span className="route-card__tag">Not available</span>
-            <h3 id="catalogue-heading">Recent sessions and sample projects</h3>
-            <p>
-              The backend exposes individual sessions only. There is no session history endpoint and
-              no curated sample catalogue, so nothing is listed here rather than showing invented
-              projects.
+          <article className="route-card" aria-labelledby="recent-heading">
+            <span className="route-card__tag">This browser</span>
+            <h3 id="recent-heading">Recent sessions</h3>
+            {recents.length === 0 ? (
+              <p>
+                Sessions you open in this browser appear here for quick continuation. Only the
+                session and run identifiers are stored locally; model files and project data stay on
+                the server.
+              </p>
+            ) : (
+              <ul className="recent-list" aria-label="Recently opened sessions">
+                {recents.map((entry) => (
+                  <li key={entry.sessionId} className="recent-list__item">
+                    <div className="recent-list__identity">
+                      <code title={entry.sessionId}>{entry.sessionId.slice(0, 8)}</code>
+                      {entry.runId && (
+                        <span className="recent-list__meta">
+                          {' '}
+                          · run <code title={entry.runId}>{entry.runId.slice(0, 8)}</code>
+                        </span>
+                      )}
+                      <span className="recent-list__meta">
+                        {' '}
+                        · opened {formatOpenedAt(entry.openedAt)}
+                      </span>
+                    </div>
+                    <RecentCheckPill check={entry.check} />
+                    <div className="recent-list__actions">
+                      <button
+                        type="button"
+                        className="button"
+                        disabled={busy || entry.check.kind !== 'available'}
+                        onClick={() => reopenRecent(entry)}
+                        aria-label={`Reopen session ${entry.sessionId.slice(0, 8)}`}
+                      >
+                        Reopen
+                      </button>
+                      <button
+                        type="button"
+                        className="button button--ghost"
+                        onClick={() => forgetRecent(entry.sessionId)}
+                        aria-label={`Forget session ${entry.sessionId.slice(0, 8)}`}
+                      >
+                        Forget
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="recent-list__note">
+              A synthetic sample project is not yet available from this page: the fixtures are not
+              served to the browser. Use New review with <code>minimal.ifc</code> and{' '}
+              <code>minimal.ids</code> from <code>tests/fixtures</code>.
             </p>
+            {recents.length > 0 && (
+              <button type="button" className="button button--ghost" onClick={clearRecents}>
+                Clear recent sessions
+              </button>
+            )}
           </article>
         </div>
       </section>
@@ -188,11 +418,52 @@ export function ProjectHome({ onOpenWorkspace }: ProjectHomeProps) {
       <footer className="home__footer">
         <p>
           IFC files remain read-only. The viewer uses local WASM and worker assets; findings are
-          produced deterministically by IfcTester and registered native rules.
+          produced deterministically by IfcTester and registered native rules. AI explanations, when
+          requested, are interpretations labelled separately from findings.
         </p>
       </footer>
     </main>
   );
+}
+
+function RecentCheckPill({ check }: { readonly check: RecentCheck }) {
+  switch (check.kind) {
+    case 'checking':
+      return (
+        <span className="status-pill status-pill--active" role="status">
+          Checking
+        </span>
+      );
+    case 'available':
+      return (
+        <span className="status-pill status-pill--done">
+          {check.session.status === 'model_ready' ? 'Model ready' : 'No model yet'}
+        </span>
+      );
+    case 'missing':
+      return (
+        <span
+          className="status-pill status-pill--error"
+          title="The server no longer has this session"
+        >
+          Not on server
+        </span>
+      );
+    case 'error':
+      return (
+        <span className="status-pill status-pill--error" title={check.message}>
+          Unavailable
+        </span>
+      );
+  }
+}
+
+function formatOpenedAt(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'unknown time';
+  }
+  return date.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 function messageForError(error: unknown): string {

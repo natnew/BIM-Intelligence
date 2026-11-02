@@ -1,9 +1,14 @@
+import type { LLMMode } from '../api/client';
 import type { CheckResult, ReviewRun } from '../api/generated/types';
 
 interface ReviewCoverageProps {
   readonly run: ReviewRun;
   readonly findingCount: number;
   readonly activeModelHash: string;
+  /** The objective text the user submitted for this run; `null` when none was sent or unknown. */
+  readonly submittedObjective: string | null;
+  /** Current backend LLM mode from `/health`; it is not a per-run provenance record. */
+  readonly llmMode: LLMMode | null;
 }
 
 const STATUS_LABEL: Record<ReviewRun['status'], string> = {
@@ -15,7 +20,23 @@ const STATUS_LABEL: Record<ReviewRun['status'], string> = {
   interrupted: 'Interrupted',
 };
 
-export function ReviewCoverage({ run, findingCount, activeModelHash }: ReviewCoverageProps) {
+/** The one plan label the interface shows; `llm` never implies a live request occurred. */
+function planSourceLabel(planSource: ReviewRun['plan_source'], llmMode: LLMMode | null): string {
+  if (planSource === 'default') {
+    return 'Deterministic default';
+  }
+  return llmMode === 'replay'
+    ? 'Recorded AI-selected plan (Replay; no live call)'
+    : 'AI-selected plan';
+}
+
+export function ReviewCoverage({
+  run,
+  findingCount,
+  activeModelHash,
+  submittedObjective,
+  llmMode,
+}: ReviewCoverageProps) {
   const totals = countByStatus(run.check_results);
   const executed = totals.passed + totals.failed;
   const notRun = totals.error + totals.skipped + totals.not_applicable;
@@ -63,9 +84,30 @@ export function ReviewCoverage({ run, findingCount, activeModelHash }: ReviewCov
         </div>
         <div>
           <dt>Plan source</dt>
-          <dd>{run.plan_source === 'default' ? 'Deterministic default' : 'AI-selected plan'}</dd>
+          <dd>
+            <span data-testid="plan-source">{planSourceLabel(run.plan_source, llmMode)}</span>
+          </dd>
         </div>
       </dl>
+
+      {submittedObjective !== null && (
+        <div className="coverage__objective" data-testid="coverage-objective">
+          <p className="coverage__objective-label">Review objective submitted</p>
+          <blockquote className="source-quote">“{submittedObjective}”</blockquote>
+          {run.plan_source === 'default' && (
+            <p className="notice" role="status">
+              The objective was not used; the deterministic default plan ran. The cause may be AI
+              off, a budget or call limit, a failed request or a rejected plan.
+            </p>
+          )}
+        </div>
+      )}
+      {run.plan_source === 'llm' && (
+        <p className="notice" role="status">
+          A model-produced plan was accepted after filtering against the confirmed checks. Checks it
+          did not select are recorded as skipped: narrowed scope, never a pass.
+        </p>
+      )}
 
       <p className="coverage__note">
         Coverage and findings are separate. Zero findings or an incomplete run is not a compliance
