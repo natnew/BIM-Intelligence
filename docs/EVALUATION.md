@@ -315,6 +315,69 @@ must report schema/grounding outcomes and any cap-related failure. See [R-API-06
 **Do not repeat the smoke test under the current request.** Recording this evidence authorises no
 additional live call. Further live workflow evaluation requires separate explicit approval.
 
+### RELEASE-001 offline verification — 1 November 2026
+
+**Scope and baseline:** Windows, Python 3.12.12, Node.js 24.19.0, npm 11.17.0, IfcOpenShell
+0.9.0.post1 and IfcTester 0.9.0. The clean checked-out implementation was
+`484b71c7988295159083121fab77e1713c825903`; its tree matched merged `main`
+`cf06328c874258efe8a49d0afa291d9aef278928`. The following results precede this documentation
+reconciliation; they are not a release commit. Live tests were explicitly excluded.
+
+The browser backend bound to `127.0.0.1:8019` with isolated ignored storage,
+`LLM_MODE=off`, `ALLOW_LIVE_LLM=false` and no configured API key. The configured default model was
+`muse-spark-1.3`, but it was not invoked. The development and production-preview frontends used
+local ports 5191 and 5192 respectively. The permitted demonstration input was the committed
+synthetic fixture; no private BIM inputs or feedback were inspected.
+
+An initial offline server inherited the repository environment rather than the intended isolated
+environment. It was stopped; the reported browser evidence uses the credential-free restart.
+`LLM_MODE=off` was enforced throughout and no model request was made.
+
+| Check | Exact command and result |
+|---|---|
+| Backend lint / format | `.\.venv\Scripts\python.exe -m ruff check .` — passed; `.\.venv\Scripts\python.exe -m ruff format --check .` — passed, 160 files already formatted. |
+| Backend types | `.\.venv\Scripts\python.exe -m mypy` — passed, 131 source files; `.\.venv\Scripts\python.exe -m mypy --strict backend\bim_intelligence\schemas backend\bim_intelligence\validation backend\bim_intelligence\orchestration` — passed, 23 files, with an unused-configuration note. |
+| Backend regression | `.\.venv\Scripts\python.exe -m pytest -m "not live"` — 616 passed, one live test deselected, one upstream Starlette/httpx deprecation warning. The FED-001 feasibility tests are included. |
+| Schema parity | `.\.venv\Scripts\python.exe scripts\export_schemas.py --check` — passed. |
+| Frontend | From `frontend/`: `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm run types:check`, `npm run test` and `npm run build` — all passed; 8 test files / 91 tests. The build reported missing `TSL`/`NodeMaterial` exports in dependencies and chunks over 500 kB. |
+| Secret scanning | `.\.venv\Scripts\python.exe scripts\secret_scan.py --history` — no leaks detected across 96 scanned commits; `--staged` — passed with an empty index. A scan is not proof that all secrets or private information have been identified. |
+
+**Documentation checks:** `git --no-pager diff --check` passed. A local check verified 31 added
+relative links/anchors and ten contiguous storyboard shots totalling 180 seconds. Its first timing
+attempt failed because the PowerShell pipe changed the Unicode separator; a Unicode-safe rerun
+passed. The changed documentation diff was scanned with
+`gitleaks stdin --redact --no-banner --config .gitleaks.toml`; no leaks were detected.
+
+**Synthetic benchmark:** At 20:01 UTC, the offline runner generated its inputs and reports in a
+fresh ignored `data/release-001-verification/` subtree, rather than overwriting the existing
+benchmark evidence. It measured 15 positive defects and seven controls: TP/FP/FN **15/0/0**,
+precision/recall/F1 **1.000/1.000/1.000**, zero clean/control false positives, byte-identical
+repeat findings and 14/14 IfcTester IDS entity agreement. Eleven checks were evaluated on each
+model, with no errors or skips and one expected not-applicable control per model. The offline Fake/Replay
+contract checks passed 9/9; the runner recorded zero network calls, live calls and spend. These
+results measure only the declared synthetic IFC4 cases, not real-project accuracy or live AI
+quality.
+
+The command below was run from the repository root with `$runtime` set to the fresh ignored
+verification directory and `TEMP`/`TMP` set to that directory. Use a new empty directory when
+reproducing so earlier evidence is not overwritten.
+
+```powershell
+.\.venv\Scripts\python.exe -c "import sys; sys.path.insert(0, 'tests'); from evaluation.run_eval import main; raise SystemExit(main())" --benchmark-dir (Join-Path $runtime 'benchmark') --results-dir (Join-Path $runtime 'results')
+```
+
+**Browser and API evidence:** The synthetic minimal fixture was uploaded and reviewed with a
+credential-free, offline backend. Real browser interactions at 1920 × 1080, 1440 × 900 and
+390 × 844 exercised the paths detailed in
+[UI_CHANGELOG.md](./UI_CHANGELOG.md#release-001--synthetic-baseline-verification). A direct
+objective request returned `plan_source=default`; a direct explanation request returned
+`source=deterministic_template`, `grounding_status=fallback`, `fallback_reason=ai_disabled` and
+no model. Neither is a live or replayed Meta response. No new live call was made.
+
+**Hosted CI:** [main run 41343324279](https://github.com/natnew/BIM-Intelligence/actions/runs/41343324279)
+at `cf06328c874258efe8a49d0afa291d9aef278928` ended in `startup_failure` with no jobs. Local
+success does not establish a successful hosted run.
+
 ## 9. Known limitations and gaps
 
 - This is one small synthetic IFC4 model. Precision/recall do not generalise to other projects,

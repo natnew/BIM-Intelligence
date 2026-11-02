@@ -8,6 +8,11 @@ proposed.
 UI-003 production baseline with the viewer corrections. The UI-002 proposal in §17 is a dated
 pre-implementation snapshot; its former statements that Project Home and upload were absent are
 not current production status.
+**Later correction:** UI-004A merged into `main` through PR #28 at
+`cf06328c874258efe8a49d0afa291d9aef278928`. The requested final UI-001 objective, explanation,
+browser-local history and one-click sample remain unimplemented; the implementation approval
+packet required by the constitution is incomplete. See §21 and
+[UI_CHANGELOG.md](./UI_CHANGELOG.md#release-001--synthetic-baseline-verification).
 The detailed implementation and browser evidence in §§18 and 20 and `docs/UI_CHANGELOG.md` remain
 the evidence record.
 **Scope:** Owner-directed interface refinement under T-7, contributing to M3.
@@ -606,6 +611,8 @@ recorded in §20 and the append-only UI changelog.
 This owner-authorised prototype revision expands the visual design, not production functionality.
 The Project Home and Review Workspace screens are static synthetic examples. Candidate functional
 requirements below are proposals, not adopted `FR-*` requirements or approval to implement them.
+The capability column is the historical UI-002 baseline; UI-003, UI-004A and FED-001 later added
+the production and feasibility evidence described in §§18, 20 and 21.
 
 ### Proposed interaction contract
 
@@ -867,13 +874,14 @@ preparation instructions and genuinely redistributable small assets. Private BIM
 evaluation materials and unapproved third-party assets remain in the owner-managed ignored
 `local-private/` layout. Duplex Apartment is the preferred external candidate only after
 compatibility and rights checks. The safe fallback is a one-click synthetic single-model review;
-it must not be presented as a clash demonstration.
+that product route is not yet implemented. Until it is verified, use the manual synthetic
+single-model workflow; neither path is a clash demonstration.
 
 ## 20. UI-004A — Viewer camera, selection and responsive-state corrections
 
 **Status:** Originally implemented and browser-verified on an isolated branch; commit `f55a5f5`
-merged via PR #25 into `chore/final-day-decisions-implementation`, not `main`. The existing work is
-being integrated on `feature/ui-004a-main-integration` from `main` at `a13857c`, pending review.
+merged via PR #25 into `chore/final-day-decisions-implementation`. It was subsequently integrated
+through PR #28 into `main` at `cf06328c874258efe8a49d0afa291d9aef278928`.
 This is a bounded viewer correction, not approval for a wider redesign and not completion of T-7/M3.
 Detailed interaction evidence and validation commands are recorded in
 [UI_CHANGELOG.md](./UI_CHANGELOG.md#ui-004a--professional-3d-viewer-and-navigation-corrections).
@@ -907,3 +915,23 @@ model-tree or category visibility controls, a new accessibility claim, API/schem
 backend review changes, native-rule configuration through the UI, or coordination behaviour.
 Keyboard activation of the available camera buttons was verified; it is not a full accessibility
 audit.
+
+## 21. RELEASE-001 — current verified baseline, not final UI-001
+
+The owner requested a bounded functional integration using the existing Concept C shell and T-5 API
+functions. No redesign or additional paid call is authorised by that request. The separately
+required implementation packet still needs an approved iteration branch, exact path allow-list,
+revision budget, evidence arrangements and rollback. No application changes were made as part of
+this baseline verification.
+
+On the merged UI-004A implementation, a fresh synthetic IFC/IDS review produced the two expected
+findings and exercised the viewer at actual CSS viewport sizes of 1920 × 1080, 1440 × 900 and
+390 × 844. The default plan source is visible. The objective field, explanation request, recent
+sessions and one-click sample are absent; reopening by explicit session/run ID works. Direct
+offline API checks returned `plan_source=default` and an `ai_disabled` deterministic explanation
+template. Those API results are not a connected browser AI workflow.
+
+The detailed checks and limitations are recorded in
+[UI_CHANGELOG.md](./UI_CHANGELOG.md#release-001--synthetic-baseline-verification). T-7/M3 remain
+in progress; a recorded browser walkthrough is not the missing benchmark Playwright smoke test or
+an accessibility audit.

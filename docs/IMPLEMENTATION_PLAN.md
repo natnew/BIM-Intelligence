@@ -201,8 +201,13 @@ No milestone is complete solely because its contributing task labels exist. Orig
 - **Evidence:** [T-3](#t-3--interactive-3d-bim-viewer) and [T-4](#t-4--end-to-end-deterministic-review-workflow) record verified interface slices; [UI_SPEC.md](./UI_SPEC.md) defines the owner-directed governance framework. The complete integrated workflow, report and demo evidence remain outstanding.
 - **Framework extension (30 October 2026):** constitution-driven, bounded concept/prototype evaluation and separate implementation approval are documented; optional Copilot guards are proposed, not installed. Reference metadata checks located an ignored singular-path library; image/provider permissions remain unverified. No UI-001 or visual redesign starts here. T-7/M3 status, dependencies, exit criteria and delivery dates are unchanged.
 - **UI-002 Revision 2 (30 October 2026):** owner-approved visual direction retains Concept C v2's palette, adds Project Home and specifies a desktop-first review layout. An isolated synthetic prototype and design acceptance criteria are recorded under `local-private/ui-prototypes/ui-002/` and `docs/UI_SPEC.md` §17. Project names/history, sample-project loading, category visibility, camera controls, geometric clashes and frontend upload/session workflows remain proposed; no production files changed, no task/milestone status or schedule changed, and T-7/M3 remain in progress.
-- **UI-003 (30 October 2026):** owner-approved production implementation of the Concept C v2 direction on branch `feature/ui-003-production-integration` (baseline `a3e701f`). The frontend now provides Project Home (session creation, IFC and requirements upload via existing endpoints, open existing session) and a three-column review workspace with real `ModelSummary`, `ReviewRun`, `Finding`, `Requirement` and `ElementRecord` data, explicit review/coverage/mismatch/error states and client-side finding filters. Evidence: 54 frontend tests pass; a live browser walkthrough on `tests/fixtures/minimal.ifc` + `minimal.ids` (create → upload → render → orbit/pan/zoom → run review → finding ↔ element → return home) with 1920×1080, 1440×900 and 390×844 captures is recorded in [UI_CHANGELOG.md](./UI_CHANGELOG.md) §UI-003 and [UI_SPEC.md](./UI_SPEC.md) §18. PR #18 merged into `main` on 30 October 2026. This contributes to the M3 browser-walkthrough criterion but does not satisfy M3: reporting with provenance, AI explanation surface, viewer camera/visibility controls, the Playwright smoke test and demo rehearsal remain outstanding. Backend, viewer modules, schemas, fixtures and dependencies were unchanged by UI-003; T-7/M3 remain in progress.
+- **UI-003 (30 October 2026):** owner-approved production implementation of the Concept C v2 direction on branch `feature/ui-003-production-integration` (baseline `a3e701f`). The frontend now provides Project Home (session creation, IFC and requirements upload via existing endpoints, open existing session) and a three-column review workspace with real `ModelSummary`, `ReviewRun`, `Finding`, `Requirement` and `ElementRecord` data, explicit review/coverage/mismatch/error states and client-side finding filters. Evidence: 54 frontend tests pass; a live browser walkthrough on `tests/fixtures/minimal.ifc` + `minimal.ids` (create → upload → render → orbit/pan/zoom → run review → finding ↔ element → return home) with 1920×1080, 1440×900 and 390×844 captures is recorded in [UI_CHANGELOG.md](./UI_CHANGELOG.md) §UI-003 and [UI_SPEC.md](./UI_SPEC.md) §18. PR #18 merged into `main` on 30 October 2026. At UI-003 completion, reporting, the AI surface, camera/visibility controls, the Playwright smoke test and demo rehearsal remained outstanding; UI-004A subsequently added three camera actions. Backend, viewer modules, schemas, fixtures and dependencies were unchanged by UI-003; T-7/M3 remain in progress.
 - **UI-004A (1 November 2026):** owner-authorised, isolated viewer correction on `feature/ui-004a-viewer-corrections`. The live browser verified distinct Fit model / Reset view / Focus selected actions and recovery after extreme zoom/pan, GlobalId-based selection/highlighting and clearing, loading/failure states, keyboard activation, responsive layouts and independent evidence/findings scrolling. Full frontend lint, formatting, typecheck, generated-types check, tests (**8 files, 67 tests**) and build passed; screenshots and exact commands are recorded in [UI_CHANGELOG.md](./UI_CHANGELOG.md#ui-004a--professional-3d-viewer-and-navigation-corrections). The UI review returned two IDS findings while the deterministic scenario includes an additional explicitly confirmed native check; the check sets differ, and backend review logic was not changed. This contributes viewer corrections to T-3/M0 and T-7/M3 but does not complete T-7/M3. The original evidence predates [PR #25](https://github.com/natnew/BIM-Intelligence/pull/25), which merged into `chore/final-day-decisions-implementation`, not `main`; the integration branch brings that existing work onto the later `main` baseline.
+- **UI-004A merged (1 November 2026):** [PR #28](https://github.com/natnew/BIM-Intelligence/pull/28)
+  merged at `cf06328c874258efe8a49d0afa291d9aef278928`. The subsequent release-baseline browser
+  checks are recorded in [UI_CHANGELOG.md](./UI_CHANGELOG.md#release-001--synthetic-baseline-verification).
+  The separately requested final UI-001 functional work is not implemented; its required
+  implementation approval packet is incomplete. T-7 and M3 remain in progress.
 
 ### T-8 — Final Hardening, Documentation and Submission
 
@@ -218,6 +223,14 @@ No milestone is complete solely because its contributing task labels exist. Orig
   records dependency metadata, web-ifc build assets and unresolved licensing/provenance checks.
   This audit does not complete T-8: final distribution-specific attribution, remaining hardening,
   demo and submission evidence are still outstanding.
+- **RELEASE-001 baseline verification (1 November 2026):** the complete non-live backend suite
+  passed 616 tests, the frontend suite passed 91 tests, and the synthetic IFC/IDS browser workflow
+  was exercised. The latest `main` hosted CI run ended in `startup_failure` before jobs started.
+  The requested final UI, recording, public repository, official submission fields and a release
+  commit remain outstanding. Exact commands and limits are in
+  [EVALUATION.md](./EVALUATION.md#release-001-offline-verification--1-november-2026) and
+  [DEMO_PLAN.md](./DEMO_PLAN.md); T-8 is in progress and the milestone table retains M4 as not
+  started.
 
 ## 4. Revised delivery schedule
 
@@ -321,8 +334,11 @@ gate drops the coordination branch and preserves the single-IFC IDS/native revie
 recording remains subject to real UI integration and explicit owner approval for any live call.
 Official hackathon rules, eligibility and public asset rights must be checked before submission.
 
-At this reconciliation, the current main commit is
-`1f3d13b78683692317e00f2279c3f0c4ac02f1c2` (31 October 2026). UI-003 is merged, but T-7/M3 and
-T-8/M4 remain **In progress** because reporting, integrated user-facing AI, remaining viewer
-controls, acceptance evidence, recording and submission checks are incomplete. No task or
-milestone is marked complete by this plan.
+The earlier reconciliation used main commit
+`1f3d13b78683692317e00f2279c3f0c4ac02f1c2` (31 October 2026). UI-003 and UI-004A have since
+merged; the verified main baseline on 1 November is
+`cf06328c874258efe8a49d0afa291d9aef278928`. T-7/M3 and T-8 remain **In progress**; the
+authoritative milestone table retains M4 as **Not started** pending M3. Earlier changelog and
+final-48-hour entries describe M4 as in progress; that status discrepancy is recorded rather than
+silently resolved. Reporting, integrated user-facing AI, acceptance evidence, recording and
+submission checks remain incomplete. No task or milestone is marked complete by this plan.

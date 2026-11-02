@@ -195,6 +195,12 @@ Statuses below describe evidence present on `main` at
 because it is documented. The coordination requirements are a separate, conditional demonstration
 scope and are not additions to the deterministic IDS-review MVP exit criteria.
 
+**Later baseline:** UI-004A merged into `main` at
+`cf06328c874258efe8a49d0afa291d9aef278928` on 1 November 2026. The release verification used
+implementation commit `484b71c7988295159083121fab77e1713c825903`, whose tree is identical to that
+merge commit. The earlier baseline above is retained as historical context; no milestone is
+completed by this update.
+
 The original **FR-VAL-08** row is retained as historical requirement-baseline text. For this
 delivery, it is **Deferred** and superseded by **FR-COORD-01..05** below: geometric results are
 not `Finding` records and cannot be accepted as part of the current review MVP.
@@ -215,7 +221,7 @@ not `Finding` records and cannot be accepted as part of the current review MVP.
 
 | ID | Requirement and acceptance test | Priority | Status | Evidence / gap |
 |---|---|---:|---|---|
-| FR-AI-01 | Integrate a bounded, user-facing objective plan and/or grounded finding explanation through the existing Meta Model API client. Show the actual `ReviewRun.plan_source`, the actual explanation source (`ai_generated` or `deterministic_template`), and the fallback state. Test Live only after explicit owner approval; test Off/Replay without network. AI must never create a `Finding` or alter confirmed check criteria. | P0 | In progress | T-5 client/planner/explanation and budget safeguards are offline-tested. The explanation endpoint verifies run, finding, requirement, check, source and model-version provenance, and labels every fallback with a reason. Typed client functions exist, but the UI states that AI explanation is not connected (see the UI_SPEC T-5 hand-off contract). Meta live compatibility is unverified. See ADR-020, `backend/bim_intelligence/api/reviews.py`, `backend/bim_intelligence/api/findings.py`, and UI-003 evidence. |
+| FR-AI-01 | Integrate a bounded, user-facing objective plan and/or grounded finding explanation through the existing Meta Model API client. Show the actual `ReviewRun.plan_source`, the actual explanation source (`ai_generated` or `deterministic_template`), and the fallback state. Test Live only after explicit owner approval; test Off/Replay without network. AI must never create a `Finding` or alter confirmed check criteria. | P0 | In progress | T-5 client/planner/explanation and budget safeguards are offline-tested. The endpoint verifies provenance and labels fallbacks. Typed client functions exist, but the objective and explanation controls are not connected in the UI. One owner-reported basic live structured-output smoke passed; live BIM planning and explanation remain unverified. See ADR-020 and the UI_SPEC T-5 hand-off contract. |
 | FR-REP-04 | Present or export a run result traceable from model hash and run identity through confirmed requirement/check and rule versions to deterministic findings, affected element references and evidence. A report must distinguish execution status, zero findings, errors and optional AI interpretation. Test a complete result and a partial/error result. | P0 | In progress | `ReviewRun` and its `InputManifest` carry model/IDS hashes, requirement revisions and rule versions, and the UI presents per-check outcomes. A report/export endpoint and complete report surface are not implemented; see `backend/bim_intelligence/schemas/runs.py`, `backend/bim_intelligence/api/reviews.py`, and T-7 in `docs/IMPLEMENTATION_PLAN.md`. |
 
 ### 8.3 Conditional two-model coordination demonstration
@@ -229,8 +235,8 @@ omitted, not simulated.
 | ID | Requirement and acceptance test | Priority | Status | Evidence / gap |
 |---|---|---:|---|---|
 | FR-COORD-01 | A separate coordination-set manifest references exactly two separately uploaded, immutable IFC versions with model identity/hash, explicit discipline labels and placement metadata. Preserve the one-active-IFC `Session` contract; never replace one model to represent the second. Test distinct duplicate GlobalIds and model-version changes. | P2 | Conditional | `Session` contains one `model_hash`; no coordination-set contract or two-model workflow exists. See `backend/bim_intelligence/schemas/sessions.py`, `backend/bim_intelligence/bim/ingest.py`, ADR-021. |
-| FR-COORD-02 | Validate both sources against one declared common coordinate frame, units and supported placements before analysis. Reject unknown, unsupported, ambiguous or stale alignment; test valid transform, mismatch, missing metadata and unsupported placement. | P2 | Conditional | No alignment validator is implemented. No geometry-only or filename-based alignment assumption is permitted. |
-| FR-COORD-03 | Run deterministic geometric analysis on one explicitly selected A/B pair only. Record both model hashes/member IDs, run ID, algorithm/version, explicit tolerance and units, exclusions, placement assumptions and tested IFC entity scope. Test reproducibility, positive/negative/boundary/tolerance/exclusion cases and explicit unavailable/not-analysed/zero/error/results states. | P2 | Conditional | No clash engine is implemented. On the checked-out environment IfcOpenShell 0.9.0.post1 and IfcTester 0.9.0 are installed; no IfcClash distribution/import is installed. |
+| FR-COORD-02 | Validate both sources against one declared common coordinate frame, units and supported placements before analysis. Reject unknown, unsupported, ambiguous or stale alignment; test valid transform, mismatch, missing metadata and unsupported placement. | P2 | Conditional | FED-001 tests alignment in a synthetic feasibility harness, but no production alignment validator is integrated. No geometry-only or filename-based alignment assumption is permitted. |
+| FR-COORD-03 | Run deterministic geometric analysis on one explicitly selected A/B pair only. Record both model hashes/member IDs, run ID, algorithm/version, explicit tolerance and units, exclusions, placement assumptions and tested IFC entity scope. Test reproducibility, positive/negative/boundary/tolerance/exclusion cases and explicit unavailable/not-analysed/zero/error/results states. | P2 | Conditional | FED-001 exercises synthetic geometric intersections outside the application. No production clash runner is integrated. IfcOpenShell 0.9.0.post1 and IfcTester 0.9.0 are installed locally; the `ifcclash` import is unavailable. |
 | FR-COORD-04 | Display a compact matrix whose rows and counts come only from completed computed runs. Keep raw intersections, deterministic groups and human-assessed coordination issues as distinct values; do not treat every intersection as an actionable error. | P2 | Conditional | No matrix or computed coordination result is implemented. |
 | FR-COORD-05 | Selecting a computed matrix result identifies and highlights the actual intersecting elements in the 3D investigation and exposes evidence traceable to both model versions and the run. Test duplicate GlobalIds across models, missing GlobalId fallback, selection clearing and stale model rejection. | P2 | Conditional | Current viewer and API handle one IFC at a time; no federated selection or clash evidence contract is implemented. |
 
@@ -239,5 +245,6 @@ Federated element identity is `(model_member_id, model_hash, GlobalId)` or, when
 Coordination output remains distinct from information-quality Findings. The preferred external
 candidate is **Duplex Apartment**, subject to compatibility, provenance and redistribution-rights
 verification. Do not inspect or copy private materials without the specific authorisation required
-by `AGENTS.md`. If the rights or feasibility gate fails, use the documented one-click synthetic
-demo only; do not imply that it demonstrates federation or clash detection.
+by `AGENTS.md`. If the rights or feasibility gate fails, use the verified manual synthetic IFC/IDS
+workflow until the one-click sample is implemented; do not imply that it demonstrates federation
+or clash detection.

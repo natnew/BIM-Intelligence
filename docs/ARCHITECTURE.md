@@ -4,6 +4,13 @@
 **Status:** Partially implemented. Rows and paragraphs marked *Implemented* or ✓ are backed by unit tests; every other statement about behaviour describes design intent, not measured results.
 **Audience:** Engineers and coding agents implementing the MVP during the Meta Global AI Developer Hackathon (26 October – 4 November 2026).
 
+**Release-baseline clarification, 1 November 2026:** UI-004A is merged, including the verified
+single-model camera and selection controls. Objective planning and grounded explanations have
+offline-tested backend/API-client paths but no connected browser controls. Recent-session history,
+one-click sample loading and report export are not implemented. FED-001 is a synthetic test
+harness, not an integrated federation or clash feature. See
+[EVALUATION.md](./EVALUATION.md#release-001-offline-verification--1-november-2026).
+
 Notation used in this document:
 
 - **DECISION** — an architectural decision adopted for the MVP (rationale in [DECISIONS.md](./DECISIONS.md)).
@@ -302,7 +309,7 @@ The orchestrator then **filters** the plan: tools must exist; `requirement_ids` 
 
 ### 7.5 Protocol choice
 
-**DECISION:** use the Chat Completions protocol (`POST /v1/chat/completions`) through the `openai` Python SDK with `base_url="https://api.meta.ai/v1"`, because it is the most widely tested OpenAI-compatible surface and supports structured output. **PROPOSAL:** evaluate the Responses API if cross-turn reasoning replay proves useful for multi-step planning. Model default: `muse-spark-1.3`; configuration may select other non-Contributor ids, subject to owner approval and current pricing. Live compatibility remains unverified.
+**DECISION:** use the Chat Completions protocol (`POST /v1/chat/completions`) through the `openai` Python SDK with `base_url="https://api.meta.ai/v1"`. The client requests JSON-object mode and validates the returned schema locally. **PROPOSAL:** evaluate the Responses API if cross-turn reasoning replay proves useful for multi-step planning. Model default: `muse-spark-1.3`; configuration may select other non-Contributor ids, subject to owner approval and current pricing. One basic live smoke is owner-reported; provider-side strict JSON-schema support and live BIM workflows remain unverified.
 
 ### 7.6 T-5 implementation boundary
 
@@ -929,6 +936,12 @@ alignment validator, clash runner, result matrix or federated viewer contract. T
 capability and two-model viewer behaviour are therefore **not yet demonstrated**. No package is
 installed and no API method is asserted here. A dependency addition needs explicit owner approval,
 licence review, an ADR and a bounded test plan; otherwise the coordination gate is no-go.
+
+**Subsequent feasibility result:** FED-001 now tests synthetic two-model alignment and
+IfcOpenShell geometric intersections in `tests/feasibility/`. This does not add a production
+ModelSet, alignment service, clash runner, result matrix or federated viewer; the complete
+coordination demonstration gate remains unmet. The paragraph above records the earlier baseline,
+not the later test-harness result.
 
 ### 21.6 Sample and private-data boundary
 

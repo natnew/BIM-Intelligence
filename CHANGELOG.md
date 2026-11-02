@@ -4,6 +4,23 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### RELEASE-001 / T-7, T-8 / M3, M4 — Synthetic release baseline (1 November 2026)
+
+- Record UI-004A's merge into `main` and verify the existing synthetic single-IFC/IDS workflow in
+  the integrated browser, including selection, camera controls, desktop and narrow layouts, and
+  explicit session/run reopening. The objective/explanation UI, recent sessions and one-click
+  sample remain absent; final UI-001 application work has not started.
+- On the clean implementation baseline, pass 616 non-live backend tests, backend lint/format/type
+  and schema checks, and all frontend checks including 91 tests and the production build. Rerun
+  the isolated synthetic benchmark: TP/FP/FN 15/0/0, precision/recall/F1 1.000, with no network or
+  live model calls. The latest hosted main CI run failed before jobs started.
+- Reconcile the current documentation, synthetic-fixture attribution and a 180-second proposed
+  storyboard without claiming a completed recording, public repository, live BIM workflow or
+  integrated clash feature. See [EVALUATION.md](./docs/EVALUATION.md#release-001-offline-verification--1-november-2026),
+  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#release-001--synthetic-baseline-verification) and
+  [DEMO_PLAN.md](./docs/DEMO_PLAN.md). T-7/M3 and T-8 remain in progress; the authoritative
+  milestone table lists M4 as not started, despite older changelog wording.
+
 ### FED-001 / W5 — Two-model federation and clash feasibility experiment (feasibility only)
 
 - Add an isolated feasibility harness under `tests/feasibility/`. It generates deterministic
