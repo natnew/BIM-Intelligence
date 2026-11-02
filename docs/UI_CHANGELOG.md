@@ -898,3 +898,83 @@ status and milestone criteria.
   `frontend/public/images/home/bim-intelligence-hero.webp` (and the then-empty
   `frontend/public/images/` folder). The source PNG in `assets/` was not modified. Private
   evidence under `local-private/test-results/ui-005a/` may be deleted independently.
+
+## UI-005B — Project Home review workflow cards
+
+### [UI-005B] — Visual explanation of AEC review workflows
+
+- **UI iteration ID:** UI-005B (T-7 / M3; cosmetic refinement only)
+- **Date (YYYY-MM-DD):** 2026-11-02
+- **Design objective:** Explain the real professional workflow at a glance with four
+  informational cards directly below *Choose how to begin*, preserving the UI-005A banner and the
+  existing Project Home layout.
+- **Source reference IDs and locations:** The owner's brief cites a reference screenshot (compact
+  isometric line illustrations, pale backgrounds) for visual direction only. No image was attached
+  to the session and none was opened; the design is synthetic-only, from the written brief. No
+  vendor branding, icons or artwork were used or reproduced.
+- **Explicit owner request:** UI-005B implementation packet (2 November 2026): branch
+  `feature/ui-005b-home-workflows` from the latest `main` after UI-005A, seven-path allow-list
+  plus new presentation-only files under `frontend/src/components/home/`, one implementation and
+  one corrective pass, no dependencies, API requests or paid calls; evidence under
+  `local-private/test-results/ui-005b/`.
+- **Proposed changes:** As implemented.
+- **Approved scope:** `frontend/src/components/ProjectHome.tsx`, `ProjectHome.test.tsx`,
+  `frontend/src/index.css`, new files under `frontend/src/components/home/`, `docs/UI_SPEC.md`,
+  `docs/UI_CHANGELOG.md`, `CHANGELOG.md`.
+- **Files changed:** `frontend/src/components/ProjectHome.tsx`,
+  `frontend/src/components/ProjectHome.test.tsx`, `frontend/src/index.css`,
+  `frontend/src/components/home/HowItWorks.tsx` (new),
+  `frontend/src/components/home/WorkflowIllustration.tsx` (new),
+  `frontend/src/components/home/isometric.ts` (new), `docs/UI_SPEC.md`, `docs/UI_CHANGELOG.md`,
+  `CHANGELOG.md`.
+- **Reason for each significant change:**
+  - `home/HowItWorks.tsx` → the section, heading, introduction and four steps with the
+    owner-approved captions. Step 04 carries a qualifying note that availability depends on server
+    configuration and that AI output never creates findings (C-01, C-02), so the card cannot imply
+    live Meta inference everywhere or AI-generated findings.
+  - `home/WorkflowIllustration.tsx`, `home/isometric.ts` → four original isometric drawings
+    (building and IDS sheet; checklist with an open, dashed row and a highlighted element; frame
+    with a selected column, selection box and lens; document with cited lines linked to a dashed
+    interpretation card), built from a pure projection helper. Inline SVG, so no assets, requests
+    or licences.
+  - `ProjectHome.tsx` → renders `<HowItWorks />` between the routes section and the footer.
+  - `index.css` → `.workflow*` and `.iso*` rules using existing tokens; 4 → 2 → 1 columns at the
+    existing `70rem` and `56rem` breakpoints.
+  - `ProjectHome.test.tsx` → one test: section immediately after the routes, introduction text,
+    four ordered items with headings *Step NN: Title* and captions, decorative SVGs, step 04 note,
+    and no buttons, links, images or tab stops inside the section.
+- **Corrective pass:** The first render showed the drawings filling about half of each panel and
+  the interpretation card floating off-centre. Drawing bounds were measured in the browser
+  (`getBBox`), each projection was rescaled 1.25–1.5× about its centre, and the interpretation
+  card was moved closer to its document.
+- **Protected behaviour:** UI-005A banner, session creation, Open an existing session, Recent
+  sessions, IFC/IDS upload and setup, workspace navigation, deterministic review, objective and
+  explanation functionality, design tokens, backend APIs and dependencies are unchanged.
+- **Tests executed (frontend/):** `npm run lint` → pass; `npm run format:check` → pass;
+  `npm run typecheck` → pass; `npm test` → 8 files, 111 tests passed (110 + 1 new);
+  `npm run build` → pass (pre-existing `three`/`@thatopen` warnings). `npm run types:check` not
+  run (no API or schema change).
+- **Visual evidence:** `local-private/test-results/ui-005b/` (private):
+  `after-{desktop-1920x1080,laptop-1440x900,tablet-1024x768,mobile-390x844}[-full].png`,
+  `after-metrics.json`, `npm-test.txt`. Captured with headless Microsoft Edge 156.0.4314.50 over the
+  DevTools protocol (`Emulation.setDeviceMetricsOverride`; device scale 1, 1, 1 and 3) against the
+  local Vite dev server and backend, fresh profile (Recent sessions empty). No *before* capture:
+  the section is new and the remainder of the page is unchanged from UI-005A's recorded *after*
+  state.
+- **Measured results:** `scrollWidth` equals the viewport width at all four sizes (no horizontal
+  scrolling). Columns: 4 at 1920 and 1440 (cards 342 px tall, equal); 2 at 1024 (rows equalised:
+  247/247 and 279/279 px); 1 at 390. The section's previous sibling is the routes section at
+  every size. The only API requests are the two existing `/api/v1/health` calls; the one
+  `net::ERR_ABORTED` entry matches UI-005A's recorded baseline. *Create review session* is enabled.
+- **Accessibility regression results:** Labelled section, ordered list, one `h3` per card with an
+  explicit *Step NN: Title* name, decorative SVGs hidden from assistive technology, no new focus
+  stops. Text uses the existing `--ink`/`--muted` colours on `--surface`. Contrast was not
+  re-measured; no screen-reader or 200 % zoom audit was performed.
+- **Owner decision:** Pending review.
+- **Branch, commit and PR references:** branch `feature/ui-005b-home-workflows` from `bf7cf95`;
+  not committed, no pull request.
+- **Rollback instructions:** `git checkout bf7cf95 -- frontend/src/components/ProjectHome.tsx
+  frontend/src/components/ProjectHome.test.tsx frontend/src/index.css docs/UI_SPEC.md
+  docs/UI_CHANGELOG.md CHANGELOG.md`, then delete `frontend/src/components/home/` (three new
+  files). Private evidence under `local-private/test-results/ui-005b/` may be deleted
+  independently.

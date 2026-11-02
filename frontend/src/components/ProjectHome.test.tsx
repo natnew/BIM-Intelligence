@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createSession, fetchSession, uploadDocument, uploadModel } from '../api/bim';
@@ -95,6 +95,43 @@ describe('ProjectHome', () => {
     ).toBeTruthy();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.queryByRole('heading', { name: /AI-native/ })).not.toBeInTheDocument();
+  });
+
+  it('explains the review workflow in four informational cards directly after the start routes', () => {
+    render(<ProjectHome onOpenWorkspace={vi.fn()} />);
+
+    const routes = screen.getByRole('region', { name: 'Choose how to begin' });
+    const workflow = screen.getByRole('region', { name: 'How BIM Intelligence works' });
+    expect(routes.nextElementSibling).toBe(workflow);
+    expect(
+      within(workflow).getByText(
+        'From IFC model ingestion to verified findings and intelligent interpretation.',
+      ),
+    ).toBeInTheDocument();
+
+    const steps = within(within(workflow).getByRole('list')).getAllByRole('listitem');
+    expect(steps).toHaveLength(4);
+    const expected = [
+      ['Step 01: Import your model', /Upload an IFC model and its associated IDS requirements/],
+      ['Step 02: Validate information', /deterministic checks against confirmed requirements/],
+      ['Step 03: Investigate in 3D', /trace findings to their source requirements/],
+      ['Step 04: Interpret with AI', /optional AI-assisted review objectives and grounded/],
+    ] as const;
+    steps.forEach((step, index) => {
+      const [heading, description] = expected[index] ?? ['', /^$/];
+      expect(within(step).getByRole('heading', { level: 3 })).toHaveAccessibleName(heading);
+      expect(within(step).getByText(description)).toBeInTheDocument();
+      const art = step.querySelector('svg');
+      expect(art).toHaveAttribute('aria-hidden', 'true');
+      expect(art).toHaveAttribute('focusable', 'false');
+    });
+    const aiNote = within(workflow).getByText(/depends on the server’s model configuration/);
+    expect(aiNote).toHaveTextContent('AI output never creates findings.');
+    expect(steps[3]).toContainElement(aiNote);
+
+    expect(within(workflow).queryAllByRole('button')).toHaveLength(0);
+    expect(within(workflow).queryAllByRole('link')).toHaveLength(0);
+    expect(workflow.querySelector('img, [tabindex]')).toBeNull();
   });
 
   it('creates a session through the API and shows the setup sequence', async () => {
