@@ -1004,3 +1004,22 @@ none has been created. The `alt` text conveys the full wording to assistive tech
 | Illustrations | Original inline SVG isometric line drawings generated from a small projection helper; no raster assets, external artwork or licensed material. Solid outlines denote deterministic artefacts; dashed outlines mark uncovered checks, the selection frame and the AI interpretation, keeping it visually separate from evidence. | `components/home/WorkflowIllustration.tsx`, `components/home/isometric.ts` |
 | Layout | Four columns above `70rem`, two columns from `56rem` to `69.99rem`, one column below `56rem`; equal card heights per row. Existing tokens only (`--line`, `--surface`, `--surface-soft`, `--blue-soft`, `--teal`, `--teal-soft`, `--navy`, `--muted`); no shadow, gradient, hover state or animation. | `index.css` |
 | Accessibility | `section` labelled by its `h2`; an `ol` of four `li` cards; each `h3` has the accessible name *Step NN: Title*. Illustrations are decorative (`aria-hidden="true"`, `focusable="false"`) because the adjacent text carries the meaning. Cards contain no buttons, links or tab stops, so keyboard order is unchanged. | `components/home/HowItWorks.tsx` |
+
+## 25. UI-005C — Project Home core product features
+
+**Status:** implemented on `feature/ui-005c-home-features` from merged `main` baseline `a5135eb`
+(2 November 2026); pending owner review. This is a cosmetic T-7 / M3 refinement, not task or
+milestone completion.
+
+| Area | Behaviour | Source |
+|---|---|---|
+| Placement | A *Features for intelligent AEC model review* section follows the existing workflow and precedes the unchanged footer in Project Home's start view. It is not shown during review setup. | `components/ProjectHome.tsx`, `components/home/ProductFeatures.tsx` |
+| Content | Four non-interactive cards describe the 3D viewer, requirements-based validation, traceable review evidence and AI-assisted interpretation. The AI card also states that availability depends on server configuration and that live provider integration remains unverified. | `components/home/ProductFeatures.tsx` |
+| Capability boundaries | The descriptions refer to existing viewer, IDS/native-rule coverage, finding evidence, objective and explanation paths. AI interpretation is distinct from deterministic evidence; the cards do not claim model correction, geometric clash detection, federation, advanced measurement or issue assignment. | `components/ModelWorkspace.tsx`, `components/ReviewCoverage.tsx`, `components/EvidenceInspector.tsx` |
+| Illustration | Four original decorative inline SVGs use the same monochrome stroke, view box and existing navy token. No third-party illustrations or screenshots were used; the owner authorised the written brief as the sole visual reference. | `components/home/FeatureIcon.tsx` |
+| Layout and access | Existing tokens and typography; four columns above `70rem`, two below `70rem`, one below `56rem`, with equal heights per row. A labelled section contains an unordered list with one `h3` per card. Decorative SVGs are hidden from assistive technology; the cards add no controls or focus stops. | `index.css`, `components/home/ProductFeatures.tsx` |
+
+The preceding UI-005B record describes its earlier pending state. Pull request #34 subsequently
+merged into `main` at `a5135eb`; GitHub showed no formal review at the time of this check. The
+owner's UI-005C request identifies that merged work as the baseline. Detailed verification and
+limitations are recorded in [UI_CHANGELOG.md](./UI_CHANGELOG.md#ui-005c--project-home-core-product-features).

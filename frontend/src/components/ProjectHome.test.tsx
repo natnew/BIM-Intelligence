@@ -134,6 +134,63 @@ describe('ProjectHome', () => {
     expect(workflow.querySelector('img, [tabindex]')).toBeNull();
   });
 
+  it('presents four non-interactive product features between the workflow and footer', () => {
+    render(<ProjectHome onOpenWorkspace={vi.fn()} />);
+
+    const workflow = screen.getByRole('region', { name: 'How BIM Intelligence works' });
+    const features = screen.getByRole('region', {
+      name: 'Features for intelligent AEC model review',
+    });
+    expect(workflow.nextElementSibling).toBe(features);
+    expect(features.nextElementSibling?.tagName).toBe('FOOTER');
+    expect(features.nextElementSibling?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'IFC files remain read-only. The viewer uses local WASM and worker assets; findings are produced deterministically by IfcTester and registered native rules. AI explanations, when requested, are interpretations labelled separately from findings.',
+    );
+    expect(
+      within(features).getByText(
+        'Technical precision, visual investigation and evidence-grounded intelligence in one review environment.',
+      ),
+    ).toBeInTheDocument();
+
+    const cards = within(within(features).getByRole('list')).getAllByRole('listitem');
+    const expected = [
+      [
+        'Interactive 3D BIM Viewer',
+        'Explore IFC geometry, navigate the building model and inspect individual elements using intuitive spatial controls.',
+      ],
+      [
+        'Requirements-Based Validation',
+        'Check BIM information against confirmed IDS specifications and deterministic rules, with transparent execution coverage.',
+      ],
+      [
+        'Traceable Review Evidence',
+        'Connect model findings to affected IFC elements, requirement references and the observed information behind each result.',
+      ],
+      [
+        'AI-Assisted Interpretation',
+        'Use bounded review objectives and grounded explanations to investigate findings while keeping verified evidence distinct from AI interpretation.',
+      ],
+    ] as const;
+    expect(cards).toHaveLength(expected.length);
+    const illustrations = cards.map((card, index) => {
+      const [heading, description] = expected[index] ?? ['', ''];
+      expect(within(card).getByRole('heading', { level: 3, name: heading })).toBeInTheDocument();
+      expect(within(card).getByText(description)).toBeInTheDocument();
+      const illustration = card.querySelector('svg');
+      expect(illustration).toHaveAttribute('aria-hidden', 'true');
+      expect(illustration).toHaveAttribute('focusable', 'false');
+      expect(illustration).toHaveAttribute('viewBox', '0 0 96 76');
+      expect(illustration).toHaveAttribute('stroke', 'currentColor');
+      expect(illustration).toHaveAttribute('stroke-width', '1.5');
+      return illustration?.innerHTML;
+    });
+    expect(new Set(illustrations).size).toBe(4);
+    expect(cards[3]).toHaveTextContent('AI availability depends on the server');
+    expect(features.querySelector('a, button, input, [tabindex]')).toBeNull();
+    expect(createSession).not.toHaveBeenCalled();
+    expect(fetchSession).not.toHaveBeenCalled();
+  });
+
   it('creates a session through the API and shows the setup sequence', async () => {
     render(<ProjectHome onOpenWorkspace={vi.fn()} />);
 
@@ -142,6 +199,9 @@ describe('ProjectHome', () => {
     expect(
       await screen.findByRole('heading', { name: 'Prepare the review inputs' }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('region', { name: 'Features for intelligent AEC model review' }),
+    ).not.toBeInTheDocument();
     expect(createSession).toHaveBeenCalledWith(expect.any(AbortSignal));
     expect(screen.getByText(session.id)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open review workspace' })).toBeDisabled();
