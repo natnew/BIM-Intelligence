@@ -77,6 +77,26 @@ describe('ProjectHome', () => {
     expect(fetchSession).not.toHaveBeenCalled();
   });
 
+  it('shows the architectural banner above the project workspace without a duplicate heading', () => {
+    render(<ProjectHome onOpenWorkspace={vi.fn()} />);
+
+    const banner = screen.getByRole('img', {
+      name: /BIM Intelligence: AI-native Architectural and Engineering BIM Model Review/,
+    });
+    expect(banner).toHaveAttribute('src', '/images/home/bim-intelligence-hero.webp');
+    expect(banner).toHaveAttribute('width', '2172');
+    expect(banner).toHaveAttribute('height', '724');
+    expect(banner).toHaveAttribute('decoding', 'async');
+    expect(banner).not.toHaveAttribute('loading', 'lazy');
+
+    const workspace = screen.getByRole('region', { name: /Start with the model/ });
+    expect(
+      banner.compareDocumentPosition(workspace) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.queryByRole('heading', { name: /AI-native/ })).not.toBeInTheDocument();
+  });
+
   it('creates a session through the API and shows the setup sequence', async () => {
     render(<ProjectHome onOpenWorkspace={vi.fn()} />);
 

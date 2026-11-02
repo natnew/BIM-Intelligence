@@ -4,6 +4,19 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### UI-005A / T-7 / M3 — Architectural banner on Project Home (2 November 2026)
+
+- Add the owner-supplied architectural banner above the *Project workspace* hero as one
+  optimised WebP (2172 × 724, 226 KB, down from a 2.4 MB PNG), shown whole at every width with
+  reserved dimensions and alt text that repeats its embedded wording. Owner confirmed public
+  redistribution rights. No overlay text, motion, new colours, dependencies or behavioural change.
+- Frontend lint, format, typecheck, 110 tests (one new) and the production build pass. Verified
+  at 1920 × 1080, 1440 × 900 and 390 × 844 with no horizontal overflow or failed asset request.
+  At 390 px the embedded tagline is too small to read comfortably; a narrow-screen variant would
+  need separate owner approval. See
+  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#ui-005a--project-home-architectural-banner). Branch
+  `feature/ui-005a-home-hero`, uncommitted, pending owner review; T-7 and M3 remain in progress.
+
 ### FINAL-UI-001 / T-5, T-7 / M3 — Meta-assisted review interface and Project Home completion (2 November 2026)
 
 - Connect the existing T-5 API client to the Concept C review workspace: an optional review
