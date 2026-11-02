@@ -97,16 +97,29 @@ describe('ProjectHome', () => {
     expect(screen.queryByRole('heading', { name: /AI-native/ })).not.toBeInTheDocument();
   });
 
-  it('places the architectural reel between the start routes and review workflow', () => {
+  it('places the introduction and architectural reel between the start routes and review workflow', () => {
     render(<ProjectHome onOpenWorkspace={vi.fn()} />);
 
     const routes = screen.getByRole('region', { name: 'Choose how to begin' });
-    const reel = screen.getByRole('region', { name: 'Architectural image reel' });
+    const introduction = screen.getByRole('region', { name: 'From BIM review to delivery' });
+    const heading = within(introduction).getByRole('heading', {
+      level: 2,
+      name: 'From BIM review to delivery',
+    });
+    const reel = within(introduction).getByRole('region', { name: 'Architectural image reel' });
     const workflow = screen.getByRole('region', { name: 'How BIM Intelligence works' });
-    expect(routes.nextElementSibling).toBe(reel);
-    expect(reel.nextElementSibling).toBe(workflow);
+    expect(routes.nextElementSibling).toBe(introduction);
+    expect(introduction.nextElementSibling).toBe(workflow);
+    expect(heading.compareDocumentPosition(reel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(introduction).toHaveTextContent(
+      'Evaluate, validate and act on your building models with BIM Intelligence — an AI-native assistant for architectural and engineering BIM review, grounded in your models, standards and project documentation.',
+    );
+    expect(
+      within(introduction).getByText('BIM Intelligence', { selector: 'strong' }),
+    ).toBeVisible();
 
     fireEvent.click(within(reel).getByRole('button', { name: 'Next image' }));
+    expect(within(reel).getByRole('group', { name: '2 of 6' })).toBeInTheDocument();
     expect(createSession).not.toHaveBeenCalled();
     expect(fetchSession).not.toHaveBeenCalled();
   });
@@ -216,6 +229,9 @@ describe('ProjectHome', () => {
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('region', { name: 'Architectural image reel' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('region', { name: 'From BIM review to delivery' }),
     ).not.toBeInTheDocument();
     expect(createSession).toHaveBeenCalledWith(expect.any(AbortSignal));
     expect(screen.getByText(session.id)).toBeInTheDocument();

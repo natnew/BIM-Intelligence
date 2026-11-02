@@ -431,7 +431,17 @@ export function ProjectHome({ onOpenWorkspace }: ProjectHomeProps) {
         </div>
       </section>
 
-      <ArchitecturalReel />
+      <section className="home-intro" aria-labelledby="home-intro-heading">
+        <div className="home-intro__copy">
+          <h2 id="home-intro-heading">From BIM review to delivery</h2>
+          <p>
+            Evaluate, validate and act on your building models with{' '}
+            <strong>BIM Intelligence</strong> — an AI-native assistant for architectural and
+            engineering BIM review, grounded in your models, standards and project documentation.
+          </p>
+        </div>
+        <ArchitecturalReel />
+      </section>
 
       <HowItWorks />
 

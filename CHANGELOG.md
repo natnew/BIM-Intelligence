@@ -4,6 +4,17 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### UI-007 / T-7 / M3 — Project Home introduction beside the reel (2 November 2026)
+
+- Add the owner-supplied introduction to the left of the existing architectural reel and align
+  the reel to the right. On narrow screens the text stacks above it; the reel's size, images,
+  controls and other page sections are unchanged.
+- Frontend lint, formatting, type checks, 128 tests and the build pass; existing dependency/chunk
+  warnings remain. Synthetic desktop and narrow browser checks cover layout and carousel
+  interactions. The existing 320 px horizontal overflow remains; local screenshots await owner
+  visual review. See [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#ui-007--project-home-introduction-and-right-aligned-reel)
+  for evidence and rollback. T-7 and M3 remain in progress.
+
 ### UI-006B / T-7 / M3 — Human-readable building storeys (2 November 2026)
 
 - Show original storey names in supplied order, with an *Unnamed storey* fallback and compact,

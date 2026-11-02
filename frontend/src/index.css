@@ -521,6 +521,31 @@ select {
   font-size: 0.82rem;
 }
 
+.home-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 50%;
+  align-items: center;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+  margin-top: 2.75rem;
+}
+
+.home-intro__copy h2 {
+  margin-bottom: 1rem;
+  font-size: clamp(1.8rem, 2.5vw, 2.4rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+
+.home-intro__copy p {
+  font-size: 1.1rem;
+}
+
+.home-intro .architectural-reel {
+  width: 100%;
+  margin: 0;
+}
+
 /* UI-005D: architectural scenes remain separate from the functional workflow. */
 .architectural-reel {
   width: 50%;
@@ -2332,6 +2357,15 @@ select {
 
 /* Narrow screens (390 px acceptance): single column, stacked panels, no horizontal scroll. */
 @media (max-width: 56rem) {
+  .home-intro {
+    grid-template-columns: 1fr;
+  }
+
+  .home-intro .architectural-reel {
+    width: 50%;
+    justify-self: end;
+  }
+
   .app-header {
     grid-template-columns: 1fr auto;
     grid-template-areas:

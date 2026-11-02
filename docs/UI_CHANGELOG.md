@@ -1309,3 +1309,70 @@ status and milestone criteria.
 
 - On 2 November 2026, the owner requested that the scoped changes be committed and pushed and
   that a pull request be opened. This does not authorise a merge, deployment or paid model call.
+
+## UI-007 — Project Home introduction and right-aligned reel
+
+### [UI-007] — Place the owner-supplied introduction beside the reel
+
+- **Iteration and objective:** UI-007, T-7 / M3, 2 November 2026. Place the supplied text to the
+  left of the existing architectural image carousel and move the carousel to the right, without
+  changing other page sections or behaviour.
+- **Approval and boundary:** The owner confirmed the existing six-scene carousel as the target
+  and approved the exact six-file scope below, one implementation pass and at most one corrective
+  pass. The text stacks above the right-aligned reel on narrow screens; the reel's existing size,
+  images and controls remain unchanged. The approval excluded commits, pushes and additional paid
+  API calls. Owner visual review of the result remains pending.
+- **Reference and provenance `UI-007-REF`:** The owner supplied a text-only image in this chat,
+  confirmed that its wording may be published and that it contains no confidential or client
+  information. Only the requested wording is reproduced; the image was not added to the
+  repository. Existing reel images remain subject to the UI-005D provenance and processing
+  conditions. Synthetic browser screenshots are retained locally under the ignored
+  `local-private/test-results/ui-007/` directory, with retention or deletion controlled by the
+  owner. Neither those screenshots nor the existing reel-image pixels were sent to a model.
+- **Baseline and files changed:** Branch `ihome-page-ide-ow-nav` from `main` at `d46bcb4`.
+  `frontend/src/components/ProjectHome.tsx` adds the introduction around the existing reel;
+  `frontend/src/index.css` provides the responsive placement;
+  `frontend/src/components/ProjectHome.test.tsx` checks the wording, placement, carousel and setup
+  state; `docs/UI_SPEC.md`, `docs/UI_CHANGELOG.md` and `CHANGELOG.md` record the change and
+  evidence. The implementation plan is unchanged because T-7 scope and the M3 mapping did not
+  change. No backend, API, viewer, generated type, dependency, image or fixture was modified.
+- **Automated checks:** From `frontend/`, the focused command
+  `npm test -- 'src\components\ProjectHome.test.tsx' 'src\components\home\ArchitecturalReel.test.tsx'`
+  passed 22 tests. `npm run lint`, `npm run format:check`, `npm run typecheck`,
+  `npm run types:check`, `npm run test` and `npm run build` passed; the full suite reported
+  128 tests in 10 files. The build retained the previously documented That Open/`three`
+  undefined-import and large-chunk warnings. Before implementation, the targeted introduction
+  test failed because the new region did not exist, as expected. The first format check failed
+  on the two changed TSX files; formatting those files and rerunning the checks passed.
+- **Before/after browser evidence:** The VS Code integrated browser used Chrome 150.0.7871.250
+  / Electron 43.8.3, memory-backed browser storage and synthetic health/session responses.
+  Baseline and after captures are retained locally for 1920 × 1080, 1440 × 900, 390 × 844,
+  320 × 700 and a 960 × 540 zoom-reflow approximation. No model or real session was loaded.
+  At 1920 × 1080 the reel frame remained 495 × 278.44 CSS px while its left edge moved from
+  705 to 953.5 px; the text is to its left. At 390 × 844 the frame remained
+  171.5 × 96.47 px, with the text above and the reel aligned to the content's right edge.
+  Measurements at 897, 896, 800, 600, 513, 512 and 360 px also confirmed the intended layout
+  and half-width reel. The existing 15 px horizontal overflow at 320 px was present before and
+  after; no overflow was measured at the other tested widths.
+- **Interaction and accessibility checks:** At 1920, 390 and 320 px, all six scenes loaded;
+  pagination, previous/next, Enter, arrow keys, synthetic horizontal touch swipes and recovery
+  from a dispatched image-error event worked. Frame, caption height and scroll position remained
+  stable across scene changes. Tab from the previous to next button retained a visible 3 px
+  outline; reduced-motion disabled the image animation. Computed text contrast against the
+  page background was 14.72:1 for the heading and 13.26:1 for the paragraph. Synthetic
+  create-session and open-existing flows entered setup and hid the introduction, and *Start
+  over* returned to it. These checks are not a screen-reader, native browser-zoom or
+  comprehensive accessibility audit, nor a real backend, upload or IFC-viewer walkthrough.
+- **Decision and rollback:** Implementation approval is recorded above; the owner has not yet
+  approved the resulting visuals. No commit, push or pull request was made. To roll back after
+  owner approval, restore the standalone `ArchitecturalReel` render in `ProjectHome.tsx`, remove
+  only the UI-007 `.home-intro` rules from `index.css`, and restore the corresponding placement
+  and setup assertions in `ProjectHome.test.tsx`. Update UI_SPEC §28 and the root changelog to
+  reflect the rollback, and append the decision here without rewriting earlier records. Preserve
+  all other changes and the owner's unrelated files.
+
+### UI-007 — Owner publication authorisation
+
+- On 2 November 2026, the owner authorised committing the six UI-007 files, pushing the branch
+  and opening a pull request against `main`. This does not constitute visual approval or
+  authorise a merge, deployment or paid model call.

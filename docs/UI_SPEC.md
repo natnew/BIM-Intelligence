@@ -1034,7 +1034,7 @@ T-7 / M3 refinement, not task or milestone completion.
 |---|---|---|
 | Placement | The architectural reel follows *Choose how to begin* and precedes *How BIM Intelligence works* in Project Home's start view. It is not shown in review setup; the existing banner and routes are unchanged. | `components/ProjectHome.tsx` |
 | Scenes | Six owner-supplied AI-generated scenes appear in order: Architectural Vision, Architectural Design, Design Collaboration, Construction Delivery, Digital Twin and BIM Intelligence. The last is labelled as a concept visualisation, not a screenshot of the implemented application. | `components/home/ArchitecturalReel.tsx` |
-| Layout and loading | The centred reel is half its original width; its responsive 16:9 image frame scales proportionally. The frame uses `cover` for landscape scenes and `contain` for the portrait concept. Controls reflow at narrow widths and retain their labels and usable targets. Only the selected image is rendered; the first is eager and subsequent scenes use lazy loading when selected. A visible error invites selection of another scene if an image fails to load. | `components/home/ArchitecturalReel.tsx`, `index.css` |
+| Layout and loading | UI-005D centred the reel at half its original width; UI-007 later aligned it to the right as described in §28. Its responsive 16:9 image frame scales proportionally. The frame uses `cover` for landscape scenes and `contain` for the portrait concept. Controls reflow at narrow widths and retain their labels and usable targets. Only the selected image is rendered; the first is eager and subsequent scenes use lazy loading when selected. A visible error invites selection of another scene if an image fails to load. | `components/home/ArchitecturalReel.tsx`, `index.css` |
 | Navigation and access | Previous/next buttons, six labelled pagination buttons, left/right arrow keys and horizontal touch swipes change the scene. The selected button exposes its pressed state and the caption is announced politely. There is no autoplay; the brief transition is disabled for reduced motion. | `components/home/ArchitecturalReel.tsx`, `index.css` |
 | Research graphics | Two owner-supplied graphics and the requested captions appear at the end of *The professional problem* in the README. Their claims and sources have not been independently verified; the descriptive alt text is not a full text equivalent of their numerical contents. | `README.md`, `docs/assets/research/` |
 
@@ -1059,3 +1059,20 @@ captures; this is a T-7 / M3 presentation refinement, not task or milestone comp
 Focused tests and local, synthetic browser measurements are recorded in
 [UI_CHANGELOG.md](./UI_CHANGELOG.md#ui-006b--human-readable-building-storeys). They do not replace
 owner visual inspection or establish an end-to-end backend review.
+
+## 28. UI-007 — Project Home introduction and right-aligned reel
+
+**Status:** implemented on `ihome-page-ide-ow-nav` from `main` baseline `d46bcb4`
+(2 November 2026); owner visual review is pending. This is a T-7 / M3 presentation refinement,
+not task or milestone completion.
+
+| Area | Behaviour |
+|---|---|
+| Introduction | The owner-supplied heading and paragraph appear between *Choose how to begin* and *How BIM Intelligence works*, with the product name emphasised in the paragraph. |
+| Placement | On desktop the text is left of the right-aligned architectural reel. At 56rem and below, the text stacks above the right-aligned reel. The reel remains half the available content width, retaining its 16:9 frame and existing controls. |
+| Protected scope | The introduction and reel remain absent during review setup. Other page sections, images, carousel interactions, backend, viewer and API behaviour are unchanged. |
+
+Focused tests and synthetic browser measurements, including the existing 320 px overflow and
+verification limitations, are recorded in
+[UI_CHANGELOG.md](./UI_CHANGELOG.md#ui-007--project-home-introduction-and-right-aligned-reel).
+The local captures await owner visual review and do not establish an end-to-end backend review.
