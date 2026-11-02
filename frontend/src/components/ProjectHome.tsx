@@ -261,6 +261,19 @@ export function ProjectHome({ onOpenWorkspace }: ProjectHomeProps) {
 
   return (
     <main className="home" id="main">
+      <div className="home-banner">
+        {/* The alt text repeats the words embedded in the image (WCAG 1.1.1, images of text). */}
+        <img
+          className="home-banner__image"
+          src="/images/home/bim-intelligence-hero.webp"
+          width={2172}
+          height={724}
+          alt="BIM Intelligence: AI-native Architectural and Engineering BIM Model Review. Review buildings and infrastructure in 3D."
+          decoding="async"
+          fetchPriority="high"
+        />
+      </div>
+
       <section className="hero" aria-labelledby="hero-heading">
         <div className="hero__copy">
           <p className="eyebrow">Project workspace</p>

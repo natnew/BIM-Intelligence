@@ -350,6 +350,23 @@ select {
   padding: 2.25rem clamp(1rem, 3vw, 2.5rem) 3rem;
 }
 
+/* UI-005A: owner-supplied banner; shown whole (never cropped) so its embedded type survives. */
+.home-banner {
+  margin: 0 0 2rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.home-banner__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2172 / 724;
+}
+
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 1fr);

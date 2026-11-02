@@ -821,3 +821,80 @@ status and milestone criteria.
   followed by the nine frontend paths and five documentation paths listed under *Files changed*.
   No generated files, dependencies, lockfiles, backend files or viewer files were touched.
   Private evidence under `local-private/test-results/final-ui-001/` may be deleted independently.
+
+## UI-005A — Project Home architectural banner
+
+### [UI-005A] — Architectural hero banner for Project Home
+
+- **UI iteration ID:** UI-005A (T-7 / M3; cosmetic refinement only)
+- **Date (YYYY-MM-DD):** 2026-11-02
+- **Design objective:** Signal on first view that BIM Intelligence serves the architecture,
+  engineering and construction sector, using the owner-supplied banner above the existing
+  *Project workspace* hero. No redesign.
+- **Source reference IDs and locations:** Owner-supplied banner
+  `assets/BIM_Intelligence_ Modern Architectural Review.png` (2172 × 724 PNG, untracked). No
+  private reference images, BIM models or client documents were used.
+- **Explicit owner request:** UI-005A implementation packet (2 November 2026): branch
+  `feature/ui-005a-home-hero`, seven-path allow-list, one implementation and one corrective pass,
+  no dependencies or paid calls. On the same date the owner confirmed public redistribution rights
+  for the banner, approved viewing it and the local Home page screenshots through the assistant's
+  model provider, and selected a single WebP asset.
+- **Proposed changes:** As implemented.
+- **Approved scope:** `frontend/src/components/ProjectHome.tsx`, `ProjectHome.test.tsx`,
+  `frontend/src/index.css`, one optimised asset under `frontend/public/images/home/`,
+  `docs/UI_SPEC.md`, `docs/UI_CHANGELOG.md`, `CHANGELOG.md`.
+- **Files changed:** `frontend/src/components/ProjectHome.tsx`,
+  `frontend/src/components/ProjectHome.test.tsx`, `frontend/src/index.css`,
+  `frontend/public/images/home/bim-intelligence-hero.webp` (new), `docs/UI_SPEC.md`,
+  `docs/UI_CHANGELOG.md`, `CHANGELOG.md`.
+- **Reason for each significant change:**
+  - `bim-intelligence-hero.webp` → encoded from the source PNG with the existing local `ffmpeg`
+    (`-c:v libwebp -quality 82 -compression_level 6 -preset photo`) at native 2172 × 724: 226 KB
+    versus 2.4 MB. Native width covers the 992 CSS px desktop render at 2× density.
+  - `ProjectHome.tsx` → a `.home-banner` wrapper and `<img>` before the hero section in the start
+    view only, with explicit `width`/`height`, `decoding="async"`, `fetchPriority="high"` and `alt`
+    repeating the embedded text; no heading, landmark or overlay, so the page has one `h1` and the
+    words are announced once.
+  - `index.css` → `.home-banner` (existing border, surface, shadow tokens and 8 px radius;
+    `2rem` bottom margin) and `.home-banner__image` (`width: 100%`, `height: auto`,
+    `aspect-ratio: 2172 / 724`), so the image always shows whole and space is reserved before load.
+  - `ProjectHome.test.tsx` → one test: accessible name, source path, intrinsic dimensions, not
+    lazy, placed before the *Project workspace* region, single `h1`, no duplicate heading.
+- **Protected behaviour:** Session creation, Open an existing session, Recent sessions
+  (revalidate, Reopen, Forget, Clear), IFC/IDS upload and review setup, the 3D workspace,
+  objective and explanation functionality, backend APIs, dependencies and routing are unchanged.
+- **Tests executed (frontend/):** `npm run lint` → pass (0 warnings); `npm run format:check` →
+  pass; `npm run typecheck` → pass; `npm test` → 8 files, 110 tests passed (109 + 1 new);
+  `npm run build` → pass (pre-existing `three`/`@thatopen` import warnings); the asset is copied
+  to `dist/images/home/`. `npm run types:check` not run (no API or schema change).
+- **Visual before/after evidence:** `local-private/test-results/ui-005a/` (private):
+  `{before,after}-{desktop-1920x1080,laptop-1440x900,mobile-390x844}[-full].png` and
+  `{before,after}-metrics.json`. Captured with headless Microsoft Edge driven over the DevTools
+  protocol (`Emulation.setDeviceMetricsOverride`; device scale 1, 1 and 3, mobile emulation at
+  390 px) against the Vite dev server and local backend with `LLM_MODE=off`; fresh profile, so
+  Recent sessions are empty. Before images were taken with the three source edits temporarily
+  stashed. The embedded VS Code browser's own screenshots ignored the emulated viewport and were
+  discarded.
+- **Accessibility regression results:** One accessible image with the full embedded wording;
+  single `h1` retained; image not focusable (`tabIndex -1`), so the keyboard order is unchanged.
+  Contrast of the embedded white type on the dark gradient was judged visually only, not measured.
+  No screen-reader or 200 % zoom audit.
+- **Functional regression results:** Metrics at 1920, 1440 and 390: `scrollWidth` equals the
+  viewport width (no horizontal scrolling); the banner loads at natural width 2172 with no failed
+  asset request (one aborted `/health` request appears identically before and after); the
+  *Project workspace* hero starts 29 px below the banner at every width. Banner render sizes:
+  992 × 331 at 1920 and 1440; 360 × 120 at 390. In the shared browser, *Create review session* is
+  enabled, *Open session* enables after typing a session ID, and *Reopen* is enabled for an
+  available recent session; existing Vitest coverage of these flows passes.
+- **Owner decision:** Pending review. **Constraint reported:** at 390 px the banner's heading type
+  renders about 9 CSS px and the tagline about 5 CSS px; the tagline is not comfortably readable.
+  Whole-image presentation was kept because cropping would remove architecture or type. A
+  separately approved narrow-screen variant would be needed; none was created.
+- **Branch, commit and PR references:** branch `feature/ui-005a-home-hero` from `82a51f8`; not
+  committed, no pull request.
+- **Rollback instructions:** `git checkout 82a51f8 -- frontend/src/components/ProjectHome.tsx
+  frontend/src/components/ProjectHome.test.tsx frontend/src/index.css docs/UI_SPEC.md
+  docs/UI_CHANGELOG.md CHANGELOG.md`, then delete
+  `frontend/public/images/home/bim-intelligence-hero.webp` (and the then-empty
+  `frontend/public/images/` folder). The source PNG in `assets/` was not modified. Private
+  evidence under `local-private/test-results/ui-005a/` may be deleted independently.

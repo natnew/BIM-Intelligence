@@ -971,3 +971,22 @@ application as built on that branch and verified by Vitest and a browser walkthr
 
 Evidence, commands and limitations are recorded in
 [UI_CHANGELOG.md](./UI_CHANGELOG.md#final-ui-001--meta-assisted-review-integration-project-home-completion).
+
+## 23. UI-005A — Project Home architectural banner
+
+**Status:** implemented on branch `feature/ui-005a-home-hero` from `82a51f8` (2 November 2026);
+not committed, not merged, pending owner review. Cosmetic T-7 / M3 refinement only.
+
+| Area | Behaviour | Source |
+|---|---|---|
+| Banner | The owner-supplied architectural banner sits at the top of Project Home's start view, directly above the *Project workspace* hero, inside the existing `.home` page width (max `76rem`). It is not shown in the review-setup state. | `components/ProjectHome.tsx` |
+| Asset | `frontend/public/images/home/bim-intelligence-hero.webp`: 2172 × 724 (native resolution of the 3:1 source), WebP quality 82, 226 KB (source PNG 2.4 MB). Owner confirmed public redistribution rights on 2 November 2026. | `public/images/home/` |
+| Layout | Always shown whole: `width: 100%`, `height: auto`, `aspect-ratio: 2172 / 724`, explicit `width`/`height` attributes to reserve space; never cropped. Uses the existing `--line`, `--surface`, `--shadow` tokens and the 8 px panel radius; `2rem` gap to the hero. No overlay text, motion or new colours. | `index.css` |
+| Accessibility | One `<img>` whose `alt` repeats the two lines of embedded text; no wrapping landmark, heading or caption, so the page keeps a single `h1` and the text is announced once. Not focusable. `decoding="async"`, `fetchPriority="high"`, not lazy-loaded (above the fold). | `components/ProjectHome.tsx` |
+
+**Known constraint — narrow screens.** At 390 px the banner renders 360 × 120 CSS px (16.6 % of
+source). The heading's embedded type is about 9 CSS px and the tagline about 5 CSS px; the heading
+stays legible on a high-density display, but the tagline does not meet a comfortable reading size.
+CSS cannot fix this without cropping the architecture or the type. A separately approved
+narrow-screen variant, cropped to the text region or recomposed by the owner, would be needed;
+none has been created. The `alt` text conveys the full wording to assistive technology.
