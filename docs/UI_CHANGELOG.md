@@ -700,3 +700,124 @@ status and milestone criteria.
   [EVALUATION.md](./EVALUATION.md#release-001-offline-verification--1-november-2026).
   No before/after UI comparison or screenshot files were saved. Screen-reader, contrast,
   200% zoom and cross-severity styling were not audited. No live or paid model call was made.
+
+## FINAL-UI-001 — Meta-assisted review integration, Project Home completion
+
+### [FINAL-UI-001] — Connect the T-5 objective/explanation API to the Concept C workspace and complete Project Home
+
+- **UI iteration ID:** FINAL-UI-001 (contributing to T-5, T-7 and M3)
+- **Date (YYYY-MM-DD):** 2026-11-02
+- **Design objective:** Make the existing objective-aware review and finding-explanation
+  endpoints usable from the browser with truthful provenance labels; add browser-local recent
+  sessions; change the subtitle to *AEC Model Review*; improve upload confirmation, requirements
+  visibility and first-use terminology. No redesign.
+- **Source reference IDs and locations:** `docs/UI_SPEC.md` §18 *T-5 Meta-assisted review —
+  frontend integration contract*; approved baseline `36363425c6bcaec7aae4e9725261fb930e756319`.
+- **Explicit owner request:** FINAL-UI-001 implementation packet (2 November 2026): one bounded
+  production implementation on branch `FINAL-UI-001`, exact path allow-list, zero
+  additional paid calls, one principal pass plus one corrective pass.
+- **Proposed changes:** As implemented below; the synthetic one-click sample was investigated
+  and stopped (see *Owner decision*).
+- **Approved scope:** P0 objective/explanation integration; P1 Project Home completion; P1
+  synthetic sample investigation. Paths limited to the listed `frontend/src` components, their
+  tests, `index.css` and the five named documentation files.
+- **Files changed:** `frontend/src/components/AppHeader.tsx`, `EvidenceInspector.tsx`,
+  `ModelWorkspace.tsx`, `ModelWorkspace.test.tsx`, `ProjectHome.tsx`, `ProjectHome.test.tsx`,
+  `ReviewCoverage.tsx`, `ReviewSetup.tsx`, `frontend/src/index.css`, `docs/UI_CHANGELOG.md`,
+  `docs/UI_SPEC.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/EVALUATION.md`, `CHANGELOG.md`.
+  `frontend/src/api/bim.ts` and `bim.test.ts` were not changed; the existing functions were
+  sufficient.
+- **Reason for each significant change:**
+  - `ModelWorkspace.tsx` → optional *Review objective (optional)* textarea
+    (`maxLength={MAX_REVIEW_OBJECTIVE_LENGTH}`, code-point counter, helper text). A blank or
+    whitespace objective calls `startStandardReview` unchanged; otherwise the trimmed text goes to
+    `startObjectiveReview`. The header action reads *Run review with objective* when text is
+    present; the status chip reads *Objective review running…*. The submitted objective is kept
+    with the `ready` review state. Explanation lifecycle: explicit `requestExplanation()` only,
+    `AbortController` per request, cache keyed `(sessionId, runId, etag, findingId)` for the
+    workspace lifetime, abort and reset on any selection/version change, late responses ignored.
+    `useHealth()` supplies the current `llm_mode` for Replay labelling only. The workspace records
+    the session, and the run once it has loaded, in browser-local recent sessions.
+  - `ReviewCoverage.tsx` → single plan-source label from `run.plan_source` (*Deterministic
+    default* / *AI-selected plan* / *Recorded AI-selected plan (Replay; no live call)*), the
+    submitted objective, and the sentence *The objective was not used; the deterministic default
+    plan ran.* when an objective produced a `default` run; an `llm` run is explained as narrowed
+    scope, never a pass.
+  - `EvidenceInspector.tsx` → replaces the fixed *not connected* note with an **Explain finding**
+    section below the deterministic evidence, visually distinct (amber rule). Renders loading,
+    error (status code and problem detail; a 412 is a version error, never an explanation) and
+    success. Labels: *AI interpretation · `{model}` · grounding passed* (+ *Recorded response
+    (Replay; no live call)* in Replay) or *Deterministic template · AI not used* with the
+    `fallback_reason` text from the contract; always shows `source`, `grounding_status`,
+    `fallback_reason`, `model` and the citations list. Disabled with a note when the run's model
+    version differs from the active model.
+  - `ProjectHome.tsx` → *Recent sessions* card backed by `localStorage`
+    (`bimi.recent-sessions.v1`, max 8 entries of `{sessionId, runId, openedAt}`; malformed
+    entries discarded). Each entry is revalidated with `GET /sessions/{id}` and shows *Checking*,
+    *Model ready*, *No model yet*, *Not on server* or *Unavailable*; **Reopen** routes
+    `model_ready` to the workspace with the remembered run and `created` into setup; **Forget**
+    and **Clear recent sessions** remove entries. The card states honestly that no synthetic
+    sample is available from the page and why. Hero and footer copy mention the optional
+    objective and per-finding explanation as non-evidence. `rememberRecentSession` is exported
+    for the workspace (lint rule disabled for that one export, with the reason recorded inline).
+  - `ReviewSetup.tsx` → confirmation sentence after upload (file, byte-for-byte storage, model
+    version), *Indexed instances* in the summary, a disclosure listing each imported requirement
+    with its id, title and executable status, and an `<abbr>` for IDS.
+  - `AppHeader.tsx` → subtitle *AEC Model Review*.
+  - `index.css` → scoped styles for the objective panel, coverage objective block, explanation
+    section, citation list, recent-session list and setup confirmation; `textarea` inherits the
+    font.
+- **Protected behaviour:** Fit model, Reset view, Focus selected, Clear selection, GlobalId
+  selection synchronisation, model-version `If-Match` pinning, `ModelVersionMismatchError`
+  handling, deterministic finding records and provenance, W-001 clean / W-002 and W-003 findings,
+  desktop three-column and narrow single-column layouts. No viewer, schema, backend, dependency
+  or CI change.
+- **Tests executed (frontend/, after the corrective pass):** `npm run lint` → 0 warnings;
+  `npm run format:check` → pass; `npm run typecheck` → pass; `npm run types:check` → generated
+  types up to date; `npm test` → 8 files, 109 tests passed (18 new: objective vs standard
+  dispatch, trimmed objective, `llm`/`default` labels, Replay label, objective error, explicit
+  explanation request, template with fallback reason, 412 as version error, stale late response
+  ignored, cache reuse, clear with selection, recent-session recording, no recording of a failed
+  run; recent-session revalidation/reopen/forget/clear; setup confirmation and requirement list);
+  `npm run build` → pass (pre-existing `three`/`@thatopen` import warnings). Backend, repository
+  root: `pytest tests/unit/api/test_reviews.py tests/unit/api/test_finding_explanations.py
+  tests/scenario/test_deterministic_review.py` → 46 passed. No live or paid model call.
+- **Visual before/after evidence:** `local-private/test-results/final-ui-001/` (private):
+  `01-home-1920`, `02-setup-1920`, `04-w002-selected-focus-native`,
+  `05-explanation-template-native`, `06-objective-review-default-native`,
+  `07-version-mismatch-native`, `08-home-recent-sessions-native`, `09-workspace-{1920,1440,390}-cdp`,
+  `10-explanation-1920-cdp`, `NOTES.md`. Backend on `127.0.0.1:8010` (`LLM_MODE=off`) because
+  port 8000 was held by an unrelated process; Vite proxied via `BIMI_API_ORIGIN`. The `-cdp`
+  captures are genuine 1920 × 1080, 1440 × 900 and 390 × 844 CSS viewports; `-native` captures
+  are the embedded browser's ≈1216 × 735 frame; `01`/`02` are the 1203-px layout inside a
+  1920 canvas. Before images: RELEASE-001 recorded no screenshots.
+- **Accessibility regression results:** Every new interaction was exercised by keyboard
+  (Tab/Enter): Explain finding, finding rows, Fit/Reset/Clear, Return to Project Home, Reopen.
+  The textarea has a visible label, `aria-describedby` help and counter; the explanation region
+  has a heading; recent-session buttons have per-entry `aria-label`s. Not a full audit: no
+  contrast, screen-reader or 200 % zoom check.
+- **Functional regression results:** Fresh session → `minimal.ifc` (version `f2bd00074c54`, 6
+  instances) → `minimal.ids` (REQ-001, REQ-002) → workspace with rendered geometry. Standard
+  review: 2 findings, *Deterministic default*. Objective review: the intercepted request body was
+  `{"objective":"Focus on fire-rating completeness for the external walls on L00."}` with
+  `If-Match`; the server (Off mode) returned `default` and the UI said so. Explain finding on W-002:
+  `deterministic_template` · `fallback` · `ai_disabled — AI is off.` · Model `none` · one citation.
+  Selection change cleared the panel; reselection showed the cached result as such. After a
+  variant model upload (version `2f963049b721`), both earlier runs were refused as mismatches with
+  the model still viewable; a non-existent run id produced *Review error* with the server detail.
+  Recent sessions: identifiers only in storage; failed runs not stored (defect found and fixed in
+  the corrective pass); *Model ready* after revalidation; Reopen restored run `508400f0` with its
+  two findings. Layout metrics: 1920 `210px 1430px 280px`; 1440 `210px 950px 280px`; 390 single
+  column, no horizontal overflow. `plan_source=llm`, `ai_generated` and Replay labels were
+  verified by Vitest only (Off mode cannot produce them).
+- **Owner decision:** Pending review. The synthetic one-click sample was **not implemented**:
+  the fixtures live outside `frontend/`, Vite's file-system allow-list blocks them, and serving
+  them requires `frontend/scripts/copy-wasm-assets.mjs` + `.gitignore` changes or a backend
+  endpoint — all outside the approved paths. The Project Home card says so rather than showing an
+  inert control.
+- **Branch, commit and PR references:** branch `FINAL-UI-001` from `3636342`; commit and pull
+  request opened on 2 November 2026 with owner approval (identifiers recorded in the pull request).
+- **Rollback instructions:** `git checkout 36363425c6bcaec7aae4e9725261fb930e756319 --`
+  followed by the nine frontend paths and five documentation paths listed under *Files changed*.
+  No generated files, dependencies, lockfiles, backend files or viewer files were touched.
+  Private evidence under `local-private/test-results/final-ui-001/` may be deleted independently.

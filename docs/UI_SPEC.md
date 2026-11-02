@@ -766,12 +766,16 @@ evidence remain as recorded, and T-7/M3 remain in progress.
 7. **Accessibility audit**: contrast measurement, screen-reader pass and 200 % zoom check; only
    keyboard activation of finding rows and camera buttons, plus focus visibility, were exercised.
 
-### T-5 Meta-assisted review — frontend integration contract (pending)
+**Status correction (2 November 2026):** item 5 and the browser-local half of item 6 (recent
+sessions, without a server session-history endpoint) are implemented by FINAL-UI-001 on its
+branch; see §22. The sample catalogue, items 1–4 and item 7 remain open.
 
-Status: **not connected in the UI.** The offline-tested backend path and typed API client were
-merged into `main` via PR #26; no component renders them yet. UI-004A changes the workspace and
-viewer independently of this pending T-5 UI integration. Apply the following changes only at the
-T-5 integration stage, keeping the approved Concept C v2 layout:
+### T-5 Meta-assisted review — frontend integration contract
+
+Status: **implemented by FINAL-UI-001 (2 November 2026)** on branch
+`FINAL-UI-001`; see §22 for the as-built behaviour and its browser evidence.
+The offline-tested backend path and typed API client were merged into `main` via PR #26. The
+contract below is retained as the specification the implementation was verified against:
 
 1. **Objective input** (`ModelWorkspace.tsx`, review controls beside **Run review**): add an
    optional, labelled `<textarea>` named *Review objective (optional)* with
@@ -935,3 +939,35 @@ The detailed checks and limitations are recorded in
 [UI_CHANGELOG.md](./UI_CHANGELOG.md#release-001--synthetic-baseline-verification). T-7/M3 remain
 in progress; a recorded browser walkthrough is not the missing benchmark Playwright smoke test or
 an accessibility audit.
+
+## 22. FINAL-UI-001 — Meta-assisted review integration and Project Home completion
+
+**Status:** implemented on branch `FINAL-UI-001` from baseline `3636342`
+(2 November 2026); not committed, not merged, pending owner review. This section describes the
+application as built on that branch and verified by Vitest and a browser walkthrough with
+`LLM_MODE=off`. It does not mark T-5, T-7 or M3 complete, and no live model call was made.
+
+### Implemented behaviour
+
+| Area | Behaviour | Source |
+|---|---|---|
+| Review objective | A *Review objective (optional)* textarea in the right column (`maxLength` 4000, code-point counter, helper text stating the objective can only narrow confirmed checks). Blank or whitespace → `startStandardReview`; otherwise the trimmed text → `startObjectiveReview` with `If-Match`. The header action reads *Run review with objective* when text is present; the status chip reads *Objective review running…*. | `components/ModelWorkspace.tsx` |
+| Plan source | One label from `run.plan_source`: *Deterministic default*, *AI-selected plan*, or *Recorded AI-selected plan (Replay; no live call)* when `/health` reports `replay`. The submitted objective is shown with the run; a `default` run after an objective adds *The objective was not used; the deterministic default plan ran.* An `llm` run is described as narrowed scope, never a pass. The current health mode is used only for the Replay label and is not a per-run provenance record. | `components/ReviewCoverage.tsx` |
+| Explain finding | An **Explain finding** button below the deterministic evidence; nothing is requested without it. Calls `explainFinding(sessionId, run.id, finding.id, modelEtag, signal)`; disabled with a note when the run's model version differs from the active model. States: loading, error (status and problem detail; 412 shown as a version error), success. Results are cached per `(sessionId, runId, etag, findingId)` for the workspace lifetime; any selection or version change aborts an in-flight request and can only show a cached result (labelled *shown from this session's earlier request*). | `components/ModelWorkspace.tsx`, `components/EvidenceInspector.tsx` |
+| Explanation provenance | Rendered in its own amber-ruled section headed *AI explanation · Interpretation · not a Finding*. `ai_generated` → *AI interpretation · `{model}` · grounding passed* (+ *Recorded response (Replay; no live call)* in Replay). `deterministic_template` → *Deterministic template · AI not used* with the `fallback_reason` text from §18. `source`, `grounding_status`, `fallback_reason`, `model`, summary, probable cause, corrective action and every citation (GlobalId, requirement, rule, observed → expected) are always shown. | `components/EvidenceInspector.tsx` |
+| Recent sessions | Project Home lists sessions opened in this browser from `localStorage` key `bimi.recent-sessions.v1` (max 8 entries of `sessionId`, `runId`, `openedAt`; nothing else is stored). Each entry is revalidated through `GET /sessions/{id}`: *Checking* → *Model ready* / *No model yet* / *Not on server* / *Unavailable*. **Reopen** routes a `model_ready` session to the workspace with its remembered run and a `created` session into setup. **Forget** and **Clear recent sessions** remove entries. The workspace records the session on open and the run only once it has loaded. | `components/ProjectHome.tsx`, `components/ModelWorkspace.tsx` |
+| Project Home copy | Subtitle *AEC Model Review*; hero and footer state that the objective and explanations are never evidence; accepted-input copy defines IDS; the recent-sessions card states that no synthetic sample is available from the page and why. | `components/AppHeader.tsx`, `components/ProjectHome.tsx` |
+| Review setup | Confirmation sentence after an IFC upload (file, byte-for-byte storage, model version), *Indexed instances* in the summary, and a disclosure listing each imported requirement with id, title and executable status. | `components/ReviewSetup.tsx` |
+
+### Not implemented
+
+- **Synthetic one-click sample.** The fixtures live outside `frontend/`; Vite's file-system
+  allow-list blocks them, and serving them needs `frontend/scripts/copy-wasm-assets.mjs` and
+  `.gitignore` changes or a backend endpoint, all outside the FINAL-UI-001 path allow-list. The
+  manual upload of `tests/fixtures/minimal.ifc` and `minimal.ids` remains the demonstration route.
+- `plan_source=llm`, `ai_generated` explanations and Replay labels are verified by Vitest only;
+  the Off-mode browser walkthrough cannot produce them.
+- No accessibility audit beyond keyboard activation of the new controls.
+
+Evidence, commands and limitations are recorded in
+[UI_CHANGELOG.md](./UI_CHANGELOG.md#final-ui-001--meta-assisted-review-integration-project-home-completion).

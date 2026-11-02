@@ -118,7 +118,8 @@ code {
 /* Buttons and form controls */
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -1509,6 +1510,239 @@ select {
   padding: 0.5rem 0.7rem;
   color: var(--muted);
   font-size: 0.76rem;
+}
+
+/* FINAL-UI-001 — review objective (T-5 integration) */
+.review-objective {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.9rem 1.1rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.review-objective__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.review-objective__input {
+  width: 100%;
+  min-height: 4.2rem;
+  resize: vertical;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.6rem;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.review-objective__input:disabled {
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
+.review-objective__help {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.review-objective__count {
+  justify-self: end;
+  color: var(--quiet);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* FINAL-UI-001 — submitted objective and true plan source */
+.coverage__objective {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.7rem;
+}
+
+.coverage__objective-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* FINAL-UI-001 — AI explanation, visually separate from deterministic evidence */
+.explanation {
+  margin-top: 1rem;
+  border: 1px solid var(--line-strong);
+  border-left: 4px solid var(--amber);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.8rem 0.8rem;
+  background: var(--surface);
+}
+
+.explanation .panel-heading {
+  margin-bottom: 0.4rem;
+}
+
+.explanation__heading {
+  font-size: 0.86rem;
+}
+
+.explanation__intro {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.explanation__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.8rem;
+  margin: 0.6rem 0;
+}
+
+.explanation__version-note {
+  color: var(--red);
+  font-size: 0.74rem;
+}
+
+.explanation__result {
+  display: grid;
+  gap: 0.6rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.6rem;
+}
+
+.explanation__provenance {
+  border-radius: var(--radius);
+  padding: 0.35rem 0.55rem;
+  font-size: 0.76rem;
+}
+
+.explanation__result--ai_generated .explanation__provenance {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.explanation__result--deterministic_template .explanation__provenance {
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.explanation__facts dt,
+.explanation__text dt {
+  text-transform: none;
+}
+
+.citation-list {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.78rem;
+}
+
+.citation-list li {
+  border-bottom: 1px dotted var(--line);
+  padding-bottom: 0.3rem;
+}
+
+.citation-list code {
+  color: var(--blue);
+}
+
+.citation-list__evidence {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.76rem;
+}
+
+/* FINAL-UI-001 — recent sessions (browser-local identifiers only) */
+.recent-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recent-list__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem 0.6rem;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.84rem;
+}
+
+.recent-list__identity {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.recent-list__meta {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.recent-list__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  grid-column: 1 / -1;
+}
+
+.recent-list .button,
+.route-card .recent-list .button {
+  margin-top: 0;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+.recent-list__note {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* FINAL-UI-001 — setup confirmation and requirement visibility */
+.setup-confirmation {
+  margin-bottom: 0.6rem;
+}
+
+.document-list__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.3rem 1rem;
+  width: 100%;
+}
+
+.document-list__item {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.document-list__requirements {
+  margin-top: 0.4rem;
+  font-size: 0.82rem;
+}
+
+.document-list__requirements summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.document-list__requirements ul {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  list-style: none;
 }
 
 /* Desktop: keep the model visible while the evidence and finding regions scroll independently. */

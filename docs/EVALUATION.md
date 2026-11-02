@@ -378,6 +378,37 @@ no model. Neither is a live or replayed Meta response. No new live call was made
 at `cf06328c874258efe8a49d0afa291d9aef278928` ended in `startup_failure` with no jobs. Local
 success does not establish a successful hosted run.
 
+### FINAL-UI-001 frontend integration verification — 2 November 2026
+
+**Scope and baseline:** branch `FINAL-UI-001` from
+`36363425c6bcaec7aae4e9725261fb930e756319` (verified before commit). Windows, Python 3.12.12,
+Node.js 24.19.0, IfcOpenShell 0.9.0.post1, IfcTester 0.9.0, @thatopen/components 3.6.0. The
+backend ran on `127.0.0.1:8010` (port 8000 was held by an unrelated process) with the repository
+`.env` (`LLM_MODE=off`, `ALLOW_LIVE_LLM=false`); `/health` reported `llm_mode=off`. No live,
+Replay or paid model request was made. Only the committed synthetic fixtures were used.
+
+| Check | Exact command and result |
+|---|---|
+| Frontend | From `frontend/`: `npm run lint` — 0 warnings; `npm run format:check` — passed; `npm run typecheck` — passed; `npm run types:check` — generated types up to date; `npm run test` — 8 files / **109 tests** passed (91 at RELEASE-001); `npm run build` — passed with the pre-existing dependency import and chunk-size warnings. |
+| Backend | `.\.venv\Scripts\python.exe -m ruff check .` — passed; `ruff format --check .` — 160 files already formatted; `mypy` — no issues in 131 source files; `pytest -m "not live"` — 616 passed, 1 deselected (run before commit; no backend file changed). |
+
+**Browser evidence (private, `local-private/test-results/final-ui-001/`):** a fresh session
+indexed `minimal.ifc` (version `f2bd0007…`) and imported `minimal.ids` (two executable
+requirements). The standard review returned the two expected findings with `plan_source=default`.
+A non-empty objective produced a `POST …/reviews` whose intercepted body was the JSON objective
+with `If-Match`; the Off-mode server returned `default` and the interface displayed *The objective
+was not used; the deterministic default plan ran.* An explicit **Explain finding** on W-002
+returned `source=deterministic_template`, `grounding_status=fallback`,
+`fallback_reason=ai_disabled`, `model=null` and one citation, rendered separately from the
+deterministic evidence. Version-mismatch (after a variant upload), missing-run, selection-change
+and cached-explanation states behaved as specified. Recent sessions stored identifiers only and
+reopened run `508400f0` with its findings. Layout metrics at 1920 × 1080, 1440 × 900 and 390 × 844
+matched the established three-/three-/one-column arrangement with no horizontal overflow.
+
+**Not measured:** `plan_source=llm`, `ai_generated` explanations and Replay labelling in the
+browser (Vitest only); accessibility beyond keyboard activation; live Meta behaviour. These
+results verify the interface wiring, not AI quality.
+
 ## 9. Known limitations and gaps
 
 - This is one small synthetic IFC4 model. Precision/recall do not generalise to other projects,

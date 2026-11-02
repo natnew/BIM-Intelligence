@@ -1,10 +1,43 @@
-import type { ElementRecord, Finding, PropertyValue, Requirement } from '../api/generated/types';
+import type { LLMMode } from '../api/client';
+import type {
+  ElementRecord,
+  Explanation,
+  Finding,
+  PropertyValue,
+  Requirement,
+} from '../api/generated/types';
 
 export type ElementLoadState =
   | { readonly kind: 'idle' }
   | { readonly kind: 'loading'; readonly globalId: string }
   | { readonly kind: 'ready'; readonly element: ElementRecord }
   | { readonly kind: 'error'; readonly globalId: string; readonly message: string };
+
+export type ExplanationState =
+  | { readonly kind: 'idle' }
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'ready'; readonly explanation: Explanation; readonly fromCache: boolean }
+  | { readonly kind: 'error'; readonly message: string; readonly status: number | undefined };
+
+/** Everything the inspector needs to offer and render an explanation for the selected finding. */
+export interface ExplanationRequest {
+  readonly state: ExplanationState;
+  /** False when the loaded run's model version differs from the active model; requests refused. */
+  readonly versionMatches: boolean;
+  /** Current backend LLM mode from `/health`; used for the Replay label only, never as proof. */
+  readonly llmMode: LLMMode | null;
+  readonly onRequest: () => void;
+}
+
+const FALLBACK_REASON_TEXT: Record<NonNullable<Explanation['fallback_reason']>, string> = {
+  ai_disabled: 'AI is off.',
+  unsupported_evidence:
+    'This finding cannot be grounded safely, for example a multi-element finding.',
+  budget_limit: 'The spend or call limit was reached.',
+  ai_request_failed: 'The AI request failed.',
+  ai_output_invalid: 'The AI response was invalid.',
+  grounding_failed: 'The AI text cited facts outside the evidence and was discarded.',
+};
 
 interface EvidenceInspectorProps {
   readonly selectedFinding: Finding | null;
@@ -13,6 +46,7 @@ interface EvidenceInspectorProps {
   readonly relatedFindings: Finding[];
   readonly requirements: Requirement[] | null;
   readonly runModelHash: string | null;
+  readonly explanation: ExplanationRequest | null;
   readonly onSelectFinding: (finding: Finding) => void;
 }
 
@@ -23,6 +57,7 @@ export function EvidenceInspector({
   relatedFindings,
   requirements,
   runModelHash,
+  explanation,
   onSelectFinding,
 }: EvidenceInspectorProps) {
   const nothingSelected = !selectedFinding && elementState.kind === 'idle';
@@ -209,13 +244,180 @@ export function EvidenceInspector({
         </details>
       )}
 
-      {!nothingSelected && (
+      {selectedFinding && <ExplanationPanel finding={selectedFinding} request={explanation} />}
+
+      {!selectedFinding && !nothingSelected && (
         <p className="inspector__ai-note">
-          <strong>AI explanation · not connected.</strong> This interface does not request
-          explanations; nothing shown above is model-generated.
+          <strong>AI explanation · findings only.</strong> Select a finding to request an
+          interpretation. Nothing shown above is model-generated.
         </p>
       )}
     </aside>
+  );
+}
+
+function ExplanationPanel({
+  finding,
+  request,
+}: {
+  readonly finding: Finding;
+  readonly request: ExplanationRequest | null;
+}) {
+  const state: ExplanationState = request?.state ?? { kind: 'idle' };
+  const canRequest = request !== null && request.versionMatches && state.kind !== 'loading';
+
+  return (
+    <section
+      className="explanation"
+      aria-labelledby="explanation-heading"
+      data-testid="explanation-panel"
+    >
+      <div className="panel-heading">
+        <h4 id="explanation-heading" className="explanation__heading">
+          AI explanation
+        </h4>
+        <span className="panel-heading__hint">Interpretation · not a Finding</span>
+      </div>
+      <p className="explanation__intro">
+        An explanation interprets the deterministic evidence above. It is requested only when you
+        ask for it, may spend part of the per-run call allowance, and never changes or creates a
+        finding.
+      </p>
+      <div className="explanation__actions">
+        <button
+          type="button"
+          className="button"
+          disabled={!canRequest}
+          onClick={request?.onRequest}
+          title={
+            request === null
+              ? 'Load a review run before requesting an explanation'
+              : !request.versionMatches
+                ? 'The run belongs to a different model version; explanations are refused'
+                : undefined
+          }
+        >
+          {state.kind === 'loading'
+            ? 'Requesting explanation…'
+            : state.kind === 'ready'
+              ? 'Explain finding again'
+              : 'Explain finding'}
+        </button>
+        {request !== null && !request.versionMatches && (
+          <span className="explanation__version-note">
+            Unavailable: the run’s model version differs from the active model.
+          </span>
+        )}
+      </div>
+
+      {state.kind === 'loading' && (
+        <p role="status" className="notice">
+          Requesting an explanation for <code>{finding.id}</code>…
+        </p>
+      )}
+      {state.kind === 'error' && (
+        <p role="alert" className="notice notice--error">
+          Explanation request failed
+          {state.status !== undefined ? ` (${state.status})` : ''}: {state.message}
+        </p>
+      )}
+      {state.kind === 'ready' && (
+        <ExplanationResult
+          explanation={state.explanation}
+          fromCache={state.fromCache}
+          llmMode={request?.llmMode ?? null}
+        />
+      )}
+    </section>
+  );
+}
+
+function ExplanationResult({
+  explanation,
+  fromCache,
+  llmMode,
+}: {
+  readonly explanation: Explanation;
+  readonly fromCache: boolean;
+  readonly llmMode: LLMMode | null;
+}) {
+  const aiGenerated = explanation.source === 'ai_generated';
+  return (
+    <div
+      className={`explanation__result explanation__result--${explanation.source}`}
+      data-testid="explanation-result"
+      data-source={explanation.source}
+    >
+      <p className="explanation__provenance">
+        {aiGenerated ? (
+          <>
+            <strong>AI interpretation</strong> · <code>{explanation.model}</code> · grounding{' '}
+            {explanation.grounding_status}
+            {llmMode === 'replay' && <> · Recorded response (Replay; no live call)</>}
+          </>
+        ) : (
+          <>
+            <strong>Deterministic template</strong> · AI not used
+          </>
+        )}
+        {fromCache && <> · shown from this session’s earlier request</>}
+      </p>
+      <dl className="detail-list explanation__facts">
+        <dt>Source</dt>
+        <dd>
+          <code>{explanation.source}</code>
+        </dd>
+        <dt>Grounding</dt>
+        <dd>
+          <code>{explanation.grounding_status}</code>
+        </dd>
+        <dt>Fallback</dt>
+        <dd>
+          {explanation.fallback_reason === null ? (
+            'none'
+          ) : (
+            <>
+              <code>{explanation.fallback_reason}</code> —{' '}
+              {FALLBACK_REASON_TEXT[explanation.fallback_reason]}
+            </>
+          )}
+        </dd>
+        <dt>Model</dt>
+        <dd>{explanation.model === null ? 'none' : <code>{explanation.model}</code>}</dd>
+      </dl>
+
+      <dl className="detail-list explanation__text">
+        <dt>Summary</dt>
+        <dd>{explanation.summary}</dd>
+        <dt>Probable cause</dt>
+        <dd>{explanation.probable_cause}</dd>
+        <dt>Corrective action</dt>
+        <dd>{explanation.corrective_action}</dd>
+      </dl>
+
+      <h5 className="inspector__subheading">Evidence cited ({explanation.citations.length})</h5>
+      {explanation.citations.length === 0 ? (
+        <p className="notice">This explanation cites no deterministic evidence.</p>
+      ) : (
+        <ul className="citation-list" aria-label="Deterministic evidence cited by the explanation">
+          {explanation.citations.map((citation, index) => (
+            <li key={`${citation.finding_id}-${citation.global_id}-${index}`}>
+              <code>{citation.global_id}</code>
+              <span className="finding-row__meta">
+                {' '}
+                · requirement <code>{citation.requirement_id}</code> · rule{' '}
+                <code>{citation.rule_id}</code>
+              </span>
+              <span className="citation-list__evidence">
+                <span className="detail-list__observed">{citation.observed}</span>
+                {' → '}
+                <span className="detail-list__expected">{citation.expected}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

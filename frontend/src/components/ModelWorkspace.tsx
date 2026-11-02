@@ -3,27 +3,36 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } f
 import { ApiError } from '../api/client';
 import {
   DOCUMENT_FILE_EXTENSIONS,
+  MAX_REVIEW_OBJECTIVE_LENGTH,
   ModelVersionMismatchError,
   classifyUploadFile,
+  explainFinding,
   fetchElement,
   fetchRequirements,
   isExecutableRequirement,
   loadModel,
   loadReviewWorkspace,
+  startObjectiveReview,
   startStandardReview,
   uploadDocument,
   type VersionedModel,
 } from '../api/bim';
-import type { Finding, Requirement, ReviewRun } from '../api/generated/types';
+import type { Explanation, Finding, Requirement, ReviewRun } from '../api/generated/types';
+import { useHealth } from '../state/useHealth';
 import {
   ViewerCanvas,
   type ViewerCanvasHandle,
   type ViewerLoadState,
 } from '../viewer/ViewerCanvas';
 import { AppHeader } from './AppHeader';
-import { EvidenceInspector, type ElementLoadState } from './EvidenceInspector';
+import {
+  EvidenceInspector,
+  type ElementLoadState,
+  type ExplanationState,
+} from './EvidenceInspector';
 import { FindingRegister } from './FindingRegister';
 import { ModelBrowser } from './ModelBrowser';
+import { rememberRecentSession } from './ProjectHome';
 import { ReviewCoverage } from './ReviewCoverage';
 
 interface ModelWorkspaceProps {
@@ -41,8 +50,14 @@ type ModelState =
 type ReviewState =
   | { readonly kind: 'none' }
   | { readonly kind: 'loading'; readonly runId: string }
-  | { readonly kind: 'running' }
-  | { readonly kind: 'ready'; readonly run: ReviewRun; readonly findings: Finding[] }
+  | { readonly kind: 'running'; readonly objective: string | null }
+  | {
+      readonly kind: 'ready';
+      readonly run: ReviewRun;
+      readonly findings: Finding[];
+      /** Objective sent for this run; `null` for a standard review or a run opened by id. */
+      readonly submittedObjective: string | null;
+    }
   | { readonly kind: 'mismatch'; readonly runId: string; readonly message: string }
   | { readonly kind: 'error'; readonly message: string };
 
@@ -59,6 +74,16 @@ type DocumentUploadState =
 
 const NO_FINDINGS: Finding[] = [];
 
+/** Explanations are cached per (session, run, model version, finding) for the workspace lifetime. */
+function explanationCacheKey(
+  sessionId: string,
+  runId: string,
+  etag: string,
+  findingId: string,
+): string {
+  return `${sessionId}\u0000${runId}\u0000${etag}\u0000${findingId}`;
+}
+
 export function ModelWorkspace({
   sessionId,
   initialRunId,
@@ -73,14 +98,20 @@ export function ModelWorkspace({
     kind: 'loading',
   });
   const [documentUpload, setDocumentUpload] = useState<DocumentUploadState>({ kind: 'idle' });
+  const [objective, setObjective] = useState('');
   const [selectedFindingId, setSelectedFindingId] = useState<string | null>(null);
   const [selectedGlobalIds, setSelectedGlobalIds] = useState<string[]>([]);
   const [elementState, setElementState] = useState<ElementLoadState>({ kind: 'idle' });
+  const [explanationState, setExplanationState] = useState<ExplanationState>({ kind: 'idle' });
   const [viewerError, setViewerError] = useState<string | null>(null);
   const [viewerLoadState, setViewerLoadState] = useState<ViewerLoadState>('preparing');
+  const health = useHealth();
+  const llmMode = health.kind === 'success' ? health.data.llm_mode : null;
 
   const reviewRequestRef = useRef<AbortController | null>(null);
   const elementRequestRef = useRef<AbortController | null>(null);
+  const explanationRequestRef = useRef<AbortController | null>(null);
+  const explanationCacheRef = useRef<Map<string, Explanation>>(new Map());
   const viewerRef = useRef<ViewerCanvasHandle | null>(null);
   // Refs let the viewer callbacks stay referentially stable, so the WebGL viewer is created once
   // per model version rather than on every state change.
@@ -89,6 +120,7 @@ export function ModelWorkspace({
 
   const findings = reviewState.kind === 'ready' ? reviewState.findings : NO_FINDINGS;
   const run = reviewState.kind === 'ready' ? reviewState.run : null;
+  const submittedObjective = reviewState.kind === 'ready' ? reviewState.submittedObjective : null;
   const model = modelState.kind === 'ready' ? modelState.model : null;
 
   useEffect(() => {
@@ -96,7 +128,28 @@ export function ModelWorkspace({
     findingsRef.current = findings;
   }, [model, findings]);
 
+  // Record the session as soon as it opens, and the run only once it has actually loaded, so a
+  // stale or missing run id is never remembered as reopenable.
+  useEffect(() => {
+    rememberRecentSession(sessionId, run?.id ?? null);
+  }, [sessionId, run]);
+
   const selectedFinding = findings.find((finding) => finding.id === selectedFindingId) ?? null;
+  const explanationKey =
+    model && run && selectedFinding
+      ? explanationCacheKey(sessionId, run.id, model.etag, selectedFinding.id)
+      : null;
+
+  // Selection or version changes abort any in-flight request and can only ever show a cached
+  // result for the new identity; nothing is requested without an explicit user action.
+  useEffect(() => {
+    explanationRequestRef.current?.abort();
+    explanationRequestRef.current = null;
+    const cached = explanationKey ? explanationCacheRef.current.get(explanationKey) : undefined;
+    setExplanationState(
+      cached ? { kind: 'ready', explanation: cached, fromCache: true } : { kind: 'idle' },
+    );
+  }, [explanationKey]);
   const highlightedGlobalIds = useMemo(
     () =>
       selectedFinding?.elements.flatMap((element) =>
@@ -137,7 +190,12 @@ export function ModelWorkspace({
               kind: 'ready',
               model: { summary: loaded.summary, etag: loaded.etag, bytes: loaded.bytes },
             });
-            setReviewState({ kind: 'ready', run: loaded.run, findings: loaded.findings });
+            setReviewState({
+              kind: 'ready',
+              run: loaded.run,
+              findings: loaded.findings,
+              submittedObjective: null,
+            });
             return;
           } catch (caught) {
             if (signal.aborted) {
@@ -184,6 +242,7 @@ export function ModelWorkspace({
       controller.abort();
       reviewRequestRef.current?.abort();
       elementRequestRef.current?.abort();
+      explanationRequestRef.current?.abort();
     };
   }, [sessionId, initialRunId]);
 
@@ -267,9 +326,15 @@ export function ModelWorkspace({
     const controller = new AbortController();
     reviewRequestRef.current = controller;
     clearSelection();
-    setReviewState({ kind: 'running' });
+    // A blank optional objective selects the standard deterministic review unchanged.
+    const trimmedObjective = objective.trim();
+    const requestedObjective = trimmedObjective.length > 0 ? trimmedObjective : null;
+    setReviewState({ kind: 'running', objective: requestedObjective });
     try {
-      const started = await startStandardReview(sessionId, controller.signal);
+      const started =
+        requestedObjective === null
+          ? await startStandardReview(sessionId, controller.signal)
+          : await startObjectiveReview(sessionId, requestedObjective, controller.signal);
       const loaded = await loadReviewWorkspace(sessionId, started.id, controller.signal);
       if (controller.signal.aborted) {
         return;
@@ -282,7 +347,12 @@ export function ModelWorkspace({
               model: { summary: loaded.summary, etag: loaded.etag, bytes: loaded.bytes },
             },
       );
-      setReviewState({ kind: 'ready', run: loaded.run, findings: loaded.findings });
+      setReviewState({
+        kind: 'ready',
+        run: loaded.run,
+        findings: loaded.findings,
+        submittedObjective: requestedObjective,
+      });
       onRunChanged(started.id);
     } catch (caught) {
       if (!controller.signal.aborted) {
@@ -293,6 +363,38 @@ export function ModelWorkspace({
         );
       }
     }
+  }
+
+  function requestExplanation() {
+    if (!model || !run || !selectedFinding || !explanationKey) {
+      return;
+    }
+    if (run.input_manifest.model_hash !== model.summary.model_hash) {
+      return;
+    }
+    explanationRequestRef.current?.abort();
+    const controller = new AbortController();
+    explanationRequestRef.current = controller;
+    const key = explanationKey;
+    setExplanationState({ kind: 'loading' });
+    void explainFinding(sessionId, run.id, selectedFinding.id, model.etag, controller.signal)
+      .then((explanation) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+        explanationCacheRef.current.set(key, explanation);
+        setExplanationState({ kind: 'ready', explanation, fromCache: false });
+      })
+      .catch((caught: unknown) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+        setExplanationState({
+          kind: 'error',
+          message: messageForError(caught),
+          status: caught instanceof ApiError ? caught.status : undefined,
+        });
+      });
   }
 
   async function handleDocumentChange(event: ChangeEvent<HTMLInputElement>) {
@@ -325,11 +427,15 @@ export function ModelWorkspace({
   }
 
   const reviewBusy = reviewState.kind === 'running' || reviewState.kind === 'loading';
+  const hasObjective = objective.trim().length > 0;
+  const objectiveLength = [...objective].length;
   const canRun =
     model !== null &&
     !reviewBusy &&
     documentUpload.kind !== 'uploading' &&
     (executableCount === null || executableCount > 0);
+  const runVersionMatches =
+    model !== null && run !== null && run.input_manifest.model_hash === model.summary.model_hash;
 
   return (
     <div className="workspace-shell">
@@ -347,10 +453,16 @@ export function ModelWorkspace({
           title={
             executableCount === 0
               ? 'Add an IDS with confirmed requirements before running a review'
-              : undefined
+              : hasObjective
+                ? 'Starts an objective-aware review; the plan may be narrowed to suit the objective'
+                : 'Starts the deterministic default review'
           }
         >
-          {reviewState.kind === 'running' ? 'Running review…' : 'Run review'}
+          {reviewState.kind === 'running'
+            ? 'Running review…'
+            : hasObjective
+              ? 'Run review with objective'
+              : 'Run review'}
         </button>
       </AppHeader>
 
@@ -522,11 +634,44 @@ export function ModelWorkspace({
               )}
             </section>
 
-            {run && (
+            <section className="review-objective" aria-labelledby="review-objective-heading">
+              <div className="panel-heading">
+                <h3 id="review-objective-heading">Review objective</h3>
+                <span className="panel-heading__hint">Optional</span>
+              </div>
+              <label className="review-objective__label" htmlFor="review-objective">
+                Review objective (optional)
+              </label>
+              <textarea
+                id="review-objective"
+                className="review-objective__input"
+                name="objective"
+                rows={3}
+                maxLength={MAX_REVIEW_OBJECTIVE_LENGTH}
+                value={objective}
+                disabled={reviewBusy}
+                aria-describedby="review-objective-help review-objective-count"
+                placeholder="e.g. Focus on fire-rating completeness for the ground-floor walls."
+                onChange={(event) => setObjective(event.target.value)}
+              />
+              <p id="review-objective-help" className="review-objective__help">
+                An objective can only narrow the confirmed checks that run; it never changes their
+                criteria and never creates findings. Leave blank to run every confirmed check
+                deterministically. The plan source shown after the run reports what actually
+                happened.
+              </p>
+              <p id="review-objective-count" className="review-objective__count">
+                {objectiveLength} / {MAX_REVIEW_OBJECTIVE_LENGTH}
+              </p>
+            </section>
+
+            {run && model && (
               <ReviewCoverage
                 run={run}
                 findingCount={findings.length}
                 activeModelHash={model.summary.model_hash}
+                submittedObjective={submittedObjective}
+                llmMode={llmMode}
               />
             )}
 
@@ -537,6 +682,16 @@ export function ModelWorkspace({
               relatedFindings={relatedFindings}
               requirements={requirementsState.kind === 'ready' ? requirementsState.items : null}
               runModelHash={run?.input_manifest.model_hash ?? null}
+              explanation={
+                run
+                  ? {
+                      state: explanationState,
+                      versionMatches: runVersionMatches,
+                      llmMode,
+                      onRequest: requestExplanation,
+                    }
+                  : null
+              }
               onSelectFinding={selectFinding}
             />
           </div>
@@ -571,7 +726,7 @@ function ReviewStatusChip({
     case 'running':
       return (
         <span className="review-bar__item review-bar__chip review-bar__chip--active" role="status">
-          Deterministic review running…
+          {state.objective === null ? 'Deterministic review running…' : 'Objective review running…'}
         </span>
       );
     case 'ready':
@@ -624,7 +779,9 @@ function ReviewPlaceholder({
     case 'running':
       return (
         <p role="status" className="notice">
-          Running the deterministic review against the active model version…
+          {state.objective === null
+            ? 'Running the deterministic review against the active model version…'
+            : 'Running the review against the active model version. The objective may narrow the confirmed checks; the plan source will show whether it was used.'}
         </p>
       );
     case 'mismatch':

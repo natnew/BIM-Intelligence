@@ -25,7 +25,7 @@ export function AppHeader({
         </span>
         <div>
           <p className="app-header__title">BIM Intelligence</p>
-          <p className="app-header__subtitle">Architectural model review</p>
+          <p className="app-header__subtitle">AEC Model Review</p>
         </div>
       </div>
       <nav className="app-header__nav" aria-label="Application sections">

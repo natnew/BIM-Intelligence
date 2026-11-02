@@ -9,17 +9,20 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  explainFinding,
   fetchElement,
   fetchRequirements,
   loadModel,
   loadReviewWorkspace,
   ModelVersionMismatchError,
+  startObjectiveReview,
   startStandardReview,
   uploadDocument,
   type ReviewWorkspaceData,
   type VersionedModel,
 } from '../api/bim';
-import type { ElementRecord, Finding, Requirement } from '../api/generated/types';
+import { ApiError, type LLMMode } from '../api/client';
+import type { ElementRecord, Explanation, Finding, Requirement } from '../api/generated/types';
 import type { ViewerCanvasHandle } from '../viewer/ViewerCanvas';
 import { ModelWorkspace } from './ModelWorkspace';
 
@@ -28,6 +31,7 @@ const w003GlobalId = '2qvnbd6oPPKR1ac5HegGTJ';
 const w001GlobalId = '21KH8X9wHPWw7JLiY2NtSZ';
 const modelHash = 'a'.repeat(64);
 const etag = `"${modelHash}"`;
+const healthMode = vi.hoisted(() => ({ llmMode: 'off' as LLMMode }));
 const viewerActions = vi.hoisted(() => ({
   fitModel: vi.fn(async () => undefined),
   resetView: vi.fn(async () => undefined),
@@ -189,12 +193,28 @@ const workspace: ReviewWorkspaceData = {
 
 vi.mock('../api/bim', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api/bim')>()),
+  explainFinding: vi.fn(),
   fetchElement: vi.fn(),
   fetchRequirements: vi.fn(),
   loadModel: vi.fn(),
   loadReviewWorkspace: vi.fn(),
+  startObjectiveReview: vi.fn(),
   startStandardReview: vi.fn(),
   uploadDocument: vi.fn(),
+}));
+
+vi.mock('../state/useHealth', () => ({
+  useHealth: () => ({
+    kind: 'success',
+    data: {
+      status: 'ok',
+      version: 'test',
+      llm_mode: healthMode.llmMode,
+      llm_model: 'fake-model',
+      llm_configured: false,
+      libraries: { ifcopenshell: null, ifctester: null },
+    },
+  }),
 }));
 
 vi.mock('../viewer/ViewerCanvas', () => ({
@@ -612,7 +632,10 @@ describe('ModelWorkspace selection coordination', () => {
     expect(inspector).toHaveTextContent('Deterministic finding · method ids');
     expect(inspector).toHaveTextContent('Every wall shall declare a FireRating.');
     expect(inspector).toHaveTextContent(/no narrative quotation/i);
-    expect(inspector).toHaveTextContent(/AI explanation · not connected/i);
+    expect(inspector).toHaveTextContent(/Interpretation · not a Finding/i);
+    expect(screen.getByRole('button', { name: 'Explain finding' })).toBeEnabled();
+    expect(explainFinding).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('explanation-result')).not.toBeInTheDocument();
   });
 
   it('filters the register client-side without altering the run’s findings', async () => {
@@ -812,5 +835,332 @@ describe('ModelWorkspace review execution and status', () => {
       await screen.findByText(/brief\.pdf" is not a supported requirements document/),
     ).toBeInTheDocument();
     expect(uploadDocument).not.toHaveBeenCalled();
+  });
+});
+
+const aiExplanation: Explanation = {
+  finding_id: 'finding-id',
+  source: 'ai_generated',
+  grounding_status: 'passed',
+  fallback_reason: null,
+  model: 'fake-model',
+  summary: 'The wall lacks a FireRating value.',
+  probable_cause: 'The property set was not populated on export.',
+  corrective_action: 'Populate Pset_WallCommon.FireRating before re-export.',
+  citations: [
+    {
+      finding_id: 'finding-id',
+      global_id: globalId,
+      requirement_id: 'REQ-001',
+      rule_id: 'ids:FireRating',
+      observed: 'FireRating is missing.',
+      expected: 'FireRating must be present.',
+    },
+  ],
+};
+const templateExplanation: Explanation = {
+  ...aiExplanation,
+  source: 'deterministic_template',
+  grounding_status: 'fallback',
+  fallback_reason: 'ai_disabled',
+  model: null,
+  summary: 'Deterministic summary of the finding.',
+};
+
+describe('FINAL-UI-001 review objective dispatch and plan source', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    healthMode.llmMode = 'off';
+    vi.mocked(loadModel).mockResolvedValue(model);
+    vi.mocked(loadReviewWorkspace).mockResolvedValue(workspace);
+    vi.mocked(startStandardReview).mockResolvedValue(workspace.run);
+    vi.mocked(startObjectiveReview).mockResolvedValue(workspace.run);
+    vi.mocked(fetchElement).mockResolvedValue(element);
+    vi.mocked(fetchRequirements).mockResolvedValue([requirement]);
+  });
+
+  it('runs the standard review when the optional objective is blank or whitespace', async () => {
+    renderWorkspace(null);
+    await screen.findByTestId('viewer');
+
+    fireEvent.change(screen.getByLabelText('Review objective (optional)'), {
+      target: { value: '   \n ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Run review' }));
+
+    await screen.findByRole('button', { name: /W-002/ });
+    expect(startStandardReview).toHaveBeenCalledWith('session-id', expect.any(AbortSignal));
+    expect(startObjectiveReview).not.toHaveBeenCalled();
+    expect(screen.getByTestId('plan-source')).toHaveTextContent('Deterministic default');
+    expect(screen.queryByTestId('coverage-objective')).not.toBeInTheDocument();
+  });
+
+  it('sends a trimmed objective to the objective-aware endpoint and reports a default fallback', async () => {
+    renderWorkspace(null);
+    await screen.findByTestId('viewer');
+
+    fireEvent.change(screen.getByLabelText('Review objective (optional)'), {
+      target: { value: '  Check fire ratings on ground-floor walls.  ' },
+    });
+    const runButton = screen.getByRole('button', { name: 'Run review with objective' });
+    fireEvent.click(runButton);
+
+    expect(
+      screen
+        .getAllByRole('status')
+        .map((node) => node.textContent)
+        .join(' '),
+    ).toMatch(/Objective review running/);
+    await screen.findByRole('button', { name: /W-002/ });
+    expect(startObjectiveReview).toHaveBeenCalledWith(
+      'session-id',
+      'Check fire ratings on ground-floor walls.',
+      expect.any(AbortSignal),
+    );
+    expect(startStandardReview).not.toHaveBeenCalled();
+    expect(screen.getByTestId('plan-source')).toHaveTextContent('Deterministic default');
+    const objectivePanel = screen.getByTestId('coverage-objective');
+    expect(objectivePanel).toHaveTextContent('Check fire ratings on ground-floor walls.');
+    expect(objectivePanel).toHaveTextContent(
+      'The objective was not used; the deterministic default plan ran.',
+    );
+  });
+
+  it('labels an accepted AI plan as AI-selected without claiming a live call', async () => {
+    vi.mocked(loadReviewWorkspace).mockResolvedValue({
+      ...workspace,
+      run: { ...workspace.run, plan_source: 'llm', status: 'partial' },
+    });
+    renderWorkspace(null);
+    await screen.findByTestId('viewer');
+
+    fireEvent.change(screen.getByLabelText('Review objective (optional)'), {
+      target: { value: 'Fire ratings only' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Run review with objective' }));
+
+    await screen.findByRole('button', { name: /W-002/ });
+    expect(screen.getByTestId('plan-source')).toHaveTextContent('AI-selected plan');
+    expect(screen.getByTestId('plan-source')).not.toHaveTextContent(/live/i);
+    expect(screen.getByRole('region', { name: 'Review coverage' })).toHaveTextContent(
+      /narrowed scope, never a pass/,
+    );
+    expect(screen.queryByText(/The objective was not used/)).not.toBeInTheDocument();
+  });
+
+  it('labels an AI plan as a recorded Replay response when the backend is in replay mode', async () => {
+    healthMode.llmMode = 'replay';
+    vi.mocked(loadReviewWorkspace).mockResolvedValue({
+      ...workspace,
+      run: { ...workspace.run, plan_source: 'llm' },
+    });
+    renderWorkspace();
+
+    await screen.findByRole('button', { name: /W-002/ });
+    expect(screen.getByTestId('plan-source')).toHaveTextContent(
+      'Recorded AI-selected plan (Replay; no live call)',
+    );
+  });
+
+  it('surfaces an objective review error without presenting a run', async () => {
+    vi.mocked(startObjectiveReview).mockRejectedValue(
+      new ApiError('Review objectives are limited to 4000 characters.'),
+    );
+    renderWorkspace(null);
+    await screen.findByTestId('viewer');
+
+    fireEvent.change(screen.getByLabelText('Review objective (optional)'), {
+      target: { value: 'An objective' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Run review with objective' }));
+
+    expect(
+      await screen.findByText('Review objectives are limited to 4000 characters.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Review coverage' })).not.toBeInTheDocument();
+  });
+});
+
+describe('FINAL-UI-001 explanation requests', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    healthMode.llmMode = 'off';
+    vi.mocked(loadModel).mockResolvedValue(model);
+    vi.mocked(loadReviewWorkspace).mockResolvedValue({
+      ...workspace,
+      findings: [finding, w003Finding],
+    });
+    vi.mocked(startStandardReview).mockResolvedValue(workspace.run);
+    vi.mocked(fetchElement).mockResolvedValue(element);
+    vi.mocked(fetchRequirements).mockResolvedValue([requirement]);
+    vi.mocked(explainFinding).mockResolvedValue(aiExplanation);
+  });
+
+  it('requests an explanation only on an explicit user action and renders AI provenance', async () => {
+    renderWorkspace();
+
+    fireEvent.click(await screen.findByRole('button', { name: /W-002/ }));
+    expect(explainFinding).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Explain finding' }));
+
+    const result = await screen.findByTestId('explanation-result');
+    expect(explainFinding).toHaveBeenCalledTimes(1);
+    expect(explainFinding).toHaveBeenCalledWith(
+      'session-id',
+      'run-id',
+      'finding-id',
+      etag,
+      expect.any(AbortSignal),
+    );
+    expect(result).toHaveAttribute('data-source', 'ai_generated');
+    expect(result).toHaveTextContent('AI interpretation · fake-model · grounding passed');
+    expect(result).not.toHaveTextContent(/Replay/);
+    expect(result).not.toHaveTextContent(/Meta/);
+    expect(result).toHaveTextContent('The wall lacks a FireRating value.');
+    expect(
+      screen.getByRole('list', { name: 'Deterministic evidence cited by the explanation' }),
+    ).toHaveTextContent(globalId);
+    expect(screen.getByLabelText('2 findings in this run')).toHaveTextContent('2');
+  });
+
+  it('renders a deterministic template with its fallback reason and no model', async () => {
+    vi.mocked(explainFinding).mockResolvedValue(templateExplanation);
+    renderWorkspace();
+
+    fireEvent.click(await screen.findByRole('button', { name: /W-002/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Explain finding' }));
+
+    const result = await screen.findByTestId('explanation-result');
+    expect(result).toHaveAttribute('data-source', 'deterministic_template');
+    expect(result).toHaveTextContent('Deterministic template · AI not used');
+    expect(result).toHaveTextContent('ai_disabled — AI is off.');
+    expect(result).toHaveTextContent('Modelnone');
+    expect(result).not.toHaveTextContent(/AI interpretation/);
+  });
+
+  it('adds the Replay label to an AI explanation only when the backend reports replay mode', async () => {
+    healthMode.llmMode = 'replay';
+    renderWorkspace();
+
+    fireEvent.click(await screen.findByRole('button', { name: /W-002/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Explain finding' }));
+
+    expect(await screen.findByTestId('explanation-result')).toHaveTextContent(
+      'Recorded response (Replay; no live call)',
+    );
+  });
+
+  it('shows a 412 as a version error rather than an explanation', async () => {
+    vi.mocked(explainFinding).mockRejectedValue(
+      new ModelVersionMismatchError('The run belongs to a different model version.'),
+    );
+    renderWorkspace();
+
+    fireEvent.click(await screen.findByRole('button', { name: /W-002/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Explain finding' }));
+
+    const alert = await screen.findByText(/Explanation request failed \(412\)/);
+    expect(alert).toHaveTextContent('The run belongs to a different model version.');
+    expect(screen.queryByTestId('explanation-result')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explain finding' })).toBeEnabled();
+  });
+
+  it('never displays a late explanation for a finding that is no longer selected', async () => {
+    let resolveExplanation: (value: Explanation) => void = () => {
+      throw new Error('Explanation request was not started.');
+    };
+    vi.mocked(explainFinding).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveExplanation = resolve;
+        }),
+    );
+    renderWorkspace();
+
+    fireEvent.click(await screen.findByRole('button', { name: /W-002/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Explain finding' }));
+    expect(screen.getByText(/Requesting an explanation for/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /W-003/ }));
+    await act(async () => resolveExplanation(aiExplanation));
+
+    expect(screen.queryByTestId('explanation-result')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Requesting an explanation for/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explain finding' })).toBeEnabled();
+    const signal = vi.mocked(explainFinding).mock.calls[0]?.[4];
+    expect(signal?.aborted).toBe(true);
+  });
+
+  it('reuses a cached explanation for the same finding without a second request', async () => {
+    renderWorkspace();
+
+    fireEvent.click(await screen.findByRole('button', { name: /W-002/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Explain finding' }));
+    await screen.findByTestId('explanation-result');
+
+    fireEvent.click(screen.getByRole('button', { name: /W-003/ }));
+    expect(screen.queryByTestId('explanation-result')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /W-002/ }));
+    expect(screen.getByTestId('explanation-result')).toHaveTextContent(
+      /shown from this session’s earlier request/,
+    );
+    expect(explainFinding).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the explanation with the selection', async () => {
+    renderWorkspace();
+
+    fireEvent.click(await screen.findByRole('button', { name: /W-002/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Explain finding' }));
+    await screen.findByTestId('explanation-result');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear selection' }));
+
+    expect(screen.queryByTestId('explanation-panel')).not.toBeInTheDocument();
+  });
+});
+
+describe('FINAL-UI-001 recent session recording', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.localStorage.clear();
+    vi.mocked(loadModel).mockResolvedValue(model);
+    vi.mocked(loadReviewWorkspace).mockResolvedValue(workspace);
+    vi.mocked(startStandardReview).mockResolvedValue(workspace.run);
+    vi.mocked(fetchElement).mockResolvedValue(element);
+    vi.mocked(fetchRequirements).mockResolvedValue([requirement]);
+  });
+
+  it('remembers only the session and run identifiers of the opened workspace', async () => {
+    renderWorkspace();
+    await screen.findByRole('button', { name: /W-002/ });
+
+    const stored = JSON.parse(window.localStorage.getItem('bimi.recent-sessions.v1') ?? '[]') as {
+      sessionId: string;
+      runId: string | null;
+      openedAt: string;
+    }[];
+    expect(stored).toHaveLength(1);
+    expect(stored[0]?.sessionId).toBe('session-id');
+    expect(stored[0]?.runId).toBe('run-id');
+    expect(Object.keys(stored[0] ?? {}).sort()).toEqual(['openedAt', 'runId', 'sessionId']);
+    expect(window.localStorage.getItem('bimi.recent-sessions.v1')).not.toContain(modelHash);
+    expect(window.localStorage.getItem('bimi.recent-sessions.v1')).not.toContain('Minimal fixture');
+  });
+
+  it('does not remember a run id that failed to load', async () => {
+    vi.mocked(loadReviewWorkspace).mockRejectedValue(
+      new ModelVersionMismatchError('This review run belongs to a different model version.'),
+    );
+    renderWorkspace('stale-run');
+    await screen.findByTestId('viewer');
+
+    const stored = JSON.parse(window.localStorage.getItem('bimi.recent-sessions.v1') ?? '[]') as {
+      sessionId: string;
+      runId: string | null;
+    }[];
+    expect(stored).toEqual([expect.objectContaining({ sessionId: 'session-id', runId: null })]);
   });
 });
