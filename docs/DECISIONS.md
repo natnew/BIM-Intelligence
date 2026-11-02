@@ -603,3 +603,26 @@ browser AI integration or a complete release demonstration.
 
 **Unresolved.** The official event rules/eligibility and owner approval for any live Meta call,
 external model use, recording, and final submission.
+
+## Implementation outcomes — 1 November 2026
+
+These observations supplement, and do not change, the adopted decisions above.
+
+- **ADR-023:** UI-004A was merged into `main` in PR #28 at
+  `cf06328c874258efe8a49d0afa291d9aef278928`. The synthetic fixture browser checks exercised
+  Fit model, Reset view, Focus selected and bidirectional finding/element selection. Cross-severity
+  viewer styling and a complete accessibility audit remain open.
+- **ADR-024:** The owner reported one approved basic `muse-spark-1.3` structured-output smoke;
+  its original request recording and source commit were not provided. This does not verify a live
+  BIM planner or explanation. On the release baseline, an offline objective request produced the
+  deterministic default plan and an explanation request returned an `ai_disabled` deterministic
+  template; neither is an AI response. The browser objective and explanation controls remain
+  unimplemented.
+- **ADR-025:** The separate FED-001 harness produced synthetic geometric feasibility evidence,
+  but no coordination API, matrix or federated viewer is integrated. The repository is private,
+  the video and official submission fields have not been verified, and release remains no-go.
+  Further live calls, publication and submission still require their existing owner gates.
+
+The precise test commands, baseline and limitations are recorded in
+[EVALUATION.md](./EVALUATION.md#release-001-offline-verification--1-november-2026) and
+[DEMO_PLAN.md](./DEMO_PLAN.md).

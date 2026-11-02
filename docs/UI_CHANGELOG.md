@@ -662,3 +662,41 @@ status and milestone criteria.
   performed. The viewer currently applies one red issue style to every severity, and
   cross-severity styling remains unverified; FR-VIS-09 therefore stays in progress. No live Meta
   call was made.
+
+## RELEASE-001 — synthetic baseline verification
+
+- **Task and milestone:** T-7/M3 and T-8/M4 verification, 1 November 2026. UI-004A was merged in
+  PR #28. The tested implementation commit was `484b71c7988295159083121fab77e1713c825903`;
+  its tree matches main merge commit `cf06328c874258efe8a49d0afa291d9aef278928`.
+- **Scope and approval:** The owner requested final UI-001 functional work while retaining the
+  approved Concept C shell. Its separate branch/path/revision/evidence/rollback packet is
+  incomplete, so no UI-001 application changes or new design approval are recorded here.
+- **Inputs and environment:** A fresh isolated local session used the committed synthetic
+  `tests/fixtures/minimal.ifc` and `minimal.ids`, with `LLM_MODE=off`, live access disabled and no
+  API key configured. Their SHA-256 values are
+  `f2bd00074c54866d95c5c344a1c604e01cdb8ea394b9b20937952b7b38c74348` and
+  `e602233db1e9aa8e77b2a4f90371db42df9879ee2f6331251f7aab84f2f1ce74`. The VS Code integrated
+  browser reported Chrome 150.0.7871.250 / Electron 43.8.3 on Windows.
+- **Actual browser checks:** At 1920 × 1080 CSS pixels, manual uploads indexed the IFC, imported
+  two executable IDS requirements and rendered the three walls. The deterministic run returned
+  W-002's missing FireRating and W-003's missing classification. Selecting W-002 highlighted it
+  and showed its matching GlobalId and evidence; clicking its focused geometry selected the
+  matching finding. Clicking W-001 showed zero linked findings, not a general compliance claim.
+  Orbit, pan, zoom, Fit, Reset and Focus changed the rendered WebGL frame; the selected finding
+  remained selected and no alert appeared.
+- **Responsive and continuity checks:** At 1440 × 900, selecting and clearing W-003 returned the
+  WebGL frame to its prior image without horizontal document overflow. At 390 × 844, the viewer
+  was ready, no horizontal document overflow was observed, and keyboard activation selected
+  W-002, focused it and cleared selection. Reopening the same synthetic session and run by explicit
+  IDs restored both findings. A production-build preview at 1216 × 735 rendered the same run and
+  exercised W-003 selection and the three camera buttons without an alert.
+- **Outstanding paths:** The objective field, explanation button, recent-session list and one-click
+  sample were absent. Direct offline API requests returned a default plan and an `ai_disabled`
+  deterministic explanation template; these do not verify a user-facing Meta workflow.
+- **Tests and limits:** The complete frontend checks passed: `npm run lint`,
+  `npm run format:check`, `npm run typecheck`, `npm run types:check`, `npm run test` (8 files,
+  91 tests) and `npm run build`. The build reported missing-export and large-chunk warnings.
+  Backend and benchmark results are in
+  [EVALUATION.md](./EVALUATION.md#release-001-offline-verification--1-november-2026).
+  No before/after UI comparison or screenshot files were saved. Screen-reader, contrast,
+  200% zoom and cross-severity styling were not audited. No live or paid model call was made.

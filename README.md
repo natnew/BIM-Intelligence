@@ -26,9 +26,10 @@ and explanation workflow, complete report export and multi-model coordination ar
 > review, the T-3 viewer, the UI-003 Project Home/workspace, the T-5 offline AI integration path and
 > a locally measured synthetic benchmark. The owner reports one approved live Muse Spark
 > structured-output smoke test passed on 1 November 2026; live planning, explanations and frontend
-> AI integration remain unverified. Hosted benchmark CI, report
-> export, viewer recovery controls and demo acceptance remain outstanding. There is no implemented
-> model federation or clash engine. See [Development status](#development-status).
+> AI integration remain unverified. UI-004A's Fit, Reset and Focus controls are implemented and
+> merged. Hosted CI, report export, the final AI interface and demo acceptance remain outstanding.
+> A separate geometry feasibility harness exists, but federation and clash detection are not
+> integrated into the application. See [Development status](#development-status).
 
 Designed for the Meta Global AI Developer Hackathon (26 October – 4 November 2026), with Meta Muse
 Spark via the Meta Model API as the intended interpretation/planning provider. The
@@ -108,16 +109,17 @@ These boundaries are recorded in [ADR-001](./docs/DECISIONS.md#adr-001-findings-
 
 | Layer | Choice | Why |
 |---|---|---|
-| LLM | Meta **Muse Spark** (`muse-spark-1.3`) via the **Meta Model API**, called with the OpenAI Python SDK (`base_url=https://api.meta.ai/v1`) | Tool calling, JSON-schema structured output, 1M-token context; Standard mode does not train on submitted content |
+| LLM | Meta **Muse Spark** (`muse-spark-1.3`) via the **Meta Model API**, called with the OpenAI Python SDK (`base_url=https://api.meta.ai/v1`) | Intended Standard-mode provider; one basic JSON-object smoke is owner-reported, while live BIM planning and explanation remain unverified |
 | BIM processing | **IfcOpenShell** 0.9, **IfcTester** 0.9 (IDS 1.0) | Implemented IFC ingestion and deterministic IDS/native validation |
 | Backend | **Python 3.12**, **FastAPI**, **Pydantic v2**, **pytest** | Typed schemas shared with the frontend; synchronous review routes with explicit loading and result states |
 | Frontend | **React**, **TypeScript**, **Three.js**, **That Open Components** 3.6 (`web-ifc`) | Browser-side IFC Fragments viewer with GlobalId selection and deterministic finding highlights |
-| Evaluation | Synthetic benchmark generated with `ifcopenshell.api`, defect injection, replayable LLM recordings | Reproducible precision/recall and grounding metrics without API spend |
+| Evaluation | Synthetic benchmark generated with `ifcopenshell.api`, defect injection, replayable LLM recordings | Reproducible synthetic precision/recall and offline grounding-contract checks without API spend |
 
 Verified versions and sources: [docs/ARCHITECTURE.md — Appendix B](./docs/ARCHITECTURE.md#appendix-b--verified-technology-facts-26-october-2026-viewer-packages-checked-29-october-2026).
 
-IfcClash and `bcf-client` are optional future candidates, not installed application dependencies
-or implemented features at the checked-out baseline.
+IfcClash is not importable locally. `bcf-client` is installed as an IfcTester transitive
+dependency, not used as a first-party application feature; its redistribution terms are unresolved.
+Neither establishes an implemented clash or BCF workflow.
 
 ## Intended user workflow
 
@@ -144,9 +146,17 @@ This is the target workflow, not a claim that every step is currently available 
 | T-5 offline AI interfaces: quote-verified TXT/Markdown candidates, bounded objective planning, grounded explanations, Fake/Replay clients and persistent spend safeguards | **Implemented and offline-tested** — only existing confirmed CheckSpecs can be selected; full BEP-to-IDS authoring is out of scope |
 | Meta API compatibility and integrated frontend AI panels | **Basic live smoke passed (owner-reported) / panels not implemented** — live BIM workflows remain unverified; this does not by itself complete M0 or M2 |
 | T-6 synthetic benchmark | **Measured locally** — 15 independently labelled P0 defects, seven clean controls; 1.000 precision/recall/F1 on this narrow IFC4 benchmark, byte-identical repeated findings and 14/14 IfcTester IDS entity agreement. This is not a general BIM accuracy or live model-quality result; hosted CI remains outstanding. See [docs/EVALUATION.md](./docs/EVALUATION.md). |
-| T-7 product integration | **In progress** — UI-003 Project Home, upload and single-model viewer workflow are implemented and merged; report export, user-facing Meta integration, camera recovery controls, browser smoke test and demo acceptance remain outstanding. |
-| Federation and clash detection | **Conditional / not implemented** — a two-model demonstration is gated on verified geometry, coordinate alignment, identity, rights and regression evidence; it is not enterprise clash management. |
+| T-7 product integration | **In progress** — UI-003 Project Home and UI-004A camera/selection controls are merged. Report export, user-facing Meta integration, browser-local recent sessions, one-click sample loading, the benchmark browser smoke test and demo acceptance remain outstanding. |
+| Federation and clash detection | **Feasibility only** — the synthetic FED-001 test harness exercises geometric intersection and alignment; there is no integrated two-model application, result matrix or federated viewer. A demonstration remains conditional on all delivery gates. |
 | Hackathon rule verification | Outstanding (see [docs/REQUIREMENTS.md — Open items](./docs/REQUIREMENTS.md#7-open-items)) |
+
+**Release baseline, 1 November 2026:** the checked-out implementation at
+`484b71c7988295159083121fab77e1713c825903` has the same tree as merged `main` at
+`cf06328c874258efe8a49d0afa291d9aef278928`. Offline backend and frontend checks passed and the
+synthetic IFC/IDS review was exercised in a browser. This is **not a release commit or release
+approval**: the final UI work, hosted CI, video, public-access and submission checks remain open.
+See [evaluation evidence](./docs/EVALUATION.md#release-001-offline-verification--1-november-2026)
+and the [demo plan](./docs/DEMO_PLAN.md).
 
 ## Development roadmap
 
@@ -173,6 +183,8 @@ The owner-directed internal completion target is 3 November 2026; the submission
 ## Local setup
 
 Verified on Windows 11 with Python 3.12.12 and Node.js 24 (27 October 2026).
+The RELEASE-001 checks used an existing local environment; a fresh clone and dependency install
+were not reverified, and the repository was private at that check.
 
 **Prerequisites:** Python **3.10–3.12** (IfcOpenShell publishes wheels for these versions only — Python 3.13+ will not install), Node.js 20+, a Meta Model API key for live LLM features (optional; the deterministic pipeline runs without one).
 
@@ -318,8 +330,8 @@ The live command is an exact one-request smoke test, not general authorisation. 
 Developed for the Meta Global AI Developer Hackathon, 26 October – 4 November 2026. The design
 retains Meta Muse Spark via the Meta Model API as the intended provider for planning, requirement
 interpretation and explanation. Live evidence is limited to the owner-reported structured-output
-smoke; the BIM workflows and event rules remain unverified. Any additional live call requires
-separate explicit owner approval.
+smoke; the live Meta-assisted BIM workflow and event rules remain unverified. Any additional live
+call requires separate explicit owner approval.
 
 ## Limitations
 
@@ -338,7 +350,8 @@ Project code is released under the [MIT License](./LICENSE).
 | Dependency | Licence | Note |
 |---|---|---|
 | IfcOpenShell, IfcTester | LGPL-3.0-or-later | Used as installed packages; no source vendored (IfcTester classifier to be confirmed) |
-| IfcClash, `bcf-client` | Not installed | Optional candidates only; verify package/version and licence before any approved addition |
+| IfcClash | Not importable locally | Optional candidate; verify package/version and licence before any approved addition |
+| `bcf-client` | Unverified | Version 0.9.0 is a local IfcTester transitive dependency; resolve its conflicting licence metadata before redistributing an installed environment. See [third-party notices](./THIRD_PARTY_NOTICES.md). |
 | That Open Components (`@thatopen/*`) | MIT | |
 | Three.js | MIT | |
 | `web-ifc` 0.0.77 | MPL-2.0 | Required by the selected IFC viewer stack. This is an exception to the repository's permissive-or-LGPL dependency preference; no source is vendored. Review the [upstream project](https://github.com/ThatOpen/engine_web-ifc) before distributing builds. |
