@@ -7,6 +7,16 @@
 **Status:** Owner-approved delivery contract; this plan does not implement features or mark T-7/M3
 or T-8/M4 complete.
 
+**Status correction, 3 November 2026:** this plan preserves its 1 November decisions, dates and
+conditional coordination gate. On merged `main`
+`588e6adf9ca71079eadc0e5b33422dc6605df743`, the guided Meta objective/explanation interface,
+explicit deterministic continuation, browser-local recent sessions and Fit/Reset/Focus controls
+are implemented. VERIFY-010 passed one authorised synthetic live plan and grounded explanation;
+VERIFY-009 remains a failure. `examples/` now exists, but contains no tracked IFC models or
+verified one-click sample. Report export, integrated federation/clashes, hosted CI, complete
+rights checks and a verified video remain outstanding. T-7/M3 and preparatory T-8 work are in
+progress; M4 remains gated by incomplete M3. See [EVALUATION §8](./EVALUATION.md#8-results).
+
 ## 1. Outcome and delivery boundary
 
 Deliver one coherent **BIM Intelligence AI-native AEC model-review application** without replacing
@@ -17,9 +27,10 @@ source-backed findings and existing viewer selection.
 The verified baseline on `main` already includes the Project Home and single-IFC upload/review
 workflow (UI-003), deterministic IDS/native checks, source-linked element evidence, offline-tested
 Meta client/planner/explanation safeguards, and a locally measured synthetic T-6 benchmark. UI-003
-was merged through PR #18 on 30 October. T-7/M3 and T-8/M4 remain in progress.
+was merged through PR #18 on 30 October. This paragraph describes the 1 November baseline, not
+the current milestone status.
 
-The checked-out implementation does **not** include a user-facing Meta objective/explanation
+At the **1 November baseline**, the implementation did **not** include a user-facing Meta objective/explanation
 workflow, a complete report/export path, Fit All/Reset/Focus controls, a session history/sample
 catalogue, a federation manifest, coordinate validation or a clash engine. The local Python
 environment reports IfcOpenShell 0.9.0.post1 and IfcTester 0.9.0; IfcClash is not installed. Do not
@@ -299,13 +310,14 @@ non-sensitive summary and neutral evidence identifiers.
 
 ## 8. Samples, privacy and exclusions
 
-- `examples/` may contain tracked manifests, attribution/provenance, preparation instructions and
-  genuinely redistributable small assets. It does not currently exist. Do not create placeholders
-  or add an IFC exception to `.gitignore` until an exact asset is rights-checked and owner-approved.
+- `examples/` now contains descriptions, draft IDS files and other tracked assets, but no tracked
+  IFC models. Check the source, rights and applicability of each asset before publication; do not
+  create placeholders or add an IFC exception to `.gitignore` without owner approval.
 - `local-private/` is for private BIM files, evaluation materials, raw tester evidence and
   unapproved third-party assets. It is owner-managed and ignored; do not inspect unrelated files
   or create placeholders.
-- The one-click synthetic demo is the safe fallback. Preserve the existing synthetic benchmark
+- A one-click synthetic demo remains planned, not implemented. Manually upload the committed
+  synthetic IFC/IDS fixture for the available fallback. Preserve the existing synthetic benchmark
   and fixtures; do not modify an IFC in place or copy a private model into tracked content.
 - Duplex Apartment is the preferred external federation candidate only if compatibility and rights
   verification both pass. No model is assumed to be available or authorised by this plan.
@@ -317,18 +329,20 @@ non-sensitive summary and neutral evidence identifiers.
 
 1. **Time:** two days is insufficient for unrestricted feature work. W5/W6 stop at the cutoff;
    protect W1–W4, regression and recording.
-2. **Meta:** API compatibility and frontend integration are unverified. Any live feature depends on
-   owner approval, secure credentials and a successful bounded request.
+2. **Meta:** one synthetic integrated live plan and explanation passed in VERIFY-010; broader
+   reliability remains unverified. Any new live request depends on separate owner approval,
+   applicable rights and secure credentials.
 3. **Clash capability:** IfcClash is not installed, alignment and the federated viewer are unproven,
    and a dependency/licence decision may not fit. The default gate is no-go.
 4. **Sample rights:** Duplex Apartment's redistribution rights and model compatibility have not
    been verified; the synthetic path remains the safe fallback.
-5. **M3/M4 acceptance:** hosted CI, Playwright smoke, complete report, integrated Meta path, final
-   walkthrough and recording remain evidence gaps. This plan cannot mark T-7/M3 or T-8/M4
-   complete.
+5. **M3/M4 acceptance:** hosted CI, benchmark Playwright smoke, complete report, reproducible
+   clean setup and recorded demonstration remain evidence gaps. This plan cannot mark T-7/M3 or
+   T-8/M4 complete.
 6. **Hackathon rules:** official requirements, eligibility, submission format and asset terms
    remain owner verification items (OPEN-02). No eligibility claim is made.
 
-**Stop condition:** Complete the scoped documentation and return this plan for owner review. Do
+**Original stop condition for the 1 November planning task:** Complete the scoped documentation
+and return this plan for owner review. Do
 not start implementation, inspect private models, call Meta, install dependencies, create a
 branch, record a video, submit, commit, push or merge as part of this task.

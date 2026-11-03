@@ -1,23 +1,26 @@
 # BIM Intelligence UI Specification
 
-**Status:** Governance baseline; the owner-approved UI-002 Revision 2 visual direction is recorded
-in §13, the UI-003 production implementation in §18, and the owner-authorised UI-004A viewer
-corrections in §20. Remaining scope (model tree, catalogue, clashes and AI explanation) remains
-proposed.
+**Status:** Governance baseline with merged implementations through UI-008 and UI-005E.
+Objective planning and on-request explanations are connected; a complete model tree, one-click
+catalogue and clashes remain unimplemented. See the current status in §31.
 **Status correction (1 November 2026):** On the UI-004A integration branch, §3 and §4 describe the
 UI-003 production baseline with the viewer corrections. The UI-002 proposal in §17 is a dated
 pre-implementation snapshot; its former statements that Project Home and upload were absent are
 not current production status.
-**Later correction:** UI-004A merged into `main` through PR #28 at
-`cf06328c874258efe8a49d0afa291d9aef278928`. The requested final UI-001 objective, explanation,
-browser-local history and one-click sample remain unimplemented; the implementation approval
-packet required by the constitution is incomplete. See §21 and
+**Historical correction (1 November 2026):** UI-004A merged into `main` through PR #28 at
+`cf06328c874258efe8a49d0afa291d9aef278928`. At that point the requested final UI-001 objective,
+explanation, browser-local history and one-click sample remained unimplemented. See §21 and
 [UI_CHANGELOG.md](./UI_CHANGELOG.md#release-001--synthetic-baseline-verification).
 The detailed implementation and browser evidence in §§18 and 20 and `docs/UI_CHANGELOG.md` remain
 the evidence record.
 **Scope:** Owner-directed interface refinement under T-7, contributing to M3.
 **Authority:** The project owner approves visual decisions. This document records verified
 behaviour, provisional design principles, approved decisions and unresolved questions separately.
+
+**Current correction (3 November 2026):** the objective, explanation and recent-session
+interfaces and the later Home iterations are merged on source baseline
+`588e6adf9ca71079eadc0e5b33422dc6605df743`. The owner has accepted the slideshow; no further
+slideshow change is requested. Historical branch and test records remain dated, not rewritten.
 
 The [UI constitution](./UI_CONSTITUTION.md) supplies binding quality criteria and the conflict
 order; it does not prescribe a layout. The [refinement skill](../.github/skills/bim-ui-refinement/SKILL.md)
@@ -1079,8 +1082,8 @@ The local captures await owner visual review and do not establish an end-to-end 
 
 ## 29. UI-008 — Guided AI review with an objective dock
 
-**Status:** implementation on `feature/ui-008-guided-ai-review`, based on `main` at
-`852746020a41f7928692d30ac62665c97d9fb68a`; owner visual review is pending. This is a T-7 / M3
+**Historical status:** implementation on `feature/ui-008-guided-ai-review`, based on `main` at
+`852746020a41f7928692d30ac62665c97d9fb68a`; owner visual review was pending at that point. This is a T-7 / M3
 refinement, not task or milestone completion. This section supersedes the objective dispatch,
 failure-recovery, run-provenance and explanation-presentation behaviour recorded for the earlier
 FINAL-UI-001 state in §§18 and 22 where they differ. Those sections remain historical records;
@@ -1102,15 +1105,15 @@ remains outstanding. No live Meta request was made, and T-7/M3 remain in progres
 
 ## 30. UI-005E — Automatic architectural reel and product-led captions
 
-**Status:** implemented on `feature/ui-005e-reel-refinement` from `main` at `2e9cba6`
-(3 November 2026); owner visual review is pending. This is a T-7 / M3 presentation refinement,
+**Historical status:** implemented on `feature/ui-005e-reel-refinement` from `main` at `2e9cba6`
+(3 November 2026); owner visual review was pending at that point. This is a T-7 / M3 presentation refinement,
 not task or milestone completion. It supersedes §26's *There is no autoplay* statement and its
 scene names; §26 remains a historical record. Image order, filenames, alt text, frame and
 §28 placement are unchanged.
 
 | Area | Behaviour |
 |---|---|
-| Captions | The six scenes are titled *Review your architectural models*, *Validate against project requirements*, *Investigate coordination issues*, *Make findings accessible for review*, *Support digital twin information quality* and *Bring AI into model review*, each with the owner-supplied description. Slides 1–5 are marked as AI-generated architectural imagery; slide 6 states that it is a concept visualisation, not a screenshot of the implemented application, and does not depict implemented clash-detection or multi-model coordination features. The captions do not claim federation, shared real-time workspaces, automatic clash detection, site synchronisation, digital twin certification or cross-discipline issue assignment. Slide 6's Muse Spark wording describes the intended provider; live compatibility remains unverified. |
+| Captions | The six scenes are titled *Review your architectural models*, *Validate against project requirements*, *Investigate coordination issues*, *Make findings accessible for review*, *Support digital twin information quality* and *Bring AI into model review*, each with the owner-supplied description. Slides 1–5 are marked as AI-generated architectural imagery; slide 6 states that it is a concept visualisation, not a screenshot of the implemented application, and does not depict implemented clash-detection or multi-model coordination features. The captions do not claim federation, shared real-time workspaces, automatic clash detection, site synchronisation, digital twin certification or cross-discipline issue assignment. At the time of this entry live compatibility was unverified; VERIFY-010 later passed one synthetic case. |
 | Autoplay | The reel advances every 7 seconds and wraps from 6 to 1. It pauses while a mouse pointer hovers over it, while keyboard focus is inside it (not after a mouse click), and while the document is hidden. Previous, Next, a pagination dot, an arrow key or a swipe restarts the full interval, so no scene is skipped. The next image is preloaded before rotation. Timers and listeners are removed on unmount. |
 | Play/Pause | A labelled button before the pagination dots toggles *Pause/Play automatic image rotation*. An explicit Play resumes rotation even while hovered or focused. |
 | Reduced motion | When `prefers-reduced-motion: reduce` applies, the reel starts paused and advances only after an explicit Play; the fade remains disabled. If the preference turns on mid-session without an explicit choice, rotation stops. |
@@ -1118,3 +1121,22 @@ scene names; §26 remains a historical record. Image order, filenames, alt text,
 
 Automated results, browser evidence, the viewport-emulation limitation and rollback guidance are
 recorded in [UI_CHANGELOG.md](./UI_CHANGELOG.md#ui-005e--automatic-architectural-reel-and-product-led-captions).
+
+## 31. Current merged interface and evidence — 3 November 2026
+
+| Area | Current status and boundary |
+|---|---|
+| Architectural hero | UI-005A's owner-supplied banner is merged. Owner-reported redistribution permission is recorded; the small embedded tagline had a readability limitation in the earlier 390 px check. |
+| Workflow cards | UI-005B's four informational import, validation, 3D and AI-interpretation cards are merged. They are not interactive controls. |
+| Feature cards | UI-005C's four non-interactive capability cards are merged. The checked-in AI card still says “live provider integration remains unverified”; that copy is stale relative to VERIFY-010's single synthetic live pass. Correcting source copy is outside DOCS-009's documentation-only scope. |
+| Architectural reel | UI-005D/UI-007/UI-005E's six-image presentation is merged; it advances every seven seconds, wraps, supports pause and respects reduced motion. The owner has accepted the slideshow, and no further change to it is requested. |
+| Guided review | UI-008 merged in [PR #40](https://github.com/natnew/BIM-Intelligence/pull/40). The objective dock submits confirmed, revision-pinned scope and offers separate retry and explicit deterministic continuation. |
+| AI activity and explanation | Run provenance shows the actual mode, selected/executed scope and fallback. Explanations are requested explicitly and labelled separately from deterministic evidence. VERIFY-010 observed a Live plan and grounded explanation once; integrated Replay and broad reliability remain unverified. |
+| Viewer and model browser | Fit, Reset, Focus and bidirectional finding/element selection are implemented. UI-006B displays storey names in source order with a readable fallback and keyboard-operable details; a complete element tree and hide/isolate controls remain unimplemented. |
+
+[PR #41](https://github.com/natnew/BIM-Intelligence/pull/41) merged UI-005E at
+`cbb4361612bbdeb40d6a4c4530e1773db041544d`. Its separate headless browser check recorded
+1920 × 1080 and 390 × 844 behaviour; the earlier integrated-browser entry records unreliable
+viewport emulation and a 319 px observation with 16 px page overflow. Both observations are
+retained. A complete accessibility audit and benchmark Playwright smoke remain outstanding;
+T-7/M3 are not complete. See [UI_CHANGELOG.md](./UI_CHANGELOG.md).

@@ -24,7 +24,7 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 | [ADR-016](#adr-016-ingestion-contract-staged-upload-content-hash-etag-and-identifier-handling) | Ingestion contract: staged upload, content-hash ETag and identifier handling | Adopted; §1 superseded by ADR-017 |
 | [ADR-017](#adr-017-content-addressed-model-versions-with-single-pointer-publication) | Content-addressed model versions with single-pointer publication | Adopted |
 | [ADR-018](#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock) | IDS import establishes confirmed requirements; checks are hydrated per run; reviews run under the session lock | Adopted |
-| [ADR-019](#adr-019-t-4-native-rule-scope-and-bounded-deterministic-execution) | T-4 native rule scope and bounded deterministic execution | Adopted |
+| [ADR-019](#adr-019--t-4-native-rule-scope-and-bounded-deterministic-execution) | T-4 native rule scope and bounded deterministic execution | Adopted |
 | [ADR-020](#adr-020-t-5-meta-client-spend-ledger-and-human-gates) | T-5 Meta client, spend ledger and human gates | Adopted |
 | [ADR-021](#adr-021-bounded-model-federation-is-separate-from-a-session) | Bounded model federation is separate from a session | Adopted; implementation conditional on feasibility |
 | [ADR-022](#adr-022-deterministic-geometric-coordination-results) | Deterministic geometric coordination results | Adopted; implementation conditional on feasibility |
@@ -34,6 +34,7 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 | [ADR-026](#adr-026-explicit-ai-review-policy-and-run-provenance) | Explicit AI review policy and run provenance | Adopted |
 | [ADR-027](#adr-027-fix-002-muse-spark-structured-review-planning) | FIX-002 Muse Spark structured review planning | Adopted |
 | [ADR-028](#adr-028-fix-003-muse-spark-grounded-explanation-allowance-and-token-limit-labelling) | FIX-003 Muse Spark grounded explanation allowance and token-limit labelling | Proposed; awaiting owner acceptance of the FIX-003 implementation |
+| [ADR-029](#adr-029-live-structured-output-evidence-and-retained-validation) | Live structured-output evidence and retained validation | Proposed; evidence reconciliation for owner review |
 
 ---
 
@@ -411,8 +412,8 @@ Before each live call, reserve application budget using configured per-million t
 
 | ID | Question | Related | Needed by |
 |---|---|---|---|
-| OQ-02 | Does Meta accept the FIX-002 non-strict JSON Schema response format for live Muse Spark review planning? | ADR-002, ADR-012, ADR-027 | VERIFY-009 |
-| OQ-08 | Does Muse Spark return a complete, schema-valid and grounded explanation within the FIX-003 2,000-token allowance at low reasoning effort? The one live VERIFY-009 explanation exhausted the prior 500-token allowance on reasoning tokens alone. | ADR-009, ADR-027, ADR-028 | Owner-approved live explanation retest |
+| OQ-02 | Does Meta consistently accept the FIX-002 non-strict JSON Schema across objectives? VERIFY-009 and VERIFY-010 each accepted one live synthetic plan; broader compatibility is not established. | ADR-002, ADR-012, ADR-027, ADR-029 | Further evaluation only with separate approval |
+| OQ-08 | How reliably does Muse Spark return a complete, schema-valid and grounded explanation within the FIX-003 2,000-token allowance? VERIFY-009 exhausted the former 500-token allowance; VERIFY-010 passed once with the new allowance. | ADR-009, ADR-027, ADR-028, ADR-029 | Further evaluation only with separate approval |
 | OQ-03 | Benchmark base model choice and licence | ADR-011 | Day 2 |
 | OQ-04 | Does the planner add measurable value over the default plan? | ADR-003 | Day 7 evaluation |
 | OQ-05 | `ifctester` licence string | ADR-004 | Before publishing licence table |
@@ -791,3 +792,47 @@ These observations supplement, and do not change, the adopted decisions above.
 The precise test commands, baseline and limitations are recorded in
 [EVALUATION.md](./EVALUATION.md#release-001-offline-verification--1-november-2026) and
 [DEMO_PLAN.md](./DEMO_PLAN.md).
+
+## ADR-029 Live structured-output evidence and retained validation
+
+**Status:** Proposed 3 November 2026 for owner review. This evidence record does not amend the
+adopted text of ADR-027 or change ADR-028's proposed status.
+
+**Context and confirmed cause.** Manual Evaluation Run 3 produced five planning responses with
+usage but no visible content at the former 500-token allowance. FIX-001 confirmed that JSON
+parsing and schema validation were never reached; the original failure was not demonstrated to
+be a schema defect. Reasoning-token exhaustion is a plausible hypothesis, not a confirmed cause:
+finish reasons and reasoning-token counts were not captured for those requests. In the later
+VERIFY-009 explanation request, the provider returned `finish_reason=length`, 500 completion
+tokens including 498 reasoning tokens, and no visible content. The completion allowance was
+exhausted before schema validation or grounding. That observed failure is distinct from a
+financial budget refusal.
+
+**Decision proposed.** Retain ADR-027's planning correction: a non-strict JSON Schema request
+using `max_completion_tokens`, a 2,000-token allowance, low reasoning effort, `planner.v2.md`
+and local Pydantic/confirmed-scope/cap validation. Retain the merged FIX-003 explanation
+implementation, whose separate 2,000-token allowance and low reasoning effort are described in
+proposed ADR-028, while awaiting its owner decision. Keep the existing explanation schema,
+deterministic grounding and distinct `token_limit` and `budget_limit` outcomes.
+
+**Why and alternatives considered in this review.** Reverting to the 500-token planning limit
+would restore the observed headroom risk; assuming a malformed schema caused the original
+missing output would contradict the diagnostic evidence. Provider-side strict schema mode is
+not established by these observations. Increasing monetary budgets, weakening citation checks
+or treating a deterministic template as a live explanation would reduce safety or misrepresent
+the result. The selected bounded request and local validation preserve the existing architecture
+while giving the provider sufficient headroom in the recorded later case.
+
+**Validation and retained boundaries.** FIX-002 and FIX-003 were regression-tested offline.
+VERIFY-009 on `b95dadbe2d0475aa3c107227a9d0af2cae2c2c47` passed planning but failed its overall
+live rubric. VERIFY-010 on `588e6adf9ca71079eadc0e5b33422dc6605df743` subsequently passed
+planning and a schema-valid, grounded explanation on one synthetic IFC/IDS pair. That is
+acceptance evidence for this specific scenario, not general reliability, factual perfection or
+owner acceptance of ADR-028. Strict planning failures publish no run; only deterministic
+validation creates findings; explanation provenance and grounding remain mandatory; IFC and
+run artefacts remain unchanged. Live calls still require explicit session approval, applicable
+data rights and unchanged fail-closed application spend controls.
+
+**Evidence:** [FIX-002, VERIFY-009 and VERIFY-010](./EVALUATION.md#8-results); the
+[T-5 task register](./IMPLEMENTATION_PLAN.md#t-5--meta-muse-spark-integration); and ADR-027/028.
+No new live call is authorised by this record.

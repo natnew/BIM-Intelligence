@@ -4,6 +4,30 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### DOCS-009 / T-5, T-7, T-8 / M2, M3, M4 — Documentation and release-evidence reconciliation (3 November 2026)
+
+- Reconcile the approved documentation against merged source baseline
+  `588e6adf9ca71079eadc0e5b33422dc6605df743`, including guided AI controls, explicit fallback,
+  deterministic findings, grounded explanations, browser-local history, viewer controls and
+  the owner-accepted architectural reel. Preserve earlier UI observations as dated history.
+- Record Manual Evaluation Run 3 and FIX-001's incomplete diagnostics, FIX-002/FIX-003's
+  offline regressions, the **failed VERIFY-009** live acceptance and the later **passed
+  VERIFY-010** single synthetic live scenario separately. Add proposed ADR-029 without changing
+  adopted ADR-027 or treating proposed ADR-028 as accepted.
+- Replace the obsolete AI-Off-only script with a planned 180-second Live storyboard and an
+  explicitly labelled deterministic fallback. No video, release, publication or submission is
+  claimed. Add the owner's requested AEC research link, correct sample and attribution
+  boundaries, and retain unresolved distribution, hosted-CI and public-access risks.
+- T-5, T-7 and preparatory T-8 work remain in progress. M2/M3 remain in progress; M4 remains
+  gated by M3. The current source's feature-card wording still describes Live integration as
+  unverified; correcting application copy is outside this documentation-only scope. No source,
+  dependency or private evidence file was changed, and no new paid provider call was made.
+- Verify the documented synthetic IFC/IDS path locally in AI-Off mode: both checks completed and
+  produced two findings. The model-file endpoint rejects `HEAD`; correct the README to retrieve
+  the model summary's `ETag` with `GET`. The pre-existing broken example link remains outside this
+  scope. Mermaid syntax received structural checks only; GitHub rendering and a clean installation
+  were not verified.
+
 ### FIX-003 / T-5 / M2 — Muse Spark grounded explanation reliability (3 November 2026)
 
 - Give finding explanations a separate `LLM_MAX_EXPLANATION_OUTPUT_TOKENS` completion allowance
