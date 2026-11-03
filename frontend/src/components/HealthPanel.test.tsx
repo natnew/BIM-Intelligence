@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { HealthResponse } from '../api/client';
@@ -28,14 +28,20 @@ describe('HealthPanel', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/checking backend/i);
   });
 
-  it('renders health data on success, including degraded badge and missing library', async () => {
+  it('shows plain-language system status and keeps diagnostics collapsed', async () => {
     mockFetch(() => Promise.resolve(Response.json(healthy)));
     render(<HealthPanel />);
-    expect(await screen.findByText('0.1.0')).toBeInTheDocument();
-    expect(screen.getByText('degraded')).toBeInTheDocument();
-    expect(screen.getByText('0.9.0.post1')).toBeInTheDocument();
-    expect(screen.getByText('not installed')).toBeInTheDocument();
-    expect(screen.getByText(/\(no key\)/)).toBeInTheDocument();
+    expect(await screen.findByText('Backend connected')).toBeInTheDocument();
+    expect(screen.getByText(/AI review unavailable/i)).toBeInTheDocument();
+    expect(screen.getByText(/deterministic reviews remain available/i)).toBeInTheDocument();
+    expect(screen.queryByText('degraded')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.1.0')).not.toBeVisible();
+    expect(screen.getByText('Technical details').closest('details')).not.toHaveAttribute('open');
+    fireEvent.click(screen.getByText('Technical details'));
+    expect(screen.getByText('0.1.0')).toBeVisible();
+    expect(screen.getByText('0.9.0.post1')).toBeVisible();
+    expect(screen.getByText('not installed')).toBeVisible();
+    expect(screen.getByText('muse-spark-1.3')).toBeVisible();
   });
 
   it('shows an alert when the backend is unreachable', async () => {

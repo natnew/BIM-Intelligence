@@ -505,6 +505,39 @@ describe('objective review and finding explanation requests', () => {
     });
   });
 
+  it('preserves typed AI-planning failure provenance for objective reviews', async () => {
+    const failure = {
+      mode: 'live',
+      model: 'muse-spark-1.3',
+      provider_request_attempted: true,
+      reason_code: 'provider_unavailable',
+    } as const;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json(modelSummary, { headers: { ETag: etag } }))
+      .mockResolvedValueOnce(
+        Response.json(
+          {
+            title: 'AI review unavailable',
+            status: 503,
+            detail: 'The configured provider could not be reached.',
+            ai_review_failure: failure,
+          },
+          { status: 503 },
+        ),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      startObjectiveReview('session-id', 'Review confirmed requirements'),
+    ).rejects.toMatchObject({
+      name: 'AIReviewRequestError',
+      message: 'The configured provider could not be reached.',
+      status: 503,
+      failure,
+    });
+  });
+
   it('reports an explicitly optional deterministic fallback without ascribing AI planning', async () => {
     vi.stubGlobal(
       'fetch',

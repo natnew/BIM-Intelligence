@@ -1,5 +1,4 @@
-import type { LLMMode } from '../api/client';
-import type { CheckResult, ReviewRun } from '../api/generated/types';
+import type { Requirement, ReviewRun } from '../api/generated/types';
 
 interface ReviewCoverageProps {
   readonly run: ReviewRun;
@@ -7,8 +6,7 @@ interface ReviewCoverageProps {
   readonly activeModelHash: string;
   /** The objective text the user submitted for this run; `null` when none was sent or unknown. */
   readonly submittedObjective: string | null;
-  /** Current backend LLM mode from `/health`; it is not a per-run provenance record. */
-  readonly llmMode: LLMMode | null;
+  readonly requirements: Requirement[];
 }
 
 const STATUS_LABEL: Record<ReviewRun['status'], string> = {
@@ -20,14 +18,63 @@ const STATUS_LABEL: Record<ReviewRun['status'], string> = {
   interrupted: 'Interrupted',
 };
 
-/** The one plan label the interface shows; `llm` never implies a live request occurred. */
-function planSourceLabel(planSource: ReviewRun['plan_source'], llmMode: LLMMode | null): string {
-  if (planSource === 'default') {
-    return 'Deterministic default';
+function planSourceLabel(run: ReviewRun): string {
+  if (run.provenance === null) {
+    return 'Historical run · provenance not recorded';
   }
-  return llmMode === 'replay'
-    ? 'Recorded AI-selected plan (Replay; no live call)'
-    : 'AI-selected plan';
+  if (run.plan_source === 'llm') {
+    return 'AI-selected plan';
+  }
+  if (run.provenance.outcome === 'continued_without_ai') {
+    return 'User continued without AI';
+  }
+  if (run.provenance.deterministic_fallback) {
+    return 'Deterministic fallback';
+  }
+  return 'Deterministic default';
+}
+
+function fallbackCauseLabel(run: ReviewRun): string {
+  const provenance = run.provenance;
+  if (provenance === null) {
+    return 'Not recorded';
+  }
+  if (provenance.fallback_reason === null) {
+    return 'None';
+  }
+  switch (provenance.fallback_reason) {
+    case 'user_selected_continue_without_ai':
+      return 'User continued without AI';
+    case 'provider_unavailable':
+      return provenance.mode === 'off' ? 'AI mode is Off' : 'Provider unavailable';
+    case 'provider_failure':
+      return 'Provider request failed';
+    case 'budget_limit':
+      return 'Configured spend or call limit reached';
+    case 'budget_state':
+      return 'Budget state could not be verified';
+    case 'token_limit':
+      return 'Configured token limit reached';
+    case 'invalid_output':
+      return 'AI response did not match the permitted schema';
+    case 'plan_rejected':
+      return 'Proposed plan could not be accepted';
+    case 'unsupported_scope':
+      return 'Objective is not represented by the selected checks';
+    case 'replay_mismatch':
+      return 'No matching Replay response';
+    default:
+      return provenance.fallback_reason;
+  }
+}
+
+function checkLabel(checkId: string, run: ReviewRun, requirements: Requirement[]): string {
+  const requirement = requirements.find(
+    (candidate) =>
+      candidate.check.id === checkId &&
+      run.input_manifest.requirement_revisions[candidate.id] === candidate.revision,
+  );
+  return requirement ? `${requirement.id} · ${requirement.title}` : checkId;
 }
 
 export function ReviewCoverage({
@@ -35,12 +82,30 @@ export function ReviewCoverage({
   findingCount,
   activeModelHash,
   submittedObjective,
-  llmMode,
+  requirements,
 }: ReviewCoverageProps) {
   const totals = countByStatus(run.check_results);
-  const executed = totals.passed + totals.failed;
+  const provenance = run.provenance;
+  const selectedIds = provenance?.selected_check_ids ?? [];
+  const plannedIds = run.plan.checks.map((check) => check.check_id);
+  const executed =
+    provenance?.executed_check_ids.length ??
+    run.check_results.filter(
+      (result) =>
+        result.status === 'passed' || result.status === 'failed' || result.status === 'error',
+    ).length;
   const notRun = totals.error + totals.skipped + totals.not_applicable;
   const versionMatches = run.input_manifest.model_hash === activeModelHash;
+  const modeLabel =
+    provenance === null
+      ? 'Not recorded'
+      : provenance.mode === 'live'
+        ? 'Live'
+        : provenance.mode === 'replay'
+          ? 'Replay'
+          : 'Off';
+  const planSource = planSourceLabel(run);
+  const fallbackCause = fallbackCauseLabel(run);
 
   return (
     <section className="coverage" aria-labelledby="coverage-heading">
@@ -55,7 +120,7 @@ export function ReviewCoverage({
         <div>
           <dt>Checks executed</dt>
           <dd>
-            {executed} of {run.check_results.length}
+            {executed} of {run.plan.checks.length} planned
           </dd>
         </div>
         <div>
@@ -79,16 +144,78 @@ export function ReviewCoverage({
           </dd>
         </div>
         <div>
+          <dt>Execution errors</dt>
+          <dd>{totals.error}</dd>
+        </div>
+        <div>
           <dt>Findings</dt>
           <dd>{findingCount}</dd>
         </div>
+      </dl>
+
+      <dl className="coverage__provenance">
+        <div>
+          <dt>Selected scope</dt>
+          <dd>
+            {provenance === null
+              ? 'Not recorded for this historical run'
+              : `${selectedIds.length} confirmed check${selectedIds.length === 1 ? '' : 's'}`}
+          </dd>
+        </div>
+        <div>
+          <dt>Plan selected</dt>
+          <dd>
+            {plannedIds.length} check{plannedIds.length === 1 ? '' : 's'}
+          </dd>
+        </div>
         <div>
           <dt>Plan source</dt>
+          <dd data-testid="plan-source">{planSource}</dd>
+        </div>
+        <div>
+          <dt>Mode</dt>
+          <dd>{modeLabel}</dd>
+        </div>
+        <div>
+          <dt>Model</dt>
+          <dd>{provenance?.model ? <code>{provenance.model}</code> : 'Not recorded'}</dd>
+        </div>
+        <div>
+          <dt>Fallback cause</dt>
           <dd>
-            <span data-testid="plan-source">{planSourceLabel(run.plan_source, llmMode)}</span>
+            {fallbackCause}
+            {provenance?.fallback_reason && (
+              <>
+                {' '}
+                (<code>{provenance.fallback_reason}</code>)
+              </>
+            )}
           </dd>
         </div>
       </dl>
+
+      <details className="coverage__checks">
+        <summary>Scope and check selection</summary>
+        {selectedIds.length > 0 && (
+          <ul className="coverage__check-list" aria-label="User-selected check scope">
+            {selectedIds.map((checkId) => (
+              <li key={checkId}>{checkLabel(checkId, run, requirements)}</li>
+            ))}
+          </ul>
+        )}
+        {plannedIds.length > 0 && (
+          <ul className="coverage__check-list" aria-label="Checks selected by the plan">
+            {plannedIds.map((checkId) => (
+              <li key={checkId}>{checkLabel(checkId, run, requirements)}</li>
+            ))}
+          </ul>
+        )}
+        {provenance?.mode === 'replay' && run.plan_source === 'llm' && (
+          <p className="notice" role="status">
+            This plan used a recorded response; no live call in Replay mode.
+          </p>
+        )}
+      </details>
 
       {submittedObjective !== null && (
         <div className="coverage__objective" data-testid="coverage-objective">
@@ -96,17 +223,11 @@ export function ReviewCoverage({
           <blockquote className="source-quote">“{submittedObjective}”</blockquote>
           {run.plan_source === 'default' && (
             <p className="notice" role="status">
-              The objective was not used; the deterministic default plan ran. The cause may be AI
-              off, a budget or call limit, a failed request or a rejected plan.
+              The objective was not used to select a plan. The plan source and fallback cause above
+              describe what happened.
             </p>
           )}
         </div>
-      )}
-      {run.plan_source === 'llm' && (
-        <p className="notice" role="status">
-          A model-produced plan was accepted after filtering against the confirmed checks. Checks it
-          did not select are recorded as skipped: narrowed scope, never a pass.
-        </p>
       )}
 
       <p className="coverage__note">
@@ -147,8 +268,10 @@ export function ReviewCoverage({
   );
 }
 
-function countByStatus(results: CheckResult[]): Record<CheckResult['status'], number> {
-  const totals: Record<CheckResult['status'], number> = {
+function countByStatus(
+  results: ReviewRun['check_results'],
+): Record<ReviewRun['check_results'][number]['status'], number> {
+  const totals: Record<ReviewRun['check_results'][number]['status'], number> = {
     passed: 0,
     failed: 0,
     error: 0,

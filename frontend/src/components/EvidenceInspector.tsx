@@ -1,4 +1,3 @@
-import type { LLMMode } from '../api/client';
 import type {
   ElementRecord,
   Explanation,
@@ -24,8 +23,6 @@ export interface ExplanationRequest {
   readonly state: ExplanationState;
   /** False when the loaded run's model version differs from the active model; requests refused. */
   readonly versionMatches: boolean;
-  /** Current backend LLM mode from `/health`; used for the Replay label only, never as proof. */
-  readonly llmMode: LLMMode | null;
   readonly onRequest: () => void;
 }
 
@@ -311,7 +308,7 @@ function ExplanationPanel({
       </div>
 
       {state.kind === 'loading' && (
-        <p role="status" className="notice">
+        <p role="status" className="notice explanation__pending">
           Requesting an explanation for <code>{finding.id}</code>…
         </p>
       )}
@@ -322,11 +319,7 @@ function ExplanationPanel({
         </p>
       )}
       {state.kind === 'ready' && (
-        <ExplanationResult
-          explanation={state.explanation}
-          fromCache={state.fromCache}
-          llmMode={request?.llmMode ?? null}
-        />
+        <ExplanationResult explanation={state.explanation} fromCache={state.fromCache} />
       )}
     </section>
   );
@@ -335,11 +328,9 @@ function ExplanationPanel({
 function ExplanationResult({
   explanation,
   fromCache,
-  llmMode,
 }: {
   readonly explanation: Explanation;
   readonly fromCache: boolean;
-  readonly llmMode: LLMMode | null;
 }) {
   const aiGenerated = explanation.source === 'ai_generated';
   return (
@@ -353,7 +344,6 @@ function ExplanationResult({
           <>
             <strong>AI interpretation</strong> · <code>{explanation.model}</code> · grounding{' '}
             {explanation.grounding_status}
-            {llmMode === 'replay' && <> · Recorded response (Replay; no live call)</>}
           </>
         ) : (
           <>
