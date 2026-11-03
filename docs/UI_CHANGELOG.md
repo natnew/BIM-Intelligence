@@ -1376,3 +1376,62 @@ status and milestone criteria.
 - On 2 November 2026, the owner authorised committing the six UI-007 files, pushing the branch
   and opening a pull request against `main`. This does not constitute visual approval or
   authorise a merge, deployment or paid model call.
+
+## UI-008 — Guided AI review with an objective dock
+
+### [UI-008] — Guide objective-based review and explicit AI-failure recovery
+
+- **Iteration and mapping:** UI-008, T-7 / M3, 3 November 2026. The owner selected Concept A,
+  the Objective dock, and approved one implementation pass plus one focused correction on
+  `feature/ui-008-guided-ai-review`, from clean `main` baseline
+  `852746020a41f7928692d30ac62665c97d9fb68a`. Owner visual review remains pending; T-7 and M3
+  remain in progress.
+- **Scope and safety boundary:** Provide explicit all-or-selected confirmed-requirement scope,
+  a custom objective, revision-pinned submissions, explicit Retry / Continue without AI recovery,
+  truthful persisted run provenance and clearer provider-data disclosure. Keep findings
+  deterministic-only and explanations separate. No paid/live Meta call, backend or schema change,
+  dependency change, commit, push, pull request or merge was authorised or performed.
+- **Files changed:** `frontend/src/api/bim.ts` and `bim.test.ts` preserve typed AI failure
+  provenance for objective reviews; `frontend/src/components/ModelWorkspace.tsx` and its test
+  implement the objective dock, all/selected scope, confirmed-revision pinning, AI-required
+  dispatch and explicit recovery; `ReviewCoverage.tsx` displays persisted run provenance and
+  separate coverage counts; `EvidenceInspector.tsx` keeps deterministic templates neutral and AI
+  explanations distinct; `ReviewSetup.tsx`, `HealthPanel.tsx`, `HealthPanel.test.tsx`,
+  `ProjectHome.tsx`, `ProjectHome.test.tsx` and `index.css` align setup/status copy and styling.
+  `ModelWorkspace.test.tsx` covers scope, dispatch, failure recovery and provenance.
+  Documentation is updated in this file, [UI_SPEC.md](./UI_SPEC.md) §29 and the root
+  [CHANGELOG.md](../CHANGELOG.md). No backend, generated API type, fixture, viewer module or
+  implementation-plan status changed.
+- **Automated checks:** From `frontend/`, `npm run lint` passed; `npm run format:check` passed;
+  `npm run typecheck` passed; `npm run types:check` passed; `npm test` passed **132 tests in 10
+  files**; `npm run build` passed. The build still reports That Open / Three undefined-import
+  warnings (`WebGPURenderer`, `TSL`, `MRTNode`, `NodeMaterial`) and a chunk larger than 500 kB.
+- **Synthetic browser evidence:** The VS Code integrated browser used Chrome
+  150.0.7871.250 / Electron 43.8.3, frontend port 5174 and an isolated backend on port 8173
+  configured with `LLM_MODE=off` and a unique temporary data directory. Only
+  `tests/fixtures/minimal.ifc` and `minimal.ids` were uploaded. An AI-required review returned
+  HTTP 503 with `mode=off`, `provider_request_attempted=false` and
+  `reason_code=provider_unavailable`; the interface stated that no provider request was made and
+  offered separate retry and continue controls. Keyboard Enter on **Continue without AI**
+  produced HTTP 201 with the same objective and selected check pinned to requirement revision 1,
+  `ai_required=true` and `continue_without_ai=true`. The resulting coverage showed 1 of 1 checks
+  executed, one deterministic finding, mode Off, model *Not recorded*, and the explicit
+  user-selected continuation as plan source and fallback cause. Scope keyboard interaction did
+  not submit a review. No provider request, paid call or real BIM material was used.
+- **Viewport and saved evidence:** A requested 1920 × 1080 viewport did not become the page's
+  CSS viewport: the body remained 1203 × 676 and the larger screenshot contained blank padding.
+  That capture is not valid 1920 × 1080 evidence and has been discarded. The repeatable desktop
+  capture is `local-private/test-results/ui-008/workspace-browser-1203x676.png` at the actual
+  1203 × 676 CSS size; the Off-mode recovery capture is
+  `local-private/test-results/ui-008/ai-off-recovery-browser-1203x676.png`. A requested
+  390 × 844 narrow view measured 375 CSS px of body width (including the browser's reserved
+  scrollbar) with no horizontal overflow; its full-page capture is
+  `local-private/test-results/ui-008/workspace-390x844.png`. The browser environment therefore
+  did not verify the required 1920 × 1080 target; repeat that visual check in a browser that
+  exposes the requested CSS viewport. Captures remain in the ignored, owner-managed evidence
+  directory and await owner review.
+- **Decision and rollback:** The implementation remains uncommitted and unpushed for owner
+  review. To roll back UI-008, restore its objective-review API-client error type and the
+  associated frontend changes in the files listed above to the branch baseline, remove the
+  UI-008 sections from this file, [UI_SPEC.md](./UI_SPEC.md) and the root changelog, and retain
+  the earlier FINAL-UI-001 history and all unrelated work. Do not mark T-7 or M3 complete.

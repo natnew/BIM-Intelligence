@@ -231,7 +231,7 @@ export function ReviewSetup({ session, onOpenWorkspace, onStartOver }: ReviewSet
           <p className="setup-step__body">
             An <abbr title="Information Delivery Specification (buildingSMART)">IDS</abbr>{' '}
             <code>.ids</code> specification becomes confirmed, <em>executable</em> requirements:
-            checks the deterministic review can run. <code>.md</code> and <code>.txt</code> briefs
+            checks the deterministic engine can run. <code>.md</code> and <code>.txt</code> briefs
             are stored as untrusted source text only; they create no requirements until separately
             interpreted and confirmed, which this interface does not yet offer.
           </p>
@@ -309,8 +309,8 @@ export function ReviewSetup({ session, onOpenWorkspace, onStartOver }: ReviewSet
           <p className="setup-step__body">
             {modelReady
               ? executableCount > 0
-                ? `The model and ${executableCount} executable requirement${executableCount === 1 ? '' : 's'} are ready. Run the deterministic review from the workspace.`
-                : 'The model can be viewed now. A deterministic review needs at least one confirmed executable requirement; without an IDS, no review can be run or reported as complete.'
+                ? `The model and ${executableCount} executable requirement${executableCount === 1 ? '' : 's'} are ready. Start an AI review in the workspace; its plan is limited to confirmed requirements, and findings come from deterministic checks.`
+                : 'The model can be viewed now. A review needs at least one confirmed executable requirement; without an IDS, no review can be run or reported as complete.'
               : 'Upload an IFC model to continue.'}
             {hasNarrative &&
               ' Narrative documents remain source material only and do not count towards executable requirements.'}

@@ -4,6 +4,7 @@ import { ApiError } from '../api/client';
 import {
   DOCUMENT_FILE_EXTENSIONS,
   MAX_REVIEW_OBJECTIVE_LENGTH,
+  AIReviewRequestError,
   ModelVersionMismatchError,
   classifyUploadFile,
   explainFinding,
@@ -13,12 +14,17 @@ import {
   loadModel,
   loadReviewWorkspace,
   startObjectiveReview,
-  startStandardReview,
-  uploadDocument,
   type VersionedModel,
+  uploadDocument,
 } from '../api/bim';
-import type { Explanation, Finding, Requirement, ReviewRun } from '../api/generated/types';
-import { useHealth } from '../state/useHealth';
+import type {
+  AIReviewFailure,
+  Explanation,
+  Finding,
+  Requirement,
+  ReviewRun,
+  SelectedCheck,
+} from '../api/generated/types';
 import {
   ViewerCanvas,
   type ViewerCanvasHandle,
@@ -50,7 +56,12 @@ type ModelState =
 type ReviewState =
   | { readonly kind: 'none' }
   | { readonly kind: 'loading'; readonly runId: string }
-  | { readonly kind: 'running'; readonly objective: string | null }
+  | {
+      readonly kind: 'running';
+      readonly objective: string;
+      readonly selectedChecks: SelectedCheck[];
+      readonly continuingWithoutAI: boolean;
+    }
   | {
       readonly kind: 'ready';
       readonly run: ReviewRun;
@@ -58,8 +69,21 @@ type ReviewState =
       /** Objective sent for this run; `null` for a standard review or a run opened by id. */
       readonly submittedObjective: string | null;
     }
+  | {
+      readonly kind: 'ai-error';
+      readonly message: string;
+      readonly failure: AIReviewFailure;
+      readonly intent: ReviewIntent;
+    }
   | { readonly kind: 'mismatch'; readonly runId: string; readonly message: string }
   | { readonly kind: 'error'; readonly message: string };
+
+interface ReviewIntent {
+  readonly objective: string;
+  readonly selectedChecks: SelectedCheck[];
+}
+
+type ReviewScope = 'all' | 'selected';
 
 type RequirementsState =
   | { readonly kind: 'loading' }
@@ -98,16 +122,15 @@ export function ModelWorkspace({
     kind: 'loading',
   });
   const [documentUpload, setDocumentUpload] = useState<DocumentUploadState>({ kind: 'idle' });
-  const [objective, setObjective] = useState('');
+  const [reviewScope, setReviewScope] = useState<ReviewScope>('all');
+  const [selectedRequirementIds, setSelectedRequirementIds] = useState<string[]>([]);
+  const [customObjective, setCustomObjective] = useState('');
   const [selectedFindingId, setSelectedFindingId] = useState<string | null>(null);
   const [selectedGlobalIds, setSelectedGlobalIds] = useState<string[]>([]);
   const [elementState, setElementState] = useState<ElementLoadState>({ kind: 'idle' });
   const [explanationState, setExplanationState] = useState<ExplanationState>({ kind: 'idle' });
   const [viewerError, setViewerError] = useState<string | null>(null);
   const [viewerLoadState, setViewerLoadState] = useState<ViewerLoadState>('preparing');
-  const health = useHealth();
-  const llmMode = health.kind === 'success' ? health.data.llm_mode : null;
-
   const reviewRequestRef = useRef<AbortController | null>(null);
   const elementRequestRef = useRef<AbortController | null>(null);
   const explanationRequestRef = useRef<AbortController | null>(null);
@@ -169,10 +192,40 @@ export function ModelWorkspace({
           ),
     [findings, selectedGlobalIds],
   );
-  const executableCount =
+  const executableRequirements =
     requirementsState.kind === 'ready'
-      ? requirementsState.items.filter(isExecutableRequirement).length
-      : null;
+      ? getUniqueExecutableRequirements(requirementsState.items)
+      : [];
+  const executableCount = requirementsState.kind === 'ready' ? executableRequirements.length : null;
+  const scopedRequirements =
+    reviewScope === 'all'
+      ? executableRequirements
+      : executableRequirements.filter((requirement) =>
+          selectedRequirementIds.includes(requirement.id),
+        );
+  const selectedChecks = scopedRequirements.flatMap((requirement): SelectedCheck[] => {
+    const revision = requirement.confirmed_revision;
+    return revision === null || revision !== requirement.revision
+      ? []
+      : [
+          {
+            check_id: requirement.check.id,
+            requirement_id: requirement.id,
+            requirement_revision: revision,
+          },
+        ];
+  });
+  const singleScopedRequirement = scopedRequirements.length === 1 ? scopedRequirements[0] : null;
+  const defaultObjective =
+    reviewScope === 'all'
+      ? 'Review all confirmed requirements'
+      : singleScopedRequirement
+        ? `Review the confirmed requirement: ${singleScopedRequirement.title}`
+        : 'Review the selected confirmed requirements';
+  const reviewIntent: ReviewIntent = {
+    objective: customObjective.trim() || defaultObjective,
+    selectedChecks,
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -321,20 +374,35 @@ export function ModelWorkspace({
     setElementState({ kind: 'idle' });
   }
 
-  async function runReview() {
+  async function runReview(intent: ReviewIntent, continuingWithoutAI = false) {
+    const [firstCheck, ...remainingChecks] = intent.selectedChecks;
+    if (!firstCheck) {
+      setReviewState({
+        kind: 'error',
+        message: 'Select at least one confirmed requirement before starting a review.',
+      });
+      return;
+    }
+    const selectedCheckScope: [SelectedCheck, ...SelectedCheck[]] = [
+      firstCheck,
+      ...remainingChecks,
+    ];
     reviewRequestRef.current?.abort();
     const controller = new AbortController();
     reviewRequestRef.current = controller;
     clearSelection();
-    // A blank optional objective selects the standard deterministic review unchanged.
-    const trimmedObjective = objective.trim();
-    const requestedObjective = trimmedObjective.length > 0 ? trimmedObjective : null;
-    setReviewState({ kind: 'running', objective: requestedObjective });
+    setReviewState({
+      kind: 'running',
+      objective: intent.objective,
+      selectedChecks: intent.selectedChecks,
+      continuingWithoutAI,
+    });
     try {
-      const started =
-        requestedObjective === null
-          ? await startStandardReview(sessionId, controller.signal)
-          : await startObjectiveReview(sessionId, requestedObjective, controller.signal);
+      const started = await startObjectiveReview(sessionId, intent.objective, controller.signal, {
+        ai_required: true,
+        continue_without_ai: continuingWithoutAI,
+        selected_checks: selectedCheckScope,
+      });
       const loaded = await loadReviewWorkspace(sessionId, started.id, controller.signal);
       if (controller.signal.aborted) {
         return;
@@ -351,18 +419,51 @@ export function ModelWorkspace({
         kind: 'ready',
         run: loaded.run,
         findings: loaded.findings,
-        submittedObjective: requestedObjective,
+        submittedObjective: intent.objective,
       });
       onRunChanged(started.id);
     } catch (caught) {
       if (!controller.signal.aborted) {
-        setReviewState(
-          caught instanceof ModelVersionMismatchError
-            ? { kind: 'mismatch', runId: 'new run', message: caught.message }
-            : { kind: 'error', message: messageForError(caught) },
-        );
+        if (caught instanceof AIReviewRequestError && caught.failure !== null) {
+          setReviewState({
+            kind: 'ai-error',
+            message: aiReviewFailureMessage(caught.failure),
+            failure: caught.failure,
+            intent,
+          });
+        } else {
+          setReviewState(
+            caught instanceof ModelVersionMismatchError
+              ? { kind: 'mismatch', runId: 'new run', message: caught.message }
+              : { kind: 'error', message: messageForError(caught) },
+          );
+        }
       }
     }
+  }
+
+  function clearAIReviewFailure() {
+    setReviewState((previous) => (previous.kind === 'ai-error' ? { kind: 'none' } : previous));
+  }
+
+  function updateReviewScope(scope: ReviewScope) {
+    clearAIReviewFailure();
+    setReviewScope(scope);
+  }
+
+  function updateSelectedRequirement(requirementId: string, selected: boolean) {
+    clearAIReviewFailure();
+    setSelectedRequirementIds((previous) => {
+      if (selected) {
+        return previous.includes(requirementId) ? previous : [...previous, requirementId];
+      }
+      return previous.filter((id) => id !== requirementId);
+    });
+  }
+
+  function updateCustomObjective(value: string) {
+    clearAIReviewFailure();
+    setCustomObjective(value);
   }
 
   function requestExplanation() {
@@ -415,6 +516,7 @@ export function ModelWorkspace({
     try {
       const imported = await uploadDocument(sessionId, file);
       const items = await fetchRequirements(sessionId);
+      clearAIReviewFailure();
       setRequirementsState({ kind: 'ready', items });
       setDocumentUpload({
         kind: 'done',
@@ -427,13 +529,15 @@ export function ModelWorkspace({
   }
 
   const reviewBusy = reviewState.kind === 'running' || reviewState.kind === 'loading';
-  const hasObjective = objective.trim().length > 0;
-  const objectiveLength = [...objective].length;
+  const objectiveLength = [...customObjective].length;
   const canRun =
     model !== null &&
     !reviewBusy &&
     documentUpload.kind !== 'uploading' &&
-    (executableCount === null || executableCount > 0);
+    requirementsState.kind === 'ready' &&
+    executableCount !== null &&
+    executableCount > 0 &&
+    selectedChecks.length > 0;
   const runVersionMatches =
     model !== null && run !== null && run.input_manifest.model_hash === model.summary.model_hash;
 
@@ -444,27 +548,7 @@ export function ModelWorkspace({
         sessionId={sessionId}
         onNavigateHome={onReturnHome}
         onNavigateWorkspace={null}
-      >
-        <button
-          type="button"
-          className="button button--primary"
-          disabled={!canRun}
-          onClick={() => void runReview()}
-          title={
-            executableCount === 0
-              ? 'Add an IDS with confirmed requirements before running a review'
-              : hasObjective
-                ? 'Starts an objective-aware review; the plan may be narrowed to suit the objective'
-                : 'Starts the deterministic default review'
-          }
-        >
-          {reviewState.kind === 'running'
-            ? 'Running review…'
-            : hasObjective
-              ? 'Run review with objective'
-              : 'Run review'}
-        </button>
-      </AppHeader>
+      />
 
       <div className="review-bar" aria-label="Review status">
         {model ? (
@@ -600,8 +684,8 @@ export function ModelWorkspace({
               )}
               {requirementsState.kind === 'ready' && executableCount === 0 && (
                 <p className="notice">
-                  No confirmed executable requirements. The model can be viewed, but no
-                  deterministic review can run until an IDS is added.
+                  No confirmed executable requirements. View the model, but add an IDS before
+                  starting a review.
                 </p>
               )}
               <label className="file-field file-field--compact">
@@ -636,33 +720,161 @@ export function ModelWorkspace({
 
             <section className="review-objective" aria-labelledby="review-objective-heading">
               <div className="panel-heading">
-                <h3 id="review-objective-heading">Review objective</h3>
-                <span className="panel-heading__hint">Optional</span>
+                <h3 id="review-objective-heading">Choose a review objective</h3>
               </div>
-              <label className="review-objective__label" htmlFor="review-objective">
-                Review objective (optional)
-              </label>
-              <textarea
-                id="review-objective"
-                className="review-objective__input"
-                name="objective"
-                rows={3}
-                maxLength={MAX_REVIEW_OBJECTIVE_LENGTH}
-                value={objective}
-                disabled={reviewBusy}
-                aria-describedby="review-objective-help review-objective-count"
-                placeholder="e.g. Focus on fire-rating completeness for the ground-floor walls."
-                onChange={(event) => setObjective(event.target.value)}
-              />
-              <p id="review-objective-help" className="review-objective__help">
-                An objective can only narrow the confirmed checks that run; it never changes their
-                criteria and never creates findings. Leave blank to run every confirmed check
-                deterministically. The plan source shown after the run reports what actually
-                happened.
-              </p>
-              <p id="review-objective-count" className="review-objective__count">
-                {objectiveLength} / {MAX_REVIEW_OBJECTIVE_LENGTH}
-              </p>
+              {requirementsState.kind === 'loading' && (
+                <p role="status" className="notice">
+                  Loading confirmed requirements…
+                </p>
+              )}
+              {requirementsState.kind === 'error' && (
+                <p role="alert" className="notice notice--error">
+                  {requirementsState.message}
+                </p>
+              )}
+              {requirementsState.kind === 'ready' && executableCount === 0 && (
+                <>
+                  <p className="notice" id="review-objective-empty-help">
+                    Add an IDS requirements file to run an information-quality review. You can still
+                    explore the IFC model in 3D.
+                  </p>
+                  <button
+                    type="button"
+                    className="button button--primary review-objective__run"
+                    disabled
+                    aria-describedby="review-objective-empty-help"
+                  >
+                    Run AI Review
+                  </button>
+                </>
+              )}
+              {requirementsState.kind === 'ready' &&
+                executableCount !== null &&
+                executableCount > 0 && (
+                  <>
+                    <fieldset className="review-objective__scope" disabled={reviewBusy}>
+                      <legend>Checks Muse Spark may select</legend>
+                      <label className="review-objective__choice">
+                        <input
+                          type="radio"
+                          name="review-scope"
+                          value="all"
+                          checked={reviewScope === 'all'}
+                          onChange={() => updateReviewScope('all')}
+                        />
+                        <span>Review all confirmed requirements</span>
+                      </label>
+                      <label className="review-objective__choice">
+                        <input
+                          type="radio"
+                          name="review-scope"
+                          value="selected"
+                          checked={reviewScope === 'selected'}
+                          onChange={() => updateReviewScope('selected')}
+                        />
+                        <span>Choose requirements</span>
+                      </label>
+                      {reviewScope === 'selected' && (
+                        <div className="review-objective__requirements">
+                          {executableRequirements.map((requirement) => (
+                            <label className="review-objective__choice" key={requirement.id}>
+                              <input
+                                type="checkbox"
+                                checked={selectedRequirementIds.includes(requirement.id)}
+                                onChange={(event) =>
+                                  updateSelectedRequirement(requirement.id, event.target.checked)
+                                }
+                              />
+                              <span>{requirement.title}</span>
+                            </label>
+                          ))}
+                          {selectedChecks.length === 0 && (
+                            <p className="review-objective__help">
+                              Select at least one confirmed requirement.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </fieldset>
+                    <p className="review-objective__scope-count" aria-live="polite">
+                      {selectedChecks.length} of {executableCount} confirmed checks in scope
+                    </p>
+                    <p className="review-objective__help">
+                      Reviews are subject to configured execution caps. Any check not completed is
+                      shown as skipped or partial coverage.
+                    </p>
+                    <label className="review-objective__label" htmlFor="review-objective">
+                      Describe another review objective
+                    </label>
+                    <textarea
+                      id="review-objective"
+                      className="review-objective__input"
+                      name="objective"
+                      rows={2}
+                      maxLength={MAX_REVIEW_OBJECTIVE_LENGTH}
+                      value={customObjective}
+                      disabled={reviewBusy}
+                      aria-describedby="review-objective-help review-objective-count"
+                      placeholder={
+                        executableRequirements[0]
+                          ? `e.g. Verify ${executableRequirements[0].title.toLocaleLowerCase()}.`
+                          : 'Describe a requirement-focused objective.'
+                      }
+                      onChange={(event) => updateCustomObjective(event.target.value)}
+                    />
+                    <p id="review-objective-help" className="review-objective__help">
+                      Muse Spark can choose among your project’s confirmed checks. It cannot create
+                      new validation rules or perform geometric clash detection.
+                    </p>
+                    <p id="review-objective-count" className="review-objective__count">
+                      {objectiveLength} / {MAX_REVIEW_OBJECTIVE_LENGTH}
+                    </p>
+                    <p className="review-objective__disclosure">
+                      Planning sends the selected objective, permitted model summary and requirement
+                      metadata to the configured Meta Model API. It does not send the IFC file.
+                      Requesting an explanation may also send selected element properties and
+                      verified finding evidence.
+                    </p>
+                    {reviewState.kind === 'ai-error' ? (
+                      <div className="review-objective__failure">
+                        <p role="alert" className="notice notice--error">
+                          {reviewState.message}
+                        </p>
+                        {reviewState.failure.reason_code === 'unsupported_scope' && (
+                          <p className="review-objective__help">
+                            Continuing without AI runs only the selected checks; it will not fulfil
+                            this unsupported objective.
+                          </p>
+                        )}
+                        <div className="review-objective__actions">
+                          <button
+                            type="button"
+                            className="button button--primary"
+                            onClick={() => void runReview(reviewState.intent)}
+                          >
+                            Retry AI Review
+                          </button>
+                          <button
+                            type="button"
+                            className="button button--ghost"
+                            onClick={() => void runReview(reviewState.intent, true)}
+                          >
+                            Continue without AI
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="button button--primary review-objective__run"
+                        disabled={!canRun}
+                        onClick={() => void runReview(reviewIntent)}
+                      >
+                        {reviewState.kind === 'running' ? 'Review in progress…' : 'Run AI Review'}
+                      </button>
+                    )}
+                  </>
+                )}
             </section>
 
             {run && model && (
@@ -671,7 +883,7 @@ export function ModelWorkspace({
                 findingCount={findings.length}
                 activeModelHash={model.summary.model_hash}
                 submittedObjective={submittedObjective}
-                llmMode={llmMode}
+                requirements={requirementsState.kind === 'ready' ? requirementsState.items : []}
               />
             )}
 
@@ -687,7 +899,6 @@ export function ModelWorkspace({
                   ? {
                       state: explanationState,
                       versionMatches: runVersionMatches,
-                      llmMode,
                       onRequest: requestExplanation,
                     }
                   : null
@@ -726,7 +937,7 @@ function ReviewStatusChip({
     case 'running':
       return (
         <span className="review-bar__item review-bar__chip review-bar__chip--active" role="status">
-          {state.objective === null ? 'Deterministic review running…' : 'Objective review running…'}
+          {state.continuingWithoutAI ? 'Continuing without AI…' : 'AI review in progress…'}
         </span>
       );
     case 'ready':
@@ -737,6 +948,12 @@ function ReviewStatusChip({
         >
           Review {state.run.status} · {state.findings.length} finding
           {state.findings.length === 1 ? '' : 's'} · run <code>{state.run.id.slice(0, 8)}</code>
+        </span>
+      );
+    case 'ai-error':
+      return (
+        <span className="review-bar__item review-bar__chip review-bar__chip--failed" role="alert">
+          AI planning unavailable
         </span>
       );
     case 'mismatch':
@@ -766,8 +983,8 @@ function ReviewPlaceholder({
       return (
         <p className="notice">
           {executableCount === 0
-            ? 'This session has no confirmed executable requirements, so no review has run and no findings exist. Add an IDS to enable Run review.'
-            : 'No review has run for this model version. Use Run review to execute the deterministic default plan.'}
+            ? 'This session has no confirmed executable requirements, so no review has run and no findings exist. Add an IDS to enable an AI review.'
+            : 'No review has run for this model version. Choose a scope and select Run AI Review to begin.'}
         </p>
       );
     case 'loading':
@@ -779,9 +996,16 @@ function ReviewPlaceholder({
     case 'running':
       return (
         <p role="status" className="notice">
-          {state.objective === null
-            ? 'Running the deterministic review against the active model version…'
-            : 'Running the review against the active model version. The objective may narrow the confirmed checks; the plan source will show whether it was used.'}
+          {state.continuingWithoutAI
+            ? 'Continuing without AI against the active model version. Only the confirmed checks in the selected scope will run.'
+            : 'Requesting an AI plan and running the review against the active model version…'}
+        </p>
+      );
+    case 'ai-error':
+      return (
+        <p className="notice">
+          AI planning did not complete. Retry or choose whether to continue without AI in the
+          objective panel.
         </p>
       );
     case 'mismatch':
@@ -816,4 +1040,40 @@ function messageForError(error: unknown): string {
     return error.message;
   }
   return error instanceof Error ? error.message : 'The request failed.';
+}
+
+function getUniqueExecutableRequirements(requirements: Requirement[]): Requirement[] {
+  const seenCheckIds = new Set<string>();
+  return requirements.filter((requirement) => {
+    if (!isExecutableRequirement(requirement) || seenCheckIds.has(requirement.check.id)) {
+      return false;
+    }
+    seenCheckIds.add(requirement.check.id);
+    return true;
+  });
+}
+
+function aiReviewFailureMessage(failure: AIReviewFailure): string {
+  switch (failure.reason_code) {
+    case 'provider_unavailable':
+      return failure.mode === 'off'
+        ? 'AI planning is unavailable because AI mode is Off; no provider request was made.'
+        : 'AI planning is unavailable in the configured mode. Check provider configuration and connectivity.';
+    case 'provider_failure':
+      return 'AI review could not be completed because the provider request failed.';
+    case 'budget_limit':
+      return 'AI review could not be completed because the configured spend or call limit was reached.';
+    case 'budget_state':
+      return 'AI review could not be completed because the budget state could not be verified.';
+    case 'token_limit':
+      return 'AI review could not be completed within the configured token limit.';
+    case 'invalid_output':
+      return 'AI review returned a response that did not match the required format.';
+    case 'plan_rejected':
+      return 'AI review returned a plan that could not be safely accepted.';
+    case 'unsupported_scope':
+      return 'AI review could not apply the requested objective to the selected requirements.';
+    case 'replay_mismatch':
+      return 'AI review could not find a matching recorded response in Replay mode.';
+  }
 }

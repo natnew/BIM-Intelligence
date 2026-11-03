@@ -9,6 +9,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  AIReviewRequestError,
   explainFinding,
   fetchElement,
   fetchRequirements,
@@ -21,8 +22,13 @@ import {
   type ReviewWorkspaceData,
   type VersionedModel,
 } from '../api/bim';
-import { ApiError, type LLMMode } from '../api/client';
-import type { ElementRecord, Explanation, Finding, Requirement } from '../api/generated/types';
+import type {
+  AIReviewFailure,
+  ElementRecord,
+  Explanation,
+  Finding,
+  Requirement,
+} from '../api/generated/types';
 import type { ViewerCanvasHandle } from '../viewer/ViewerCanvas';
 import { ModelWorkspace } from './ModelWorkspace';
 
@@ -31,7 +37,6 @@ const w003GlobalId = '2qvnbd6oPPKR1ac5HegGTJ';
 const w001GlobalId = '21KH8X9wHPWw7JLiY2NtSZ';
 const modelHash = 'a'.repeat(64);
 const etag = `"${modelHash}"`;
-const healthMode = vi.hoisted(() => ({ llmMode: 'off' as LLMMode }));
 const viewerActions = vi.hoisted(() => ({
   fitModel: vi.fn(async () => undefined),
   resetView: vi.fn(async () => undefined),
@@ -202,20 +207,6 @@ vi.mock('../api/bim', async (importOriginal) => ({
   startObjectiveReview: vi.fn(),
   startStandardReview: vi.fn(),
   uploadDocument: vi.fn(),
-}));
-
-vi.mock('../state/useHealth', () => ({
-  useHealth: () => ({
-    kind: 'success',
-    data: {
-      status: 'ok',
-      version: 'test',
-      llm_mode: healthMode.llmMode,
-      llm_model: 'fake-model',
-      llm_configured: false,
-      libraries: { ifcopenshell: null, ifctester: null },
-    },
-  }),
 }));
 
 vi.mock('../viewer/ViewerCanvas', () => ({
@@ -693,14 +684,30 @@ describe('ModelWorkspace review execution and status', () => {
     expect(await screen.findByRole('button', { name: /W-002/ })).toBeInTheDocument();
   });
 
-  it('runs a deterministic review through the existing endpoint and reports coverage', async () => {
+  it('does not request a plan until the user runs the default all-requirements objective', async () => {
     const { onRunChanged } = renderWorkspace(null);
     await screen.findByTestId('viewer');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Run review' }));
+    expect(startObjectiveReview).not.toHaveBeenCalled();
+    expect(startStandardReview).not.toHaveBeenCalled();
+    expect(screen.getByRole('radio', { name: 'Review all confirmed requirements' })).toBeChecked();
+    vi.mocked(startObjectiveReview).mockResolvedValue(workspace.run);
+    fireEvent.click(screen.getByRole('button', { name: 'Run AI Review' }));
 
     expect(await screen.findByRole('button', { name: /W-002/ })).toBeInTheDocument();
-    expect(startStandardReview).toHaveBeenCalledWith('session-id', expect.any(AbortSignal));
+    expect(startObjectiveReview).toHaveBeenCalledWith(
+      'session-id',
+      'Review all confirmed requirements',
+      expect.any(AbortSignal),
+      {
+        ai_required: true,
+        continue_without_ai: false,
+        selected_checks: [
+          { check_id: 'check-id', requirement_id: 'REQ-001', requirement_revision: 1 },
+        ],
+      },
+    );
+    expect(startStandardReview).not.toHaveBeenCalled();
     expect(loadReviewWorkspace).toHaveBeenCalledWith(
       'session-id',
       'run-id',
@@ -710,9 +717,94 @@ describe('ModelWorkspace review execution and status', () => {
     const coverage = screen.getByRole('region', { name: 'Review coverage' });
     expect(coverage).toHaveTextContent('Complete');
     expect(coverage).toHaveTextContent('Checks executed1 of 1');
-    expect(coverage).toHaveTextContent('Deterministic default');
+    expect(coverage).toHaveTextContent(/provenance.*not recorded/i);
     expect(screen.getByRole('list', { name: 'Check coverage' })).toHaveTextContent('REQ-001');
     expect(coverage).toHaveTextContent(/not a compliance conclusion/i);
+  });
+
+  it('offers only current executable requirements and pins a custom objective to the selected scope', async () => {
+    const secondRequirement: Requirement = {
+      ...requirement,
+      id: 'REQ-002',
+      title: 'Classification reference present',
+      check: { ...requirement.check, id: 'check-id-2', rule_id: 'ids:Classification' },
+    };
+    const unconfirmed: Requirement = {
+      ...requirement,
+      id: 'REQ-003',
+      title: 'Unconfirmed requirement',
+      status: 'proposed',
+      confirmed_revision: null,
+    };
+    const stale: Requirement = {
+      ...requirement,
+      id: 'REQ-004',
+      title: 'Outdated confirmation',
+      revision: 2,
+      confirmed_revision: 1,
+    };
+    vi.mocked(fetchRequirements).mockResolvedValue([
+      requirement,
+      secondRequirement,
+      unconfirmed,
+      stale,
+    ]);
+    vi.mocked(startObjectiveReview).mockResolvedValue(workspace.run);
+    renderWorkspace(null);
+    await screen.findByTestId('viewer');
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Choose requirements' }));
+    expect(screen.getByRole('button', { name: 'Run AI Review' })).toBeDisabled();
+    expect(screen.getByLabelText('Fire rating present')).toBeInTheDocument();
+    expect(screen.getByLabelText('Classification reference present')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Unconfirmed requirement')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Outdated confirmation')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Classification reference present'));
+    fireEvent.change(screen.getByLabelText('Describe another review objective'), {
+      target: { value: 'Check classification data only' },
+    });
+    expect(startObjectiveReview).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run AI Review' }));
+
+    await screen.findByRole('button', { name: /W-002/ });
+    expect(startObjectiveReview).toHaveBeenCalledWith(
+      'session-id',
+      'Check classification data only',
+      expect.any(AbortSignal),
+      {
+        ai_required: true,
+        continue_without_ai: false,
+        selected_checks: [
+          { check_id: 'check-id-2', requirement_id: 'REQ-002', requirement_revision: 1 },
+        ],
+      },
+    );
+  });
+
+  it('deduplicates requirements that reference the same executable check', async () => {
+    vi.mocked(fetchRequirements).mockResolvedValue([
+      requirement,
+      { ...requirement, id: 'REQ-DUPLICATE', title: 'Duplicate requirement' },
+    ]);
+    vi.mocked(startObjectiveReview).mockResolvedValue(workspace.run);
+    renderWorkspace(null);
+    await screen.findByTestId('viewer');
+
+    expect(screen.getByText('1 of 1 confirmed checks in scope')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Run AI Review' }));
+
+    await screen.findByRole('button', { name: /W-002/ });
+    expect(startObjectiveReview).toHaveBeenCalledWith(
+      'session-id',
+      'Review all confirmed requirements',
+      expect.any(AbortSignal),
+      expect.objectContaining({
+        selected_checks: [
+          { check_id: 'check-id', requirement_id: 'REQ-001', requirement_revision: 1 },
+        ],
+      }),
+    );
   });
 
   it('shows an explicit empty state when the review has no findings', async () => {
@@ -771,13 +863,13 @@ describe('ModelWorkspace review execution and status', () => {
   });
 
   it('shows review errors without presenting an empty review as success', async () => {
-    vi.mocked(startStandardReview).mockRejectedValue(
+    vi.mocked(startObjectiveReview).mockRejectedValue(
       new Error('Session has no executable checks.'),
     );
     renderWorkspace(null);
     await screen.findByTestId('viewer');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Run review' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Run AI Review' }));
 
     expect(await screen.findByText('Session has no executable checks.')).toBeInTheDocument();
     expect(
@@ -786,7 +878,7 @@ describe('ModelWorkspace review execution and status', () => {
     expect(screen.queryByRole('region', { name: 'Review coverage' })).not.toBeInTheDocument();
   });
 
-  it('disables Run review when the session has no confirmed executable requirements', async () => {
+  it('disables AI review and explains how to add requirements when none are executable', async () => {
     vi.mocked(fetchRequirements).mockResolvedValue([
       { ...requirement, confirmed_revision: null, status: 'proposed' },
     ]);
@@ -794,9 +886,13 @@ describe('ModelWorkspace review execution and status', () => {
     await screen.findByTestId('viewer');
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Run review' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Run AI Review' })).toBeDisabled();
     });
-    expect(screen.getByText(/No confirmed executable requirements/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Add an IDS requirements file to run an information-quality review. You can still explore the IFC model in 3D.',
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText(/model view only/)).toBeInTheDocument();
   });
 
@@ -811,7 +907,7 @@ describe('ModelWorkspace review execution and status', () => {
     renderWorkspace(null);
     await screen.findByTestId('viewer');
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Run review' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Run AI Review' })).toBeDisabled();
     });
 
     const input = screen.getByLabelText('Add requirements document');
@@ -821,7 +917,7 @@ describe('ModelWorkspace review execution and status', () => {
       await screen.findByText(/minimal\.ids imported · 1 executable requirement/),
     ).toBeInTheDocument();
     expect(uploadDocument).toHaveBeenCalledWith('session-id', expect.any(File));
-    expect(screen.getByRole('button', { name: 'Run review' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Run AI Review' })).toBeEnabled();
   });
 
   it('rejects an unsupported requirements file type in the workspace without a request', async () => {
@@ -868,10 +964,9 @@ const templateExplanation: Explanation = {
   summary: 'Deterministic summary of the finding.',
 };
 
-describe('FINAL-UI-001 review objective dispatch and plan source', () => {
+describe('UI-008 review objective dispatch and plan provenance', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    healthMode.llmMode = 'off';
     vi.mocked(loadModel).mockResolvedValue(model);
     vi.mocked(loadReviewWorkspace).mockResolvedValue(workspace);
     vi.mocked(startStandardReview).mockResolvedValue(workspace.run);
@@ -880,112 +975,187 @@ describe('FINAL-UI-001 review objective dispatch and plan source', () => {
     vi.mocked(fetchRequirements).mockResolvedValue([requirement]);
   });
 
-  it('runs the standard review when the optional objective is blank or whitespace', async () => {
-    renderWorkspace(null);
-    await screen.findByTestId('viewer');
-
-    fireEvent.change(screen.getByLabelText('Review objective (optional)'), {
-      target: { value: '   \n ' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Run review' }));
-
-    await screen.findByRole('button', { name: /W-002/ });
-    expect(startStandardReview).toHaveBeenCalledWith('session-id', expect.any(AbortSignal));
-    expect(startObjectiveReview).not.toHaveBeenCalled();
-    expect(screen.getByTestId('plan-source')).toHaveTextContent('Deterministic default');
-    expect(screen.queryByTestId('coverage-objective')).not.toBeInTheDocument();
-  });
-
-  it('sends a trimmed objective to the objective-aware endpoint and reports a default fallback', async () => {
-    renderWorkspace(null);
-    await screen.findByTestId('viewer');
-
-    fireEvent.change(screen.getByLabelText('Review objective (optional)'), {
-      target: { value: '  Check fire ratings on ground-floor walls.  ' },
-    });
-    const runButton = screen.getByRole('button', { name: 'Run review with objective' });
-    fireEvent.click(runButton);
-
-    expect(
-      screen
-        .getAllByRole('status')
-        .map((node) => node.textContent)
-        .join(' '),
-    ).toMatch(/Objective review running/);
-    await screen.findByRole('button', { name: /W-002/ });
-    expect(startObjectiveReview).toHaveBeenCalledWith(
-      'session-id',
-      'Check fire ratings on ground-floor walls.',
-      expect.any(AbortSignal),
-    );
-    expect(startStandardReview).not.toHaveBeenCalled();
-    expect(screen.getByTestId('plan-source')).toHaveTextContent('Deterministic default');
-    const objectivePanel = screen.getByTestId('coverage-objective');
-    expect(objectivePanel).toHaveTextContent('Check fire ratings on ground-floor walls.');
-    expect(objectivePanel).toHaveTextContent(
-      'The objective was not used; the deterministic default plan ran.',
-    );
-  });
-
-  it('labels an accepted AI plan as AI-selected without claiming a live call', async () => {
+  it('attributes an accepted AI plan to persisted provenance on the run', async () => {
+    const provenance = {
+      ai_planning_requested: true,
+      deterministic_fallback: false,
+      executed_check_ids: ['check-id'],
+      fallback_reason: null,
+      mode: 'live' as const,
+      model: 'muse-spark-1.3',
+      outcome: 'accepted' as const,
+      provider_request_attempted: true,
+      selected_check_ids: ['check-id'],
+    };
     vi.mocked(loadReviewWorkspace).mockResolvedValue({
       ...workspace,
-      run: { ...workspace.run, plan_source: 'llm', status: 'partial' },
+      run: { ...workspace.run, plan_source: 'llm', provenance },
     });
     renderWorkspace(null);
     await screen.findByTestId('viewer');
 
-    fireEvent.change(screen.getByLabelText('Review objective (optional)'), {
-      target: { value: 'Fire ratings only' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Run review with objective' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Run AI Review' }));
 
     await screen.findByRole('button', { name: /W-002/ });
-    expect(screen.getByTestId('plan-source')).toHaveTextContent('AI-selected plan');
-    expect(screen.getByTestId('plan-source')).not.toHaveTextContent(/live/i);
-    expect(screen.getByRole('region', { name: 'Review coverage' })).toHaveTextContent(
-      /narrowed scope, never a pass/,
+    const coverage = screen.getByRole('region', { name: 'Review coverage' });
+    expect(coverage).toHaveTextContent('AI-selected plan');
+    expect(coverage).toHaveTextContent('muse-spark-1.3');
+    expect(coverage).toHaveTextContent('Live');
+    expect(coverage).toHaveTextContent('Selected scope');
+    expect(coverage).toHaveTextContent(/executed/i);
+    fireEvent.click(screen.getByText('Scope and check selection'));
+    expect(screen.getByRole('list', { name: 'User-selected check scope' })).toHaveTextContent(
+      'REQ-001 · Fire rating present',
     );
-    expect(screen.queryByText(/The objective was not used/)).not.toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Checks selected by the plan' })).toHaveTextContent(
+      'REQ-001 · Fire rating present',
+    );
   });
 
-  it('labels an AI plan as a recorded Replay response when the backend is in replay mode', async () => {
-    healthMode.llmMode = 'replay';
+  it('shows Replay from persisted run provenance', async () => {
     vi.mocked(loadReviewWorkspace).mockResolvedValue({
       ...workspace,
-      run: { ...workspace.run, plan_source: 'llm' },
+      run: {
+        ...workspace.run,
+        plan_source: 'llm',
+        provenance: {
+          ai_planning_requested: true,
+          deterministic_fallback: false,
+          executed_check_ids: ['check-id'],
+          fallback_reason: null,
+          mode: 'replay',
+          model: 'replay-model',
+          outcome: 'accepted',
+          provider_request_attempted: true,
+          selected_check_ids: ['check-id'],
+        },
+      },
     });
     renderWorkspace();
 
     await screen.findByRole('button', { name: /W-002/ });
-    expect(screen.getByTestId('plan-source')).toHaveTextContent(
-      'Recorded AI-selected plan (Replay; no live call)',
-    );
+    const coverage = screen.getByRole('region', { name: 'Review coverage' });
+    expect(coverage).toHaveTextContent('Replay');
+    expect(coverage).toHaveTextContent(/recorded response; no live call/i);
+    expect(coverage).toHaveTextContent('replay-model');
+    expect(coverage).not.toHaveTextContent('Live');
   });
 
-  it('surfaces an objective review error without presenting a run', async () => {
+  it('does not infer Replay for a historical run without persisted provenance', async () => {
+    vi.mocked(loadReviewWorkspace).mockResolvedValue({
+      ...workspace,
+      run: { ...workspace.run, plan_source: 'llm', provenance: null },
+    });
+    renderWorkspace();
+
+    await screen.findByRole('button', { name: /W-002/ });
+    expect(screen.getByTestId('plan-source')).toHaveTextContent(/provenance not recorded/i);
+    expect(screen.getByRole('region', { name: 'Review coverage' })).not.toHaveTextContent(/Replay/);
+  });
+
+  it('offers Retry AI Review and explicit deterministic continuation after a typed planning failure', async () => {
+    const failure: AIReviewFailure = {
+      mode: 'live',
+      model: 'muse-spark-1.3',
+      provider_request_attempted: true,
+      reason_code: 'provider_unavailable',
+    };
+    vi.mocked(startObjectiveReview)
+      .mockRejectedValueOnce(
+        new AIReviewRequestError('The provider could not be reached.', 503, failure),
+      )
+      .mockRejectedValueOnce(
+        new AIReviewRequestError('The provider could not be reached.', 503, failure),
+      )
+      .mockResolvedValueOnce(workspace.run);
+    vi.mocked(loadReviewWorkspace).mockResolvedValue({
+      ...workspace,
+      run: {
+        ...workspace.run,
+        provenance: {
+          ai_planning_requested: true,
+          deterministic_fallback: true,
+          executed_check_ids: ['check-id'],
+          fallback_reason: 'user_selected_continue_without_ai',
+          mode: 'off',
+          model: null,
+          outcome: 'continued_without_ai',
+          provider_request_attempted: false,
+          selected_check_ids: ['check-id'],
+        },
+      },
+    });
+    renderWorkspace(null);
+    await screen.findByTestId('viewer');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run AI Review' }));
+    expect(await screen.findByText(/AI planning is unavailable/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry AI Review' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Continue without AI' })).toBeEnabled();
+    expect(screen.queryByRole('region', { name: 'Review coverage' })).not.toBeInTheDocument();
+    expect(startStandardReview).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry AI Review' }));
+    await screen.findByRole('button', { name: 'Continue without AI' });
+    expect(startObjectiveReview).toHaveBeenNthCalledWith(
+      2,
+      'session-id',
+      'Review all confirmed requirements',
+      expect.any(AbortSignal),
+      {
+        ai_required: true,
+        continue_without_ai: false,
+        selected_checks: [
+          { check_id: 'check-id', requirement_id: 'REQ-001', requirement_revision: 1 },
+        ],
+      },
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continue without AI' }));
+    await screen.findByRole('button', { name: /W-002/ });
+    expect(startObjectiveReview).toHaveBeenNthCalledWith(
+      3,
+      'session-id',
+      'Review all confirmed requirements',
+      expect.any(AbortSignal),
+      {
+        ai_required: true,
+        continue_without_ai: true,
+        selected_checks: [
+          { check_id: 'check-id', requirement_id: 'REQ-001', requirement_revision: 1 },
+        ],
+      },
+    );
+    const coverage = screen.getByRole('region', { name: 'Review coverage' });
+    expect(coverage).toHaveTextContent('User continued without AI');
+    expect(coverage).toHaveTextContent('Off');
+    expect(coverage).toHaveTextContent('user_selected_continue_without_ai');
+  });
+
+  it('explains that AI-off mode made no provider request', async () => {
+    const failure: AIReviewFailure = {
+      mode: 'off',
+      model: null,
+      provider_request_attempted: false,
+      reason_code: 'provider_unavailable',
+    };
     vi.mocked(startObjectiveReview).mockRejectedValue(
-      new ApiError('Review objectives are limited to 4000 characters.'),
+      new AIReviewRequestError('AI planning is unavailable in the configured mode.', 503, failure),
     );
     renderWorkspace(null);
     await screen.findByTestId('viewer');
 
-    fireEvent.change(screen.getByLabelText('Review objective (optional)'), {
-      target: { value: 'An objective' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Run review with objective' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Run AI Review' }));
 
     expect(
-      await screen.findByText('Review objectives are limited to 4000 characters.'),
+      await screen.findByText(/AI mode is Off; no provider request was made/i),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Review coverage' })).not.toBeInTheDocument();
   });
 });
 
 describe('FINAL-UI-001 explanation requests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    healthMode.llmMode = 'off';
     vi.mocked(loadModel).mockResolvedValue(model);
     vi.mocked(loadReviewWorkspace).mockResolvedValue({
       ...workspace,
@@ -1040,16 +1210,13 @@ describe('FINAL-UI-001 explanation requests', () => {
     expect(result).not.toHaveTextContent(/AI interpretation/);
   });
 
-  it('adds the Replay label to an AI explanation only when the backend reports replay mode', async () => {
-    healthMode.llmMode = 'replay';
+  it('does not infer Replay for an explanation from current health state', async () => {
     renderWorkspace();
 
     fireEvent.click(await screen.findByRole('button', { name: /W-002/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Explain finding' }));
 
-    expect(await screen.findByTestId('explanation-result')).toHaveTextContent(
-      'Recorded response (Replay; no live call)',
-    );
+    expect(await screen.findByTestId('explanation-result')).not.toHaveTextContent(/Replay/);
   });
 
   it('shows a 412 as a version error rather than an explanation', async () => {

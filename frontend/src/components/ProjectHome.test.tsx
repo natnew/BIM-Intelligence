@@ -65,6 +65,7 @@ describe('ProjectHome', () => {
     render(<ProjectHome onOpenWorkspace={vi.fn()} />);
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/Start with the model/);
+    expect(screen.getByRole('heading', { name: 'System status' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create review session' })).toBeEnabled();
     expect(screen.getByRole('heading', { name: 'Open an existing session' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Recent sessions' })).toBeInTheDocument();

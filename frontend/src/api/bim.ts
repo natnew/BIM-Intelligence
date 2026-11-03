@@ -3,6 +3,7 @@ import type {
   ElementRecord,
   Explanation,
   Finding,
+  AIReviewFailure,
   ModelSummary,
   ProblemDetail,
   Requirement,
@@ -30,6 +31,16 @@ export class ModelVersionMismatchError extends ApiError {
   constructor(message: string) {
     super(message, 412);
     this.name = 'ModelVersionMismatchError';
+  }
+}
+
+export class AIReviewRequestError extends ApiError {
+  readonly failure: AIReviewFailure | null;
+
+  constructor(message: string, status: number, failure: AIReviewFailure | null) {
+    super(message, status);
+    this.name = 'AIReviewRequestError';
+    this.failure = failure;
   }
 }
 
@@ -82,7 +93,11 @@ function requestOptions(signal?: AbortSignal, headers?: HeadersInit): RequestIni
   return options;
 }
 
-async function request(path: string, init: RequestInit = {}): Promise<Response> {
+async function request(
+  path: string,
+  init: RequestInit = {},
+  includeAIReviewFailure = false,
+): Promise<Response> {
   let response: Response;
   try {
     response = await fetch(path, { ...init, signal: init.signal ?? null });
@@ -98,8 +113,9 @@ async function request(path: string, init: RequestInit = {}): Promise<Response> 
 
   if (!response.ok) {
     let detail = `Request failed (${response.status})`;
+    let problem: ProblemDetail | null = null;
     try {
-      const problem = (await response.json()) as ProblemDetail;
+      problem = (await response.json()) as ProblemDetail;
       detail = problem.detail ?? problem.title ?? detail;
     } catch (error) {
       if (!(error instanceof SyntaxError)) {
@@ -108,6 +124,9 @@ async function request(path: string, init: RequestInit = {}): Promise<Response> 
     }
     if (response.status === 412) {
       throw new ModelVersionMismatchError(detail);
+    }
+    if (includeAIReviewFailure) {
+      throw new AIReviewRequestError(detail, response.status, problem?.ai_review_failure ?? null);
     }
     throw new ApiError(detail, response.status);
   }
@@ -339,7 +358,7 @@ export async function startObjectiveReview(
   });
   options.method = 'POST';
   options.body = JSON.stringify(body);
-  const response = await request(`${sessionPath(sessionId)}/reviews`, options);
+  const response = await request(`${sessionPath(sessionId)}/reviews`, options, true);
   const run = (await response.json()) as ReviewRun;
   if (run.session_id !== sessionId) {
     throw new ApiError('The started review does not match the requested session.');

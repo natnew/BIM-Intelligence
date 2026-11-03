@@ -1076,3 +1076,26 @@ Focused tests and synthetic browser measurements, including the existing 320 px 
 verification limitations, are recorded in
 [UI_CHANGELOG.md](./UI_CHANGELOG.md#ui-007--project-home-introduction-and-right-aligned-reel).
 The local captures await owner visual review and do not establish an end-to-end backend review.
+
+## 29. UI-008 — Guided AI review with an objective dock
+
+**Status:** implementation on `feature/ui-008-guided-ai-review`, based on `main` at
+`852746020a41f7928692d30ac62665c97d9fb68a`; owner visual review is pending. This is a T-7 / M3
+refinement, not task or milestone completion. This section supersedes the objective dispatch,
+failure-recovery, run-provenance and explanation-presentation behaviour recorded for the earlier
+FINAL-UI-001 state in §§18 and 22 where they differ. Those sections remain historical records;
+the unchanged Project Home and recent-session behaviour from FINAL-UI-001 is retained.
+
+| Area | Behaviour |
+|---|---|
+| Objective and scope | The right-column objective dock lets the reviewer choose all confirmed requirements or an explicit subset, then add a free-text objective. Check submissions are deduplicated by CheckSpec ID and pinned to the confirmed requirement revision. An empty selected scope cannot be submitted. |
+| Review dispatch | Objective reviews use the objective-review API with `ai_required: true`, `continue_without_ai: false` and the selected revision-pinned checks. Findings remain produced only by deterministic registered checks. |
+| Recovery | A typed AI-planning failure exposes separate **Retry AI Review** and **Continue without AI** actions. Retry repeats the AI-required request. Continuing resubmits the same objective and scope with `continue_without_ai: true`; it is never an automatic fallback. In AI Off mode, the message states that no provider request was made. |
+| Run provenance | Coverage uses persisted run provenance, not current `/health`, for mode, model, selected checks, fallback cause and execution results. Missing historical values remain *Not recorded*. Selected, planned, executed, skipped, failed and finding counts remain distinct; an incomplete run or zero findings is not a compliance conclusion. |
+| Explanation and disclosure | AI-generated explanations remain distinct from deterministic evidence; deterministic templates use neutral presentation. The disclosure explains which objective, permitted model summary and requirement metadata may be sent for planning, and which element properties and verified finding evidence may be sent for an explicitly requested explanation. The IFC file is not sent by planning. |
+| Protected scope | No backend, schema, generated type, dependency, IFC, viewer or deterministic rule changes. Recent-session behaviour is unchanged. |
+
+Automated results, synthetic browser evidence, rollback guidance and limitations are recorded in
+[UI_CHANGELOG.md](./UI_CHANGELOG.md#ui-008--guided-ai-review-with-an-objective-dock). The
+integrated browser did not provide a genuine 1920 × 1080 CSS viewport; owner review at that target
+remains outstanding. No live Meta request was made, and T-7/M3 remain in progress.

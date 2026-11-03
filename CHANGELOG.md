@@ -4,6 +4,20 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### UI-008 / T-7 / M3 — Guided AI review with an objective dock (3 November 2026)
+
+- Add explicit all-or-selected confirmed-requirement scope, a custom objective, revision-pinned
+  checks, typed AI-failure recovery and persisted run provenance. **Retry AI Review** and
+  **Continue without AI** are separate choices; findings remain deterministic, and AI
+  explanations remain separately labelled.
+- Frontend lint, formatting, typecheck, generated-types check and production build pass; all
+  **132 tests in 10 files** pass. Synthetic AI-Off browser checks confirmed no provider request,
+  explicit continuation and persisted fallback/mode display. The browser could not expose a true
+  1920 × 1080 CSS viewport, so that visual target remains unverified. No paid/live request or
+  publication action occurred; owner review remains pending and T-7/M3 remain in progress. See
+  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#ui-008--guided-ai-review-with-an-objective-dock) for
+  exact commands, evidence, limitations and rollback.
+
 ### AI-007 / T-5.1 / M2 — Explicit AI review policy and provenance (3 November 2026)
 
 - Require an accepted AI plan for objective requests by default; expose typed safe errors instead

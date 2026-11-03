@@ -293,7 +293,7 @@ export function ProjectHome({ onOpenWorkspace }: ProjectHomeProps) {
           </p>
         </div>
         <aside className="hero__aside" aria-label="Backend status">
-          <h2 className="hero__aside-title">Backend status</h2>
+          <h2 className="hero__aside-title">System status</h2>
           <HealthPanel />
         </aside>
       </section>
