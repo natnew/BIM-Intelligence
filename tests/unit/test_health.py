@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from bim_intelligence import __version__
@@ -36,6 +37,21 @@ def test_health_reports_key_presence_but_never_value() -> None:
     assert response.json()["llm_configured"] is True
     assert PLACEHOLDER_KEY not in response.text
     assert "x" * 24 not in response.text
+
+
+def test_health_does_not_construct_an_llm_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail_if_called(*args: object, **kwargs: object) -> None:
+        raise AssertionError("health must not construct an LLM client")
+
+    monkeypatch.setattr("bim_intelligence.api.deps.create_client", fail_if_called)
+    response = _client(
+        bimi_environment="production",
+        model_api_key=PLACEHOLDER_KEY,
+        llm_mode="live",
+        allow_live_llm=True,
+    ).get(f"{API_PREFIX}/health")
+    assert response.status_code == 200
+    assert response.json()["llm_mode"] == "live"
 
 
 def test_openapi_served_under_versioned_prefix() -> None:

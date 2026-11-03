@@ -13,6 +13,7 @@ export type JsonValue = unknown;
  * Generated from backend/bim_intelligence/schemas by scripts/export_schemas.py. Do not edit by hand.
  */
 export interface BimIntelligenceContracts {
+  readonly aIReviewFailure?: AIReviewFailure;
   readonly budgetStatus?: BudgetStatus;
   readonly checkResult?: CheckResult;
   readonly checkSpec?: CheckSpec;
@@ -35,9 +36,29 @@ export interface BimIntelligenceContracts {
   readonly requirementExtractionRequest?: RequirementExtractionRequest;
   readonly requirementSource?: RequirementSource;
   readonly reviewPlan?: ReviewPlan;
+  readonly reviewProvenance?: ReviewProvenance;
   readonly reviewRequest?: ReviewRequest;
   readonly reviewRun?: ReviewRun;
+  readonly selectedCheck?: SelectedCheck;
   readonly session?: Session;
+}
+/**
+ * Safe, typed provenance for a rejected AI-planning request.
+ */
+export interface AIReviewFailure {
+  readonly mode: 'live' | 'replay' | 'off';
+  readonly model: string | null;
+  readonly provider_request_attempted: boolean;
+  readonly reason_code:
+    | 'provider_unavailable'
+    | 'provider_failure'
+    | 'budget_limit'
+    | 'budget_state'
+    | 'token_limit'
+    | 'invalid_output'
+    | 'plan_rejected'
+    | 'unsupported_scope'
+    | 'replay_mismatch';
 }
 /**
  * Non-sensitive application-level accounting summary; never includes prompt content.
@@ -368,6 +389,10 @@ export interface PlannedCheck {
  */
 export interface ProblemDetail {
   /**
+   * Safe AI-planning failure provenance when an AI-required review is rejected.
+   */
+  readonly ai_review_failure: AIReviewFailure | null;
+  /**
    * Request correlation id for matching against the run log.
    */
   readonly correlation_id: string | null;
@@ -436,13 +461,47 @@ export interface ReviewPlan {
   readonly checks: PlannedCheck[];
 }
 /**
- * Optional objective for a bounded AI-selected plan; omitted means deterministic default.
+ * Persisted AI planning and execution provenance; absent on historical runs.
+ */
+export interface ReviewProvenance {
+  readonly ai_planning_requested: boolean;
+  readonly deterministic_fallback: boolean;
+  readonly executed_check_ids: string[];
+  readonly fallback_reason: string | null;
+  readonly mode: 'live' | 'replay' | 'off';
+  readonly model: string | null;
+  readonly outcome: 'not_requested' | 'accepted' | 'rejected' | 'continued_without_ai';
+  readonly provider_request_attempted: boolean;
+  readonly selected_check_ids: string[];
+}
+/**
+ * Bounded review intent; an objective requires AI unless explicitly made optional.
  */
 export interface ReviewRequest {
+  /**
+   * Whether an objective requires an accepted AI plan. When omitted, a supplied objective requires AI; a request without an objective uses the deterministic plan.
+   */
+  readonly ai_required: boolean | null;
+  /**
+   * Explicitly choose the deterministic alternative after an AI-required request.
+   */
+  readonly continue_without_ai: boolean;
   /**
    * Plain-language review objective. It must contain visible text; whitespace-only objectives are rejected rather than sent to the planner.
    */
   readonly objective: string | null;
+  /**
+   * Optional confirmed-check scope, each pinned to its requirement revision. The model may select only within this scope.
+   */
+  readonly selected_checks: [SelectedCheck, ...SelectedCheck[]] | null;
+}
+/**
+ * A user-selected check pinned to the confirmed requirement revision it came from.
+ */
+export interface SelectedCheck {
+  readonly check_id: string;
+  readonly requirement_id: string;
+  readonly requirement_revision: number;
 }
 /**
  * One review run over a session; the only record that carries timestamps.
@@ -455,6 +514,7 @@ export interface ReviewRun {
   readonly input_manifest: InputManifest;
   readonly plan: ReviewPlan;
   readonly plan_source: 'llm' | 'default';
+  readonly provenance: ReviewProvenance | null;
   readonly session_id: string;
   readonly status: 'queued' | 'running' | 'completed' | 'partial' | 'failed' | 'interrupted';
 }

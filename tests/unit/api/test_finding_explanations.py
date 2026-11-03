@@ -56,7 +56,9 @@ def _use(client: TestClient, factory: Callable[[], LLMClient | None]) -> None:
 
 
 def _review(client: TestClient, session_id: str, objective: str | None = None) -> dict[str, Any]:
-    kwargs: dict[str, Any] = {"json": {"objective": objective}} if objective else {}
+    kwargs: dict[str, Any] = (
+        {"json": {"objective": objective, "ai_required": False}} if objective else {}
+    )
     response = client.post(f"{API_PREFIX}/sessions/{session_id}/reviews", **kwargs)
     assert response.status_code == 201, response.text
     return cast(dict[str, Any], response.json())

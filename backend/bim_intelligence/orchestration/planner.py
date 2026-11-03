@@ -4,16 +4,61 @@ from __future__ import annotations
 
 import json
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
 from bim_intelligence.config import Settings
 from bim_intelligence.llm.client import ChatMessage, LLMClient
 from bim_intelligence.llm.errors import LLMClientError, LLMOutputError
-from bim_intelligence.schemas import ModelSummary, Requirement, ReviewPlan
+from bim_intelligence.schemas import (
+    AIReviewFailureReason,
+    ModelSummary,
+    Requirement,
+    ReviewPlan,
+)
 
 
 class PlanViolation(ValueError):  # noqa: N818
     """A model proposal references invalid, unconfirmed, duplicate or excessive checks."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        reason_code: AIReviewFailureReason = "plan_rejected",
+        provider_request_attempted: bool = False,
+        model: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.reason_code = reason_code
+        self.provider_request_attempted = provider_request_attempted
+        self.model = model
+
+
+class UnsupportedScopeViolation(PlanViolation):
+    """No supplied confirmed check can represent the requested objective."""
+
+    def __init__(
+        self,
+        *,
+        provider_request_attempted: bool = False,
+        model: str | None = None,
+    ) -> None:
+        super().__init__(
+            "No supplied check applies to the requested objective.",
+            reason_code="unsupported_scope",
+            provider_request_attempted=provider_request_attempted,
+            model=model,
+        )
+
+
+@dataclass(frozen=True)
+class PlanProposal:
+    """Accepted plan plus the model and network provenance returned by its client."""
+
+    plan: ReviewPlan
+    model: str
+    provider_request_attempted: bool
 
 
 _PROMPT = Path(__file__).with_name("prompts") / "planner.v1.md"
@@ -27,14 +72,14 @@ def propose_plan(
     requirements: Sequence[Requirement],
     settings: Settings,
     run_id: str,
-) -> ReviewPlan:
+) -> PlanProposal:
     """Ask the model for JSON, then reject anything outside the confirmed check registry."""
     confirmed = [requirement for requirement in requirements if requirement.is_executable]
     by_check: dict[str, Requirement] = {}
     for requirement in confirmed:
         by_check.setdefault(requirement.check.id, requirement)
     if not by_check:
-        raise PlanViolation("There are no confirmed checks available for planning.")
+        raise UnsupportedScopeViolation()
 
     tools = [
         {
@@ -78,20 +123,33 @@ def propose_plan(
             purpose="plan",
             run_id=run_id,
         )
-    except LLMOutputError:
-        raise PlanViolation("Model plan did not match the permitted response schema.") from None
+    except LLMOutputError as exc:
+        raise PlanViolation(
+            "Model plan did not match the permitted response schema.",
+            reason_code="invalid_output",
+            provider_request_attempted=exc.provider_request_attempted,
+        ) from None
     except LLMClientError:
         raise
     plan = completion.value
-    _validate_plan(
-        plan,
-        by_check,
-        max_checks=min(
-            settings.max_plan_checks,
-            settings.max_tool_calls_per_run,
-        ),
+    try:
+        _validate_plan(
+            plan,
+            by_check,
+            max_checks=min(
+                settings.max_plan_checks,
+                settings.max_tool_calls_per_run,
+            ),
+        )
+    except PlanViolation as exc:
+        exc.provider_request_attempted = completion.provider_request_attempted
+        exc.model = completion.model
+        raise
+    return PlanProposal(
+        plan=plan,
+        model=completion.model,
+        provider_request_attempted=completion.provider_request_attempted,
     )
-    return plan
 
 
 def validate_plan(
@@ -117,7 +175,7 @@ def _validate_plan(
 ) -> None:
     ids = [item.check_id for item in plan.checks]
     if not ids:
-        raise PlanViolation("A review plan must select at least one confirmed check.")
+        raise UnsupportedScopeViolation()
     if len(ids) != len(set(ids)):
         raise PlanViolation("A review plan contains duplicate check IDs.")
     unknown = sorted(set(ids) - by_check.keys())

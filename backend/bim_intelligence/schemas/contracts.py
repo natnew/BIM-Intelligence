@@ -25,7 +25,7 @@ from bim_intelligence.schemas.elements import (
     PropertyValue,
 )
 from bim_intelligence.schemas.findings import Finding
-from bim_intelligence.schemas.problems import ProblemDetail
+from bim_intelligence.schemas.problems import AIReviewFailure, ProblemDetail
 from bim_intelligence.schemas.requirements import (
     Requirement,
     RequirementCandidate,
@@ -39,8 +39,10 @@ from bim_intelligence.schemas.runs import (
     InputManifest,
     PlannedCheck,
     ReviewPlan,
+    ReviewProvenance,
     ReviewRequest,
     ReviewRun,
+    SelectedCheck,
 )
 from bim_intelligence.schemas.sessions import Session
 
@@ -58,15 +60,18 @@ CONTRACT_MODELS: tuple[type[BaseModel], ...] = (
     CheckResult,
     PlannedCheck,
     ReviewPlan,
+    ReviewProvenance,
     InputManifest,
     ReviewRun,
     ProblemDetail,
+    AIReviewFailure,
     DocumentImport,
     RequirementCandidate,
     RequirementCandidateBatch,
     RequirementCandidateConfirmation,
     RequirementExtractionRequest,
     ReviewRequest,
+    SelectedCheck,
     Explanation,
     EvidenceCitation,
     BudgetStatus,

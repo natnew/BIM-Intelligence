@@ -35,7 +35,7 @@ from bim_intelligence.schemas.findings import (
     findings_to_json,
     sort_findings,
 )
-from bim_intelligence.schemas.problems import ProblemDetail
+from bim_intelligence.schemas.problems import AIReviewFailure, AIReviewFailureReason, ProblemDetail
 from bim_intelligence.schemas.requirements import (
     Requirement,
     RequirementCandidate,
@@ -53,10 +53,14 @@ from bim_intelligence.schemas.runs import (
     InputManifest,
     PlannedCheck,
     PlanSource,
+    ReviewMode,
     ReviewPlan,
+    ReviewPlanOutcome,
+    ReviewProvenance,
     ReviewRequest,
     ReviewRun,
     RunStatus,
+    SelectedCheck,
 )
 from bim_intelligence.schemas.sessions import SESSION_ID_PATTERN, Session, SessionStatus
 
@@ -64,6 +68,8 @@ __all__ = [
     "CONTRACT_MODELS",
     "SESSION_ID_PATTERN",
     "TERMINAL_RUN_STATUSES",
+    "AIReviewFailure",
+    "AIReviewFailureReason",
     "BudgetStatus",
     "CheckKind",
     "CheckResult",
@@ -93,10 +99,14 @@ __all__ = [
     "RequirementOrigin",
     "RequirementSource",
     "RequirementStatus",
+    "ReviewMode",
     "ReviewPlan",
+    "ReviewPlanOutcome",
+    "ReviewProvenance",
     "ReviewRequest",
     "ReviewRun",
     "RunStatus",
+    "SelectedCheck",
     "Session",
     "SessionStatus",
     "Severity",

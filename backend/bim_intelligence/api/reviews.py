@@ -32,10 +32,13 @@ logger = logging.getLogger(__name__)
     summary="Run a bounded review",
     description=(
         "Executes a bounded plan against the active model version and returns the terminal "
-        "``ReviewRun``. Without an objective or an enabled LLM client, it uses the stable "
-        "deterministic default plan. With an objective and an enabled client, Muse Spark may "
-        "select only confirmed immutable check ids; invalid or unavailable AI plans fall back "
-        "to the default plan. One ``CheckResult`` is recorded per unique check "
+        "``ReviewRun``. Without an objective, it uses the stable deterministic default plan. A "
+        "supplied objective requires an accepted AI plan unless ``ai_required=false`` is explicit; "
+        "strict failures return a typed problem rather than silently running the default. "
+        "``continue_without_ai=true`` is the explicit deterministic alternative. The planner may "
+        "select only checks in the current confirmed scope; rejected optional plans in a "
+        "representable scope fall back to that scope's deterministic plan, while unsupported "
+        "scope returns a typed 422. One ``CheckResult`` is recorded per unique check "
         "(``passed``, ``failed``, "
         "``error``, ``skipped`` or ``not_applicable``) and the ``InputManifest`` naming the "
         "model hash, IDS hashes, requirement revisions and rule versions it ran against. The "
@@ -51,7 +54,7 @@ logger = logging.getLogger(__name__)
         "Live calls require explicit live-mode configuration and are bounded by the persistent "
         "application-level budget ledger."
     ),
-    responses=problem_responses(400, 404, 409, 412),
+    responses=problem_responses(400, 404, 409, 412, 422, 503),
 )
 def start_review(
     session_id: str,
@@ -70,6 +73,9 @@ def start_review(
         settings=settings,
         objective=body.objective if body else None,
         client=client,
+        ai_required=body.effective_ai_required if body else False,
+        continue_without_ai=body.continue_without_ai if body else False,
+        selected_checks=body.selected_checks if body else None,
     )
     response.headers["Location"] = request.url_for(
         "get_review", session_id=session_id, run_id=outcome.run.id

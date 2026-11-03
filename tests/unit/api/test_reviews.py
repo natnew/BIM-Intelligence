@@ -111,6 +111,9 @@ def test_objective_reaches_the_planner_in_the_provider_request_body(
     assert response.status_code == 201, response.text
     run = response.json()
     assert run["plan_source"] == "llm"
+    assert run["provenance"]["mode"] == "live"
+    assert run["provenance"]["model"] == "muse-spark-1.3"
+    assert run["provenance"]["provider_request_attempted"] is True
     assert [item["check_id"] for item in run["plan"]["checks"]] == [checks["REQ-002"]]
     assert run["check_results"][0]["check_id"] == checks["REQ-002"]
     assert len(completions.requests) == 1
@@ -152,7 +155,7 @@ def test_planner_budget_rejection_runs_the_default_plan_without_a_provider_reque
 
     response = client.post(
         f"{API_PREFIX}/sessions/{review_session}/reviews",
-        json={"objective": "Check fire ratings only"},
+        json={"objective": "Check fire ratings only", "ai_required": False},
     )
 
     assert response.status_code == 201, response.text
@@ -162,6 +165,40 @@ def test_planner_budget_rejection_runs_the_default_plan_without_a_provider_reque
     assert completions.requests == []
 
 
+def test_strict_budget_rejection_is_typed_and_does_not_make_a_provider_request(
+    client: TestClient, review_session: str, tmp_path: Path, settings: Settings
+) -> None:
+    completions = CapturingCompletions(
+        json.dumps({"checks": [{"check_id": "unused", "reason": "Not sent."}]})
+    )
+    tiny = "0.00001"
+    live = live_settings(
+        tmp_path,
+        llm_project_budget_usd=tiny,
+        llm_max_run_budget_usd=tiny,
+        llm_max_call_budget_usd=tiny,
+    )
+    cast(FastAPI, client.app).dependency_overrides[get_llm_client] = lambda: stub_live_client(
+        live, completions
+    )
+
+    response = client.post(
+        f"{API_PREFIX}/sessions/{review_session}/reviews",
+        json={"objective": "Check fire ratings only"},
+    )
+
+    problem = assert_problem(response, 503, "ai-review-unavailable")
+    assert problem["ai_review_failure"] == {
+        "mode": "live",
+        "provider_request_attempted": False,
+        "model": None,
+        "reason_code": "budget_limit",
+    }
+    assert completions.requests == []
+    runs_dir = settings.data_dir / "sessions" / review_session / RUNS_DIR
+    assert not runs_dir.exists() or not any(runs_dir.iterdir())
+
+
 def test_planner_request_failure_runs_the_default_plan(
     client: TestClient, review_session: str
 ) -> None:
@@ -169,7 +206,7 @@ def test_planner_request_failure_runs_the_default_plan(
 
     response = client.post(
         f"{API_PREFIX}/sessions/{review_session}/reviews",
-        json={"objective": "Check fire ratings only"},
+        json={"objective": "Check fire ratings only", "ai_required": False},
     )
 
     assert response.status_code == 201, response.text
@@ -203,13 +240,136 @@ def test_invalid_objective_plan_falls_back_to_deterministic_default(
     )
     response = client.post(
         f"{API_PREFIX}/sessions/{review_session}/reviews",
-        json={"objective": "Review only the unconfirmed check"},
+        json={"objective": "Review only the unconfirmed check", "ai_required": False},
     )
     assert response.status_code == 201, response.text
     run = response.json()
     assert run["plan_source"] == "default"
+    assert run["provenance"]["outcome"] == "rejected"
+    assert run["provenance"]["deterministic_fallback"] is True
     assert len(run["plan"]["checks"]) == 2
     assert [result["status"] for result in run["check_results"]] == ["failed", "failed"]
+
+
+def test_strict_objective_failure_is_a_typed_error_not_a_default_review(
+    client: TestClient, review_session: str
+) -> None:
+    cast(FastAPI, client.app).dependency_overrides[get_llm_client] = lambda: None
+    response = client.post(
+        f"{API_PREFIX}/sessions/{review_session}/reviews",
+        json={"objective": "Check fire ratings only"},
+    )
+
+    problem = assert_problem(response, 503, "ai-review-unavailable")
+    assert problem["ai_review_failure"] == {
+        "mode": "off",
+        "provider_request_attempted": False,
+        "model": None,
+        "reason_code": "provider_unavailable",
+    }
+
+
+def test_rejected_live_plan_is_typed_and_never_publishes_findings(
+    client: TestClient, review_session: str, tmp_path: Path, settings: Settings
+) -> None:
+    completions = CapturingCompletions(
+        json.dumps({"checks": [{"check_id": "unregistered", "reason": "Not permitted."}]})
+    )
+    live = live_settings(tmp_path)
+    cast(FastAPI, client.app).dependency_overrides[get_llm_client] = lambda: stub_live_client(
+        live, completions
+    )
+
+    response = client.post(
+        f"{API_PREFIX}/sessions/{review_session}/reviews",
+        json={"objective": "Review only the confirmed requirements"},
+    )
+
+    problem = assert_problem(response, 503, "ai-review-unavailable")
+    assert problem["ai_review_failure"] == {
+        "mode": "live",
+        "provider_request_attempted": True,
+        "model": "muse-spark-1.3",
+        "reason_code": "plan_rejected",
+    }
+    assert len(completions.requests) == 1
+    runs_dir = settings.data_dir / "sessions" / review_session / RUNS_DIR
+    assert not runs_dir.exists() or not any(runs_dir.iterdir())
+
+
+def test_selected_check_contract_rejects_stale_revision_and_does_not_run_unrelated_checks(
+    client: TestClient, review_session: str
+) -> None:
+    requirements = client.get(f"{API_PREFIX}/sessions/{review_session}/requirements").json()
+    selected = requirements[1]
+    selected_check = {
+        "check_id": selected["check"]["id"],
+        "requirement_id": selected["id"],
+        "requirement_revision": selected["revision"],
+    }
+    payload = {
+        "objective": "Review classification quality",
+        "continue_without_ai": True,
+        "selected_checks": [selected_check],
+    }
+    valid = client.post(f"{API_PREFIX}/sessions/{review_session}/reviews", json=payload)
+    assert valid.status_code == 201, valid.text
+    run = valid.json()
+    assert [result["check_id"] for result in run["check_results"]] == [selected["check"]["id"]]
+    assert run["provenance"]["selected_check_ids"] == [selected["check"]["id"]]
+    assert run["provenance"]["executed_check_ids"] == [selected["check"]["id"]]
+
+    stale = client.post(
+        f"{API_PREFIX}/sessions/{review_session}/reviews",
+        json={
+            **payload,
+            "selected_checks": [
+                {**selected_check, "requirement_revision": selected["revision"] + 1}
+            ],
+        },
+    )
+    assert_problem(stale, 422, "invalid-review-scope", detail_contains="stale")
+
+
+def test_continue_without_ai_is_an_explicit_deterministic_alternative(
+    client: TestClient, review_session: str
+) -> None:
+    fake = FakeClient([])
+    cast(FastAPI, client.app).dependency_overrides[get_llm_client] = lambda: fake
+    response = client.post(
+        f"{API_PREFIX}/sessions/{review_session}/reviews",
+        json={
+            "objective": "Check fire ratings only",
+            "ai_required": True,
+            "continue_without_ai": True,
+        },
+    )
+
+    assert response.status_code == 201, response.text
+    assert fake.calls == 0
+    run = response.json()
+    assert run["plan_source"] == "default"
+    assert run["provenance"]["outcome"] == "continued_without_ai"
+
+
+def test_unsupported_objective_is_not_replaced_with_a_default_plan(
+    client: TestClient, review_session: str
+) -> None:
+    cast(FastAPI, client.app).dependency_overrides[get_llm_client] = lambda: FakeClient(
+        [{"checks": []}]
+    )
+    response = client.post(
+        f"{API_PREFIX}/sessions/{review_session}/reviews",
+        json={"objective": "Review spatial containment"},
+    )
+
+    problem = assert_problem(response, 422, "unsupported-review-scope")
+    assert problem["ai_review_failure"] == {
+        "mode": "off",
+        "provider_request_attempted": False,
+        "model": "fake-model",
+        "reason_code": "unsupported_scope",
+    }
 
 
 def test_findings_expose_the_two_fixture_defects_with_evidence(

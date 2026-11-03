@@ -82,7 +82,7 @@ def _evaluate_contract() -> dict[str, bool]:
         run_id="offline-plan",
     )
     plan_schema_and_selection = (
-        valid_plan
+        valid_plan.plan
         == ReviewPlan(
             checks=[PlannedCheck(check_id=check.id, reason="Check classification consistency.")]
         )
@@ -143,7 +143,7 @@ def _evaluate_contract() -> dict[str, bool]:
         fallback_a.source == "deterministic_template" and fallback_a.grounding_status == "fallback"
     )
     deterministic_fallback = serialized_a == serialized_b
-    replay_repeatable = _replay_repeatable(valid_plan)
+    replay_repeatable = _replay_repeatable(valid_plan.plan)
 
     return {
         "plan_schema_valid_and_selection_registered": plan_schema_and_selection,

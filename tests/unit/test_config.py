@@ -109,6 +109,41 @@ class TestLiveMode:
         with pytest.raises(ValidationError):
             Settings(llm_project_budget_usd=5.01)
 
+    def test_production_requires_the_approved_live_configuration(self) -> None:
+        with pytest.raises(ValidationError, match="BIMI_ENVIRONMENT=production"):
+            Settings(bimi_environment="production")
+
+        with pytest.raises(ValidationError, match="MODEL_API_KEY"):
+            Settings(bimi_environment="production", llm_mode="live", allow_live_llm=True)
+
+        settings = Settings(
+            bimi_environment="production",
+            llm_mode="live",
+            allow_live_llm=True,
+            model_api_key="LLM_0_" + "x" * 16,
+        )
+        assert settings.llm_model == "muse-spark-1.3"
+
+    def test_production_rejects_nonstandard_or_contributor_models(self) -> None:
+        with pytest.raises(ValidationError, match=r"muse-spark-1\.3"):
+            Settings(
+                bimi_environment="production",
+                llm_mode="live",
+                allow_live_llm=True,
+                model_api_key="LLM_0_" + "x" * 16,
+                llm_model="muse-wonder-1.0",
+            )
+
+        with pytest.raises(ValidationError, match="ALLOW_CONTRIBUTOR_MODELS"):
+            Settings(
+                bimi_environment="production",
+                llm_mode="live",
+                allow_live_llm=True,
+                allow_contributor_models=True,
+                model_api_key="LLM_0_" + "x" * 16,
+                llm_model="muse-spark-1.3-contributor",
+            )
+
 
 class TestRemoteBindingGuard:
     @pytest.mark.parametrize("host", ["127.0.0.1", "localhost", "::1", "127.0.0.2"])
@@ -128,9 +163,11 @@ class TestRemoteBindingGuard:
 class TestEnvironmentParsing:
     def test_reads_environment_variables(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("LLM_MODE", "replay")
+        monkeypatch.setenv("BIMI_ENVIRONMENT", "development")
         monkeypatch.setenv("CORS_ORIGINS", "http://a.test, http://b.test")
         settings = Settings()
         assert settings.llm_mode is LLMMode.REPLAY
+        assert settings.bimi_environment == "development"
         assert settings.cors_origins == ["http://a.test", "http://b.test"]
 
     def test_contributor_rejection_applies_to_environment(

@@ -1,5 +1,56 @@
 {
   "$defs": {
+    "AIReviewFailure": {
+      "additionalProperties": false,
+      "description": "Safe, typed provenance for a rejected AI-planning request.",
+      "properties": {
+        "mode": {
+          "enum": [
+            "live",
+            "replay",
+            "off"
+          ],
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "provider_request_attempted": {
+          "type": "boolean"
+        },
+        "reason_code": {
+          "enum": [
+            "provider_unavailable",
+            "provider_failure",
+            "budget_limit",
+            "budget_state",
+            "token_limit",
+            "invalid_output",
+            "plan_rejected",
+            "unsupported_scope",
+            "replay_mismatch"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "provider_request_attempted",
+        "model",
+        "reason_code"
+      ],
+      "title": "AIReviewFailure",
+      "type": "object"
+    },
     "BudgetStatus": {
       "additionalProperties": false,
       "description": "Non-sensitive application-level accounting summary; never includes prompt content.",
@@ -715,6 +766,18 @@
       "additionalProperties": false,
       "description": "``application/problem+json`` body.",
       "properties": {
+        "ai_review_failure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AIReviewFailure"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Safe AI-planning failure provenance when an AI-required review is rejected."
+        },
         "correlation_id": {
           "anyOf": [
             {
@@ -773,7 +836,8 @@
         "status",
         "detail",
         "instance",
-        "correlation_id"
+        "correlation_id",
+        "ai_review_failure"
       ],
       "title": "ProblemDetail",
       "type": "object"
@@ -1122,10 +1186,108 @@
       "title": "ReviewPlan",
       "type": "object"
     },
+    "ReviewProvenance": {
+      "additionalProperties": false,
+      "description": "Persisted AI planning and execution provenance; absent on historical runs.",
+      "properties": {
+        "ai_planning_requested": {
+          "type": "boolean"
+        },
+        "deterministic_fallback": {
+          "default": false,
+          "type": "boolean"
+        },
+        "executed_check_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "fallback_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "mode": {
+          "enum": [
+            "live",
+            "replay",
+            "off"
+          ],
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "outcome": {
+          "enum": [
+            "not_requested",
+            "accepted",
+            "rejected",
+            "continued_without_ai"
+          ],
+          "type": "string"
+        },
+        "provider_request_attempted": {
+          "type": "boolean"
+        },
+        "selected_check_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "ai_planning_requested",
+        "provider_request_attempted",
+        "mode",
+        "model",
+        "outcome",
+        "fallback_reason",
+        "deterministic_fallback",
+        "selected_check_ids",
+        "executed_check_ids"
+      ],
+      "title": "ReviewProvenance",
+      "type": "object"
+    },
     "ReviewRequest": {
       "additionalProperties": false,
-      "description": "Optional objective for a bounded AI-selected plan; omitted means deterministic default.",
+      "description": "Bounded review intent; an objective requires AI unless explicitly made optional.",
       "properties": {
+        "ai_required": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether an objective requires an accepted AI plan. When omitted, a supplied objective requires AI; a request without an objective uses the deterministic plan."
+        },
+        "continue_without_ai": {
+          "default": false,
+          "description": "Explicitly choose the deterministic alternative after an AI-required request.",
+          "type": "boolean"
+        },
         "objective": {
           "anyOf": [
             {
@@ -1140,10 +1302,30 @@
           ],
           "default": null,
           "description": "Plain-language review objective. It must contain visible text; whitespace-only objectives are rejected rather than sent to the planner."
+        },
+        "selected_checks": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/SelectedCheck"
+              },
+              "maxItems": 50,
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional confirmed-check scope, each pinned to its requirement revision. The model may select only within this scope."
         }
       },
       "required": [
-        "objective"
+        "objective",
+        "ai_required",
+        "continue_without_ai",
+        "selected_checks"
       ],
       "title": "ReviewRequest",
       "type": "object"
@@ -1191,6 +1373,17 @@
           ],
           "type": "string"
         },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReviewProvenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "session_id": {
           "minLength": 1,
           "type": "string"
@@ -1213,12 +1406,38 @@
         "status",
         "plan",
         "plan_source",
+        "provenance",
         "check_results",
         "input_manifest",
         "created_at",
         "finished_at"
       ],
       "title": "ReviewRun",
+      "type": "object"
+    },
+    "SelectedCheck": {
+      "additionalProperties": false,
+      "description": "A user-selected check pinned to the confirmed requirement revision it came from.",
+      "properties": {
+        "check_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "requirement_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "requirement_revision": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "check_id",
+        "requirement_id",
+        "requirement_revision"
+      ],
+      "title": "SelectedCheck",
       "type": "object"
     },
     "Session": {
@@ -1282,6 +1501,9 @@
   "additionalProperties": false,
   "description": "Generated from backend/bim_intelligence/schemas by scripts/export_schemas.py. Do not edit by hand.",
   "properties": {
+    "aIReviewFailure": {
+      "$ref": "#/$defs/AIReviewFailure"
+    },
     "budgetStatus": {
       "$ref": "#/$defs/BudgetStatus"
     },
@@ -1348,11 +1570,17 @@
     "reviewPlan": {
       "$ref": "#/$defs/ReviewPlan"
     },
+    "reviewProvenance": {
+      "$ref": "#/$defs/ReviewProvenance"
+    },
     "reviewRequest": {
       "$ref": "#/$defs/ReviewRequest"
     },
     "reviewRun": {
       "$ref": "#/$defs/ReviewRun"
+    },
+    "selectedCheck": {
+      "$ref": "#/$defs/SelectedCheck"
     },
     "session": {
       "$ref": "#/$defs/Session"

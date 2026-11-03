@@ -4,6 +4,10 @@
 class LLMClientError(Exception):
     """Base class for failures that can safely be handled without exposing provider details."""
 
+    def __init__(self, message: str, *, provider_request_attempted: bool = False) -> None:
+        super().__init__(message)
+        self.provider_request_attempted = provider_request_attempted
+
 
 class LLMUnavailableError(LLMClientError):
     """No client is enabled for this operation."""

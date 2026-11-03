@@ -51,9 +51,10 @@ def test_planner_validates_and_returns_only_confirmed_checks() -> None:
         settings=Settings(),
         run_id="run-1",
     )
-    assert plan == ReviewPlan(
+    assert plan.plan == ReviewPlan(
         checks=[PlannedCheck(check_id=check.id, reason="Check classification consistency.")]
     )
+    assert plan.model == "fake-model"
 
 
 @pytest.mark.parametrize(
@@ -120,6 +121,20 @@ def test_planner_rejects_more_than_two_check_calls() -> None:
             settings=Settings(max_plan_checks=10, max_tool_calls_per_run=2),
             run_id="run-1",
         )
+
+
+def test_planner_reports_unsupported_scope_when_no_check_applies() -> None:
+    check = classification_consistency_check()
+    with pytest.raises(PlanViolation, match="No supplied check applies") as exc_info:
+        propose_plan(
+            FakeClient([{"checks": []}]),
+            objective="Check spatial containment.",
+            summary=_summary(),
+            requirements=[_requirement(check)],
+            settings=Settings(),
+            run_id="run-1",
+        )
+    assert exc_info.value.reason_code == "unsupported_scope"
 
 
 def test_plan_schema_rejects_injected_tool_fields() -> None:

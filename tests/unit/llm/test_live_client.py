@@ -46,10 +46,15 @@ def _settings(tmp_path: Path, **overrides: object) -> Settings:
 
 
 def _response(
-    *, content: str = '{"checks": []}', input_tokens: int = 20, output_tokens: int = 5
+    *,
+    content: str = '{"checks": []}',
+    model: str = "muse-spark-1.3",
+    input_tokens: int = 20,
+    output_tokens: int = 5,
 ) -> object:
     return SimpleNamespace(
         id="response-id",
+        model=model,
         choices=[SimpleNamespace(message=SimpleNamespace(content=content))],
         usage=SimpleNamespace(
             prompt_tokens=input_tokens,
@@ -67,7 +72,7 @@ def _ledger(settings: Settings) -> BudgetLedger:
 
 def test_live_client_uses_stubbed_sdk_and_reconciles_usage(tmp_path: Path) -> None:
     settings = _settings(tmp_path)
-    sdk = _SdkClient(_response())
+    sdk = _SdkClient(_response(model="muse-spark-1.3-returned"))
     completion = LiveClient(
         settings,
         ledger=_ledger(settings),
@@ -81,6 +86,8 @@ def test_live_client_uses_stubbed_sdk_and_reconciles_usage(tmp_path: Path) -> No
     )
 
     assert completion.value == ReviewPlan(checks=[])
+    assert completion.model == "muse-spark-1.3-returned"
+    assert completion.provider_request_attempted is True
     assert completion.usage == TokenUsage(input_tokens=20, output_tokens=5)
     assert sdk.chat.completions.calls == 1
     status = _ledger(settings).status()

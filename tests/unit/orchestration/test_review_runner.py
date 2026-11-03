@@ -19,9 +19,10 @@ import pytest
 
 from bim_intelligence.bim import ingest_model
 from bim_intelligence.config import Settings
+from bim_intelligence.llm.client import FakeClient, RecordingClient, ReplayClient
 from bim_intelligence.orchestration import NoExecutableChecksError, ReviewOutcome, run_review
 from bim_intelligence.requirements import import_ids_document
-from bim_intelligence.schemas import CheckResult, findings_to_json
+from bim_intelligence.schemas import CheckResult, SelectedCheck, findings_to_json
 from bim_intelligence.store import (
     ArtefactNotFoundError,
     ModelLockedError,
@@ -112,6 +113,10 @@ def test_review_executes_both_checks_and_records_two_findings(
     }
     assert sorted(run.finding_ids) == sorted(f.id for f in outcome.findings)
     assert run.finished_at is not None and run.finished_at > run.created_at
+    assert run.provenance is not None
+    assert run.provenance.ai_planning_requested is False
+    assert run.provenance.mode == "off"
+    assert run.provenance.executed_check_ids == [r.check_id for r in run.check_results]
 
 
 def test_input_manifest_pins_every_input(store: SessionStore, ready_session: str) -> None:
@@ -196,6 +201,166 @@ def test_review_pinned_to_a_stale_version_is_refused(
 def test_review_pinned_to_the_active_version_runs(store: SessionStore, ready_session: str) -> None:
     outcome = run_review(store, ready_session, pinned_model_hash=FIXTURE_SHA256)
     assert outcome.run.input_manifest.model_hash == FIXTURE_SHA256
+
+
+def test_strict_ai_review_rejects_an_unavailable_planner_without_publishing(
+    store: SessionStore, ready_session: str
+) -> None:
+    from bim_intelligence.orchestration import AIReviewRequiredError
+
+    with pytest.raises(AIReviewRequiredError) as exc_info:
+        run_review(
+            store,
+            ready_session,
+            objective="Review the confirmed requirements.",
+            ai_required=True,
+            client=None,
+        )
+
+    assert exc_info.value.reason_code == "provider_unavailable"
+    assert exc_info.value.provider_request_attempted is False
+    assert store.list_runs(ready_session) == []
+
+
+def test_explicit_deterministic_continuation_does_not_call_the_client(
+    store: SessionStore, ready_session: str
+) -> None:
+    fake = FakeClient([])
+    outcome = run_review(
+        store,
+        ready_session,
+        objective="Review the confirmed requirements.",
+        ai_required=True,
+        continue_without_ai=True,
+        client=fake,
+    )
+
+    assert fake.calls == 0
+    assert outcome.run.plan_source == "default"
+    assert outcome.run.provenance is not None
+    assert outcome.run.provenance.outcome == "continued_without_ai"
+    assert outcome.run.provenance.fallback_reason == "user_selected_continue_without_ai"
+    assert outcome.run.provenance.deterministic_fallback is True
+
+
+def test_replay_run_persists_replay_mode_and_retrieves_the_same_provenance(
+    store: SessionStore, ready_session: str, tmp_path: Path
+) -> None:
+    check_id = store.read_requirements(ready_session)[0].check.id
+    response: dict[str, object] = {
+        "checks": [{"check_id": check_id, "reason": "Matches the selected objective."}]
+    }
+    recordings = tmp_path / "recordings"
+    recorder = RecordingClient(
+        FakeClient([response]),
+        recordings,
+    )
+    run_review(
+        store,
+        ready_session,
+        objective="Review the first confirmed check.",
+        ai_required=True,
+        client=recorder,
+    )
+
+    replay = ReplayClient(recordings)
+    outcome = run_review(
+        store,
+        ready_session,
+        settings=Settings(llm_mode="replay", llm_recordings_dir=recordings),
+        objective="Review the first confirmed check.",
+        ai_required=True,
+        client=replay,
+    )
+    fetched = store.read_run(ready_session, outcome.run.id)
+
+    assert fetched.provenance is not None
+    assert fetched.provenance.mode == "replay"
+    assert fetched.provenance.provider_request_attempted is False
+    assert fetched.provenance.model == "fake-model"
+    assert fetched.provenance.outcome == "accepted"
+    assert fetched == outcome.run
+
+
+def test_selected_check_scope_cannot_run_unselected_checks(
+    store: SessionStore, ready_session: str
+) -> None:
+    requirements = store.read_requirements(ready_session)
+    selected = requirements[1]
+    outcome = run_review(
+        store,
+        ready_session,
+        selected_checks=[
+            SelectedCheck(
+                check_id=selected.check.id,
+                requirement_id=selected.id,
+                requirement_revision=selected.revision,
+            )
+        ],
+    )
+
+    assert [result.check_id for result in outcome.run.check_results] == [selected.check.id]
+    assert outcome.run.provenance is not None
+    assert outcome.run.provenance.selected_check_ids == [selected.check.id]
+    assert outcome.run.provenance.executed_check_ids == [selected.check.id]
+    assert outcome.run.input_manifest.requirement_revisions == {selected.id: selected.revision}
+
+
+@pytest.mark.parametrize(
+    ("requirement_id", "check_id", "revision"),
+    [
+        ("REQ-UNKNOWN", "unknown", 1),
+        ("REQ-001", "stale-check", 1),
+        ("REQ-001", "current-check", 99),
+    ],
+)
+def test_selected_check_scope_rejects_unknown_or_stale_selections(
+    store: SessionStore,
+    ready_session: str,
+    requirement_id: str,
+    check_id: str,
+    revision: int,
+) -> None:
+    from bim_intelligence.orchestration import ReviewScopeError
+
+    with pytest.raises(ReviewScopeError):
+        run_review(
+            store,
+            ready_session,
+            selected_checks=[
+                SelectedCheck(
+                    check_id=check_id,
+                    requirement_id=requirement_id,
+                    requirement_revision=revision,
+                )
+            ],
+        )
+
+
+def test_selected_check_scope_rejects_an_unconfirmed_requirement(
+    store: SessionStore, ready_session: str
+) -> None:
+    from bim_intelligence.orchestration import ReviewScopeError
+
+    requirements = store.read_requirements(ready_session)
+    unconfirmed = requirements[0].model_copy(
+        update={"status": "proposed", "confirmed_revision": None, "confirmed_by": None}
+    )
+    with store.lock_model(ready_session) as lock:
+        store.write_requirements(lock, [unconfirmed, *requirements[1:]])
+
+    with pytest.raises(ReviewScopeError):
+        run_review(
+            store,
+            ready_session,
+            selected_checks=[
+                SelectedCheck(
+                    check_id=unconfirmed.check.id,
+                    requirement_id=unconfirmed.id,
+                    requirement_revision=unconfirmed.revision,
+                )
+            ],
+        )
 
 
 # -- version consistency while validating (ADR-017 §4, AC-12) -------------------------------

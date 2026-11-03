@@ -13,7 +13,7 @@ from decimal import Decimal
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, field_validator, model_validator
@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     )
 
     # Meta Model API
+    bimi_environment: Literal["development", "production"] = "development"
     model_api_key: SecretStr | None = Field(default=None, description="Meta Model API key.")
     llm_base_url: str = "https://api.meta.ai/v1"
     llm_model: str = "muse-spark-1.3"
@@ -154,6 +155,28 @@ class Settings(BaseSettings):
             or self.llm_max_run_budget_usd > self.llm_project_budget_usd
         ):
             raise ConfigurationError("LLM call and run budgets must not exceed the project budget.")
+        return self
+
+    @model_validator(mode="after")
+    def _require_approved_production_provider(self) -> Settings:
+        if self.bimi_environment == "production":
+            if self.allow_contributor_models:
+                raise ConfigurationError(
+                    "BIMI_ENVIRONMENT=production does not allow ALLOW_CONTRIBUTOR_MODELS=true."
+                )
+            if self.llm_model != "muse-spark-1.3":
+                raise ConfigurationError(
+                    "BIMI_ENVIRONMENT=production requires LLM_MODEL=muse-spark-1.3."
+                )
+            if self.llm_mode is not LLMMode.LIVE:
+                raise ConfigurationError(
+                    "BIMI_ENVIRONMENT=production requires LLM_MODE=live; "
+                    "the development Off setting is not a production fallback."
+                )
+            if not self.has_api_key or not self.allow_live_llm:
+                raise ConfigurationError(
+                    "BIMI_ENVIRONMENT=production requires MODEL_API_KEY and ALLOW_LIVE_LLM=true."
+                )
         return self
 
     @model_validator(mode="after")

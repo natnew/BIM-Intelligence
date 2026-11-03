@@ -14,20 +14,28 @@ from bim_intelligence.llm import (
 from bim_intelligence.orchestration.default_plan import DEFAULT_REASON, default_plan
 from bim_intelligence.orchestration.planner import PlanViolation, propose_plan, validate_plan
 from bim_intelligence.orchestration.runner import (
+    AIReviewRequiredError,
     CheckObserver,
     NoExecutableChecksError,
     ReviewOutcome,
+    ReviewPlanningError,
+    ReviewScopeError,
+    UnsupportedReviewScopeError,
     run_review,
 )
 
 __all__ = [
     "DEFAULT_REASON",
+    "AIReviewRequiredError",
     "CheckObserver",
     "LLMClient",
     "LLMClientError",
     "NoExecutableChecksError",
     "PlanViolation",
     "ReviewOutcome",
+    "ReviewPlanningError",
+    "ReviewScopeError",
+    "UnsupportedReviewScopeError",
     "create_budget_ledger",
     "create_client",
     "default_plan",

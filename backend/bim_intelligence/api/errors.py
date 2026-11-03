@@ -27,14 +27,20 @@ from bim_intelligence.bim import (
     UnsupportedSchemaError,
     UnsupportedUploadError,
 )
-from bim_intelligence.orchestration import NoExecutableChecksError
+from bim_intelligence.orchestration import (
+    AIReviewRequiredError,
+    NoExecutableChecksError,
+    ReviewPlanningError,
+    ReviewScopeError,
+    UnsupportedReviewScopeError,
+)
 from bim_intelligence.reporting import (
     ExplanationProvenanceError,
     FindingNotInRunError,
     RunModelMismatchError,
 )
 from bim_intelligence.requirements import InvalidIdsError, RequirementInterpretationError
-from bim_intelligence.schemas import ProblemDetail
+from bim_intelligence.schemas import AIReviewFailure, ProblemDetail
 from bim_intelligence.store import (
     ArtefactNotFoundError,
     DocumentNotFoundError,
@@ -93,6 +99,13 @@ DOMAIN_PROBLEMS: dict[type[Exception], ProblemSpec] = {
     NoExecutableChecksError: ProblemSpec(
         409, "no-executable-checks", "No confirmed requirements to review"
     ),
+    ReviewScopeError: ProblemSpec(422, "invalid-review-scope", "Invalid review scope"),
+    UnsupportedReviewScopeError: ProblemSpec(
+        422, "unsupported-review-scope", "Review objective is outside supported scope"
+    ),
+    AIReviewRequiredError: ProblemSpec(
+        503, "ai-review-unavailable", "AI-required review could not be completed"
+    ),
     FindingNotInRunError: ProblemSpec(404, "finding-not-found", "Finding not found in this run"),
     ExplanationProvenanceError: ProblemSpec(
         409, "explanation-provenance-mismatch", "Finding provenance no longer verifiable"
@@ -124,6 +137,7 @@ def problem_response(
     title: str,
     detail: str | None,
     type_uri: str = "about:blank",
+    ai_review_failure: AIReviewFailure | None = None,
 ) -> JSONResponse:
     problem = ProblemDetail(
         type=type_uri,
@@ -132,10 +146,12 @@ def problem_response(
         detail=detail,
         instance=request.url.path,
         correlation_id=correlation_id_from_scope(request.scope),
+        ai_review_failure=ai_review_failure,
     )
-    return JSONResponse(
-        status_code=status, content=problem.model_dump(mode="json"), media_type=PROBLEM_MEDIA_TYPE
-    )
+    payload = problem.model_dump(mode="json")
+    if ai_review_failure is None:
+        payload.pop("ai_review_failure")
+    return JSONResponse(status_code=status, content=payload, media_type=PROBLEM_MEDIA_TYPE)
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -147,13 +163,28 @@ def register_exception_handlers(app: FastAPI) -> None:
 
 def _domain_handler(spec: ProblemSpec) -> Any:
     async def handler(request: Request, exc: Exception) -> JSONResponse:
+        ai_failure = (
+            AIReviewFailure(
+                mode=exc.mode,
+                provider_request_attempted=exc.provider_request_attempted,
+                model=exc.model,
+                reason_code=exc.reason_code,
+            )
+            if isinstance(exc, ReviewPlanningError)
+            else None
+        )
         if spec.expose_detail:
             detail = str(exc)
         else:
             logger.error("%s on %s: %s", spec.title, request.url.path, exc, exc_info=exc)
             detail = _GENERIC_STORAGE_DETAIL
         return problem_response(
-            request, status=spec.status, title=spec.title, detail=detail, type_uri=spec.type_uri
+            request,
+            status=spec.status,
+            title=spec.title,
+            detail=detail,
+            type_uri=spec.type_uri,
+            ai_review_failure=ai_failure,
         )
 
     return handler

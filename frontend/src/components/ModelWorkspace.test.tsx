@@ -169,6 +169,7 @@ const workspace: ReviewWorkspaceData = {
     status: 'completed',
     plan: { checks: [{ check_id: 'check-id', reason: 'default' }] },
     plan_source: 'default',
+    provenance: null,
     check_results: [
       {
         check_id: 'check-id',

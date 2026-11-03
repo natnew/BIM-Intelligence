@@ -4,6 +4,22 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### AI-007 / T-5.1 / M2 — Explicit AI review policy and provenance (3 November 2026)
+
+- Require an accepted AI plan for objective requests by default; expose typed safe errors instead
+  of silently widening a strict request to the deterministic default. Preserve optional fallback
+  only when requested, and distinguish it from an explicit choice to continue without AI.
+- Pin user-selected check scope to confirmed requirement revisions and persist per-run mode, model
+  when known, provider-attempt status, planning outcome, fallback reason and executed checks.
+  Historical runs remain readable without fabricated provenance. Add an explicit production Live
+  configuration profile; development remains Off by default. This is not a public-deployment
+  approval, and the existing UI still needs a continuation control.
+- Verification: backend `pytest -q` **637 passed, 1 live test skipped, 1 third-party warning**;
+  Ruff check/format, mypy (131 files) and schema export check pass. Frontend lint, format, typecheck,
+  generated-types check, **129 tests** and production build pass; existing Vite chunk-size warning
+  remains. No live/paid request was made. T-5.1 is verified; M2 remains in progress. The
+  continuation UI and public-deployment authentication remain unresolved.
+
 ### UI-007 / T-7 / M3 — Project Home introduction beside the reel (2 November 2026)
 
 - Add the owner-supplied introduction to the left of the existing architectural reel and align

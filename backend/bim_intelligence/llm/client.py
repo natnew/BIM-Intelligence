@@ -24,6 +24,7 @@ from bim_intelligence.config import LLMMode, Settings
 from bim_intelligence.llm.budget import BudgetLedger, BudgetReservation, TokenUsage
 from bim_intelligence.llm.errors import (
     BudgetStateError,
+    LLMClientError,
     LLMOutputError,
     LLMRequestError,
     ReplayMismatchError,
@@ -66,10 +67,14 @@ class Completion(Generic[T]):
     usage: TokenUsage
     model: str
     response_id: str | None = None
+    provider_request_attempted: bool = False
 
 
 class LLMClient(Protocol):
     """One typed completion interface implemented by offline and live clients."""
+
+    @property
+    def mode(self) -> LLMMode: ...
 
     def complete(
         self,
@@ -96,6 +101,10 @@ class FakeClient:
         self._usage = usage or TokenUsage(input_tokens=0, output_tokens=0)
         self._model = model
         self.calls = 0
+
+    @property
+    def mode(self) -> LLMMode:
+        return LLMMode.OFF
 
     def complete(
         self,
@@ -144,6 +153,10 @@ class LiveClient:
             max_retries=settings.llm_max_retries,
         )
 
+    @property
+    def mode(self) -> LLMMode:
+        return self.settings.llm_mode
+
     def complete(
         self,
         messages: Sequence[ChatMessage],
@@ -177,6 +190,7 @@ class LiveClient:
 
         reservation: BudgetReservation | None = None
         request_id = str(uuid.uuid4())
+        provider_request_attempted = False
         try:
             reservation = self.ledger.reserve(
                 request_id=request_id,
@@ -185,6 +199,7 @@ class LiveClient:
                 max_output_tokens=max_output_tokens,
             )
             try:
+                provider_request_attempted = True
                 response = self._client.chat.completions.create(
                     model=self.settings.llm_model,
                     messages=[_sdk_message(message) for message in messages],
@@ -235,6 +250,12 @@ class LiveClient:
                     outcome="usage_limit_exceeded",
                 )
                 raise TokenLimitError("Provider usage exceeded the configured token limit.")
+            response_model_id = getattr(response, "model", None)
+            actual_model = (
+                response_model_id.strip()
+                if isinstance(response_model_id, str) and response_model_id.strip()
+                else self.settings.llm_model
+            )
             try:
                 value = response_model.model_validate_json(content)
             except (ValidationError, ValueError):
@@ -256,9 +277,14 @@ class LiveClient:
             return Completion(
                 value=value,
                 usage=usage,
-                model=self.settings.llm_model,
+                model=actual_model,
                 response_id=getattr(response, "id", None),
+                provider_request_attempted=True,
             )
+        except LLMClientError as exc:
+            if provider_request_attempted:
+                exc.provider_request_attempted = True
+            raise
         finally:
             self._request_lock.release()
 
@@ -269,6 +295,10 @@ class RecordingClient:
     def __init__(self, client: LLMClient, directory: Path) -> None:
         self.client = client
         self.directory = directory
+
+    @property
+    def mode(self) -> LLMMode:
+        return self.client.mode
 
     def complete(
         self,
@@ -321,6 +351,10 @@ class ReplayClient:
         self.directory = directory
         self._recordings = sorted(directory.glob("*.json"))
         self._position = 0
+
+    @property
+    def mode(self) -> LLMMode:
+        return LLMMode.REPLAY
 
     def complete(
         self,
