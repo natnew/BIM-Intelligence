@@ -30,20 +30,39 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from bim_intelligence.bim import load_index, load_summary
-from bim_intelligence.config import Settings, get_settings
+from bim_intelligence.config import LLMMode, Settings, get_settings
 from bim_intelligence.llm.client import LLMClient
-from bim_intelligence.llm.errors import LLMClientError
+from bim_intelligence.llm.errors import (
+    BudgetLimitError,
+    BudgetStateError,
+    LLMClientError,
+    LLMOutputError,
+    LLMUnavailableError,
+    ReplayMismatchError,
+    TokenLimitError,
+)
 from bim_intelligence.orchestration.default_plan import default_plan
-from bim_intelligence.orchestration.planner import PlanViolation, propose_plan, validate_plan
+from bim_intelligence.orchestration.planner import (
+    PlanProposal,
+    PlanViolation,
+    UnsupportedScopeViolation,
+    propose_plan,
+    validate_plan,
+)
 from bim_intelligence.schemas import (
+    AIReviewFailureReason,
     CheckResult,
     Finding,
     InputManifest,
     PlanSource,
     Requirement,
+    ReviewMode,
     ReviewPlan,
+    ReviewPlanOutcome,
+    ReviewProvenance,
     ReviewRun,
     RunStatus,
+    SelectedCheck,
     sort_findings,
 )
 from bim_intelligence.store import (
@@ -69,6 +88,39 @@ class NoExecutableChecksError(Exception):
         self.session_id = session_id
 
 
+class ReviewScopeError(Exception):
+    """A selected check is not current, confirmed and bound to the supplied revision."""
+
+    def __init__(self) -> None:
+        super().__init__("Selected review scope contains an unknown, stale, or unconfirmed check.")
+
+
+class ReviewPlanningError(Exception):
+    """A typed planning failure, safe to return without exposing prompts or provider details."""
+
+    def __init__(
+        self,
+        *,
+        mode: ReviewMode,
+        reason_code: AIReviewFailureReason,
+        provider_request_attempted: bool,
+        model: str | None,
+    ) -> None:
+        super().__init__(_planning_failure_detail(reason_code))
+        self.mode = mode
+        self.reason_code = reason_code
+        self.provider_request_attempted = provider_request_attempted
+        self.model = model
+
+
+class AIReviewRequiredError(ReviewPlanningError):
+    """AI was required but no acceptable plan could be produced."""
+
+
+class UnsupportedReviewScopeError(ReviewPlanningError):
+    """The registered checks cannot represent the requested objective."""
+
+
 @dataclass(frozen=True)
 class ReviewOutcome:
     """A published run and the findings it verified, in canonical order."""
@@ -86,6 +138,9 @@ def run_review(
     settings: Settings | None = None,
     objective: str | None = None,
     client: LLMClient | None = None,
+    ai_required: bool | None = None,
+    continue_without_ai: bool = False,
+    selected_checks: Sequence[SelectedCheck] | None = None,
 ) -> ReviewOutcome:
     """Run a bounded default or objective-selected plan against the active model and publish it.
 
@@ -94,20 +149,70 @@ def run_review(
     for logging and, in tests, to exercise the lock while the run is in progress).
     """
     settings = settings or get_settings()
+    effective_ai_required = objective is not None if ai_required is None else ai_required
+    if effective_ai_required and objective is None:
+        raise ValueError("An AI-required review needs a visible objective.")
+    if continue_without_ai and not effective_ai_required:
+        raise ValueError("Deterministic continuation requires an AI-required objective.")
+    if objective is not None and not objective.strip():
+        raise ValueError("A review objective must contain visible text.")
+
     with store.lock_model(session_id):
         version = store.active_model(session_id)
         if pinned_model_hash is not None and pinned_model_hash != version.sha256:
             raise ModelVersionMismatchError(session_id, pinned_model_hash, version.sha256)
-        full_plan, by_check = default_plan(store.read_requirements(session_id))
-        all_checks = list(by_check.items())
-        if not all_checks:
+        requirements = store.read_requirements(session_id)
+        full_plan, all_by_check = default_plan(requirements)
+        if not all_by_check:
             raise NoExecutableChecksError(session_id)
+        requested_scope = _selected_scope(requirements, all_by_check, selected_checks)
+        by_check = (
+            all_by_check
+            if selected_checks is None
+            else {
+                check_id: requested_scope[check_id]
+                for check_id in all_by_check
+                if check_id in requested_scope
+            }
+        )
+        all_checks = list(by_check.items())
         run_id = store.new_id()
-        plan = ReviewPlan(checks=full_plan.checks[: settings.max_plan_checks])
+        scoped_plan = (
+            full_plan
+            if selected_checks is None
+            else ReviewPlan(
+                checks=[
+                    full_plan_item
+                    for full_plan_item in full_plan.checks
+                    if full_plan_item.check_id in by_check
+                ]
+            )
+        )
+        plan = ReviewPlan(checks=scoped_plan.checks[: settings.max_plan_checks])
         plan_source: PlanSource = "default"
-        if objective is not None and client is not None:
+        ai_planning_requested = objective is not None
+        execution_mode = (
+            client.mode
+            if objective is not None and not continue_without_ai and client is not None
+            else settings.llm_mode
+        )
+        provider_request_attempted = False
+        model: str | None = None
+        planning_outcome: ReviewPlanOutcome = "not_requested"
+        fallback_reason: str | None = None
+        deterministic_fallback = False
+
+        if continue_without_ai:
+            planning_outcome = "continued_without_ai"
+            fallback_reason = "user_selected_continue_without_ai"
+            deterministic_fallback = True
+        elif objective is not None:
+            failure: LLMClientError | PlanViolation | None = None
+            proposal: PlanProposal | None = None
             try:
-                proposed = propose_plan(
+                if client is None:
+                    raise LLMUnavailableError("No AI planning client is configured.")
+                proposal = propose_plan(
                     client,
                     objective=objective,
                     summary=load_summary(version),
@@ -116,22 +221,57 @@ def run_review(
                     run_id=run_id,
                 )
                 selected = validate_plan(
-                    proposed,
+                    proposal.plan,
                     list(by_check.values()),
                     max_checks=min(settings.max_plan_checks, settings.max_tool_calls_per_run),
                 )
+            except UnsupportedScopeViolation as exc:
+                raise UnsupportedReviewScopeError(
+                    mode=_review_mode(execution_mode),
+                    reason_code="unsupported_scope",
+                    provider_request_attempted=exc.provider_request_attempted,
+                    model=exc.model,
+                ) from None
             except (LLMClientError, PlanViolation) as exc:
+                failure = exc
+
+            if failure is not None:
+                reason_code = _planning_failure_reason(failure)
+                provider_request_attempted = failure.provider_request_attempted
+                model = failure.model if isinstance(failure, PlanViolation) else None
+                if reason_code == "unsupported_scope":
+                    raise UnsupportedReviewScopeError(
+                        mode=_review_mode(execution_mode),
+                        reason_code=reason_code,
+                        provider_request_attempted=provider_request_attempted,
+                        model=model,
+                    ) from None
+                if effective_ai_required:
+                    raise AIReviewRequiredError(
+                        mode=_review_mode(execution_mode),
+                        reason_code=reason_code,
+                        provider_request_attempted=provider_request_attempted,
+                        model=model,
+                    ) from None
                 logger.warning(
-                    "AI plan rejected; deterministic default used (%s)", type(exc).__name__
+                    "AI plan rejected; deterministic default used (%s)",
+                    type(failure).__name__,
                 )
+                planning_outcome = "rejected"
+                fallback_reason = reason_code
+                deterministic_fallback = True
             else:
-                plan = proposed
+                assert proposal is not None
+                plan = proposal.plan
+                provider_request_attempted = proposal.provider_request_attempted
+                model = proposal.model
                 plan_source = "llm"
+                planning_outcome = "accepted"
                 all_checks = list(selected.items()) + [
                     item for item in all_checks if item[0] not in selected
                 ]
         planned_count = min(len(plan.checks), settings.max_plan_checks)
-        attributed = [requirement for _, requirement in by_check.items()]
+        attributed = list(by_check.values())
         manifest = _manifest(store, session_id, version, attributed)
 
         created_at = store.now()
@@ -157,6 +297,23 @@ def run_review(
             status=_run_status(results),
             plan=plan,
             plan_source=plan_source,
+            provenance=ReviewProvenance(
+                ai_planning_requested=ai_planning_requested,
+                provider_request_attempted=provider_request_attempted,
+                mode=_review_mode(execution_mode),
+                model=model,
+                outcome=planning_outcome,
+                fallback_reason=fallback_reason,
+                deterministic_fallback=deterministic_fallback,
+                selected_check_ids=(
+                    [selection.check_id for selection in selected_checks]
+                    if selected_checks is not None
+                    else []
+                ),
+                executed_check_ids=[
+                    result.check_id for result in results if result.status != "skipped"
+                ],
+            ),
             check_results=results,
             input_manifest=manifest,
             created_at=created_at,
@@ -164,6 +321,84 @@ def run_review(
         )
         store.publish_run(run, findings)
     return ReviewOutcome(run=run, findings=findings)
+
+
+def _selected_scope(
+    requirements: Sequence[Requirement],
+    all_by_check: dict[str, Requirement],
+    selected_checks: Sequence[SelectedCheck] | None,
+) -> dict[str, Requirement]:
+    if selected_checks is None:
+        return all_by_check
+    if not selected_checks:
+        raise ReviewScopeError()
+    by_requirement = {requirement.id: requirement for requirement in requirements}
+    selected: dict[str, Requirement] = {}
+    for selection in selected_checks:
+        requirement = by_requirement.get(selection.requirement_id)
+        if (
+            requirement is None
+            or not requirement.is_executable
+            or requirement.revision != selection.requirement_revision
+            or requirement.check.id != selection.check_id
+            or selection.check_id in selected
+        ):
+            raise ReviewScopeError()
+        selected[selection.check_id] = requirement
+    return selected
+
+
+def _planning_failure_reason(
+    failure: LLMClientError | PlanViolation,
+) -> AIReviewFailureReason:
+    if isinstance(failure, PlanViolation):
+        return failure.reason_code
+    if isinstance(failure, LLMUnavailableError):
+        return "provider_unavailable"
+    if isinstance(failure, BudgetLimitError):
+        return "budget_limit"
+    if isinstance(failure, BudgetStateError):
+        return "budget_state"
+    if isinstance(failure, TokenLimitError):
+        return "token_limit"
+    if isinstance(failure, ReplayMismatchError):
+        return "replay_mismatch"
+    if isinstance(failure, LLMOutputError):
+        return "invalid_output"
+    return "provider_failure"
+
+
+def _review_mode(mode: LLMMode) -> ReviewMode:
+    modes: dict[LLMMode, ReviewMode] = {
+        LLMMode.LIVE: "live",
+        LLMMode.REPLAY: "replay",
+        LLMMode.OFF: "off",
+    }
+    return modes[mode]
+
+
+def _planning_failure_detail(reason: AIReviewFailureReason) -> str:
+    details: dict[AIReviewFailureReason, str] = {
+        "provider_unavailable": (
+            "AI planning is unavailable in the configured mode. Continue without AI or ask the "
+            "administrator to configure the approved provider."
+        ),
+        "provider_failure": "The configured provider could not complete the AI planning request.",
+        "budget_limit": "The AI planning request was blocked by the configured spending limit.",
+        "budget_state": (
+            "AI planning was blocked because the spending ledger could not be verified."
+        ),
+        "token_limit": "The AI planning request exceeded a configured token limit.",
+        "invalid_output": "The AI response did not match the permitted review-plan schema.",
+        "plan_rejected": (
+            "The proposed plan did not match the confirmed checks or configured execution caps."
+        ),
+        "unsupported_scope": (
+            "No confirmed check in the selected scope can represent the requested objective."
+        ),
+        "replay_mismatch": "No matching offline Replay response is available.",
+    }
+    return details[reason]
 
 
 def _execute(

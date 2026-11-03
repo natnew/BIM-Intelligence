@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from './client';
+import type { ReviewRequest } from './generated/types';
 import {
   classifyUploadFile,
   createSession,
@@ -34,6 +35,7 @@ const reviewRun = {
   status: 'completed' as const,
   plan: { checks: [] },
   plan_source: 'default' as const,
+  provenance: null,
   check_results: [],
   input_manifest: {
     model_hash: modelHash,
@@ -468,12 +470,42 @@ describe('objective review and finding explanation requests', () => {
       expect.objectContaining({
         method: 'POST',
         headers: { 'If-Match': etag, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ objective: 'Check fire ratings only' }),
+        body: JSON.stringify({
+          objective: 'Check fire ratings only',
+          ai_required: true,
+          continue_without_ai: false,
+          selected_checks: null,
+        }),
       }),
     );
   });
 
-  it('reports a deterministic default run unchanged rather than as AI planning', async () => {
+  it('sends revision-pinned scope and an explicit deterministic continuation choice', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json(modelSummary, { headers: { ETag: etag } }))
+      .mockResolvedValueOnce(Response.json(reviewRun));
+    vi.stubGlobal('fetch', fetchMock);
+    const selectedChecks: NonNullable<ReviewRequest['selected_checks']> = [
+      { check_id: 'check-id', requirement_id: 'REQ-001', requirement_revision: 3 },
+    ];
+
+    await startObjectiveReview('session-id', 'Check fire ratings only', undefined, {
+      ai_required: true,
+      continue_without_ai: true,
+      selected_checks: selectedChecks,
+    });
+
+    const [, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({
+      objective: 'Check fire ratings only',
+      ai_required: true,
+      continue_without_ai: true,
+      selected_checks: selectedChecks,
+    });
+  });
+
+  it('reports an explicitly optional deterministic fallback without ascribing AI planning', async () => {
     vi.stubGlobal(
       'fetch',
       vi
@@ -482,7 +514,9 @@ describe('objective review and finding explanation requests', () => {
         .mockResolvedValueOnce(Response.json(reviewRun)),
     );
 
-    const run = await startObjectiveReview('session-id', 'Check fire ratings only');
+    const run = await startObjectiveReview('session-id', 'Check fire ratings only', undefined, {
+      ai_required: false,
+    });
 
     expect(run.plan_source).toBe('default');
   });

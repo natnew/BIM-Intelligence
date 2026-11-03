@@ -173,6 +173,17 @@ evidence of Muse Spark relevance, structured-output reliability, API compatibili
 token-use performance. No live Meta request or spend was made by this offline evaluation. The
 separate owner-approved live smoke observation is recorded in §8.
 
+### T-5.1 objective policy and provenance contract
+
+The T-5.1 unit and API tests exercise the production-profile configuration gate, strict objective
+failure responses, budget refusal before a provider request, rejection of an invalid Live plan
+without publishing a run or findings, explicit deterministic continuation, revision-pinned check
+selection, accepted Replay provenance retrieval and compatibility with historical runs that lack
+provenance. Provider interactions use Fake/Replay clients or a stubbed SDK transport; the tests
+make no live Meta request and report no model-quality, cost or latency metric. These are contract
+tests only. The caller-visible typed errors identify mode, whether a provider request was attempted,
+model when known and a safe reason code.
+
 A rerun on 1 November 2026 (branch `Working-Muse-Spark`, uncommitted T-5 explanation hardening)
 again reported 9/9, with 0 network calls, 0 live calls and USD 0. In that run, the fallback for
 the "ungrounded explanation" check came from the explanation response schema (`fallback_reason=

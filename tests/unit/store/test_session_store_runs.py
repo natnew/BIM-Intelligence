@@ -211,6 +211,17 @@ def test_publish_run_writes_run_and_findings_atomically(
     assert [p.name for p in (store.session_dir(session_id) / RUNS_DIR).iterdir()] == [run_id]
 
 
+def test_read_historical_run_without_provenance(store: SessionStore, session_id: str) -> None:
+    run_id = "6f1c2b3a-4d5e-4f60-8a9b-0c1d2e3f4a5b"
+    store.publish_run(_run(session_id, run_id, []), [])
+    run_path = store.session_dir(session_id) / RUNS_DIR / run_id / RUN_FILE
+    legacy_data = json.loads(run_path.read_text(encoding="utf-8"))
+    legacy_data.pop("provenance")
+    run_path.write_text(json.dumps(legacy_data), encoding="utf-8")
+
+    assert store.read_run(session_id, run_id).provenance is None
+
+
 def test_publish_run_refuses_a_second_run_with_the_same_id(
     store: SessionStore, session_id: str
 ) -> None:

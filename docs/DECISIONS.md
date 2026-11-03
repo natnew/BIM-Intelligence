@@ -31,6 +31,7 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 | [ADR-023](#adr-023-ui-004-viewer-integrity-and-visual-continuity) | UI-004 viewer integrity and visual continuity | Adopted |
 | [ADR-024](#adr-024-muse-spark-remains-an-optional-grounded-interpretation-provider) | Muse Spark remains an optional, grounded interpretation provider | Adopted |
 | [ADR-025](#adr-025-hackathon-release-gate-and-demonstration-fallback) | Hackathon release gate and demonstration fallback | Adopted |
+| [ADR-026](#adr-026-explicit-ai-review-policy-and-run-provenance) | Explicit AI review policy and run provenance | Adopted |
 
 ---
 
@@ -603,6 +604,61 @@ browser AI integration or a complete release demonstration.
 
 **Unresolved.** The official event rules/eligibility and owner approval for any live Meta call,
 external model use, recording, and final submission.
+
+---
+
+## ADR-026 Explicit AI review policy and run provenance
+
+**Status: Adopted 3 November 2026.**
+
+**Context.** ADR-024 keeps Muse optional and Off by default. Once the review API accepts a plain-
+language objective, silently running the deterministic default after an unavailable or rejected AI
+plan can misrepresent whether the user's requested review was performed. A persisted run also needs
+to distinguish Live, Replay and Off planning without inferring the mode from current configuration.
+User-selected checks must remain bound to the exact confirmed requirement revision from which they
+were selected.
+
+**Decision.** Preserve ADR-024's development defaults and optional-provider architecture, while
+making objective intent explicit:
+
+- An objective requires an accepted AI plan unless the request explicitly sets `ai_required=false`.
+- `continue_without_ai=true` is a distinct, explicit choice to skip planning and run the
+  deterministic plan. Strict planning failures return typed errors and publish neither a run nor
+  findings. Unsupported scope is never replaced with a broader default plan.
+- Optional AI failures may use the deterministic plan, with the failure reason persisted in run
+  provenance. Explicit continuation is recorded separately from an attempted-but-rejected plan.
+- Optional selected checks are identified by `check_id`, `requirement_id` and
+  `requirement_revision`; stale, unconfirmed or mismatched selections are rejected before
+  execution. Both planning and deterministic continuation are restricted to that scope.
+- Each new run records whether planning was requested, whether a provider request was attempted,
+  the actual client mode and model when available, the planning outcome, fallback reason, selected
+  check ids and executed check ids. Historical runs without this field remain readable and are not
+  assigned retrospective provenance. Strict failures return equivalent safe metadata in a typed
+  problem response.
+- `BIMI_ENVIRONMENT=production` is an explicit configuration profile requiring the approved
+  Standard-mode `muse-spark-1.3` Live configuration and rejecting contributor mode. Development
+  remains Off by default.
+
+This configuration profile is not a public-deployment approval or security claim. The application
+still lacks authentication; a production profile must not be interpreted as permission to expose
+project data publicly.
+
+**Alternatives.** Keep implicit deterministic fallback for every objective; infer provenance from
+the current global mode; or pin selection only to a check id. Each loses user intent, historical
+truthfulness or revision-level traceability.
+
+**Trade-offs.** Strict objective requests can now fail visibly when AI is unavailable. The API
+supports explicit deterministic continuation, but the existing UI does not yet expose a dedicated
+continuation control. The caller must handle the typed error or send the explicit continuation
+field; UI work remains outside this task's approved file scope.
+
+**Evidence.** T-5.1 offline tests cover strict failure without run publication, budget refusal before
+a provider request, rejected Live plan metadata, selected-check revision validation, Replay
+provenance retrieval and historical-run compatibility. These tests use stubs and make no live Meta
+request.
+
+**Unresolved.** User-approved Live planner evidence, UI exposure of explicit continuation, and
+authentication and access controls before any public deployment.
 
 ## Implementation outcomes — 1 November 2026
 

@@ -303,15 +303,19 @@ export async function fetchElement(
 /** Upper bound the backend enforces on `ReviewRequest.objective`, in characters. */
 export const MAX_REVIEW_OBJECTIVE_LENGTH = 4000;
 
+export type ObjectiveReviewOptions = Partial<
+  Pick<ReviewRequest, 'ai_required' | 'continue_without_ai' | 'selected_checks'>
+>;
+
 /**
- * Starts a review whose plan the server may narrow to the confirmed checks that suit the
- * objective. The caller must still read `plan_source`: `default` means the deterministic plan
- * ran because AI is off, the plan was rejected or the request failed.
+ * Starts an objective review. AI planning is required by default; callers may explicitly permit
+ * deterministic fallback or choose to continue without AI, and may pin a confirmed check scope.
  */
 export async function startObjectiveReview(
   sessionId: string,
   objective: string,
   signal?: AbortSignal,
+  reviewOptions: ObjectiveReviewOptions = {},
 ): Promise<ReviewRun> {
   if (!/\S/u.test(objective)) {
     throw new ApiError('Enter a review objective before starting an objective review.');
@@ -323,7 +327,12 @@ export async function startObjectiveReview(
     );
   }
   const { etag } = await getModelSummary(sessionId, undefined, signal);
-  const body: ReviewRequest = { objective };
+  const body: ReviewRequest = {
+    objective,
+    ai_required: reviewOptions.ai_required ?? true,
+    continue_without_ai: reviewOptions.continue_without_ai ?? false,
+    selected_checks: reviewOptions.selected_checks ?? null,
+  };
   const options = requestOptions(signal, {
     'If-Match': etag,
     'Content-Type': 'application/json',

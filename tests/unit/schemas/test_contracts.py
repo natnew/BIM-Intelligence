@@ -9,7 +9,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from bim_intelligence.schemas import CONTRACT_MODELS, build_contract_schema, contract_schema_json
+import pytest
+from pydantic import ValidationError
+
+from bim_intelligence.schemas import (
+    CONTRACT_MODELS,
+    ReviewProvenance,
+    build_contract_schema,
+    contract_schema_json,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCHEMA_PATH = REPO_ROOT / "frontend" / "src" / "api" / "generated" / "bim_intelligence.schema.json"
@@ -27,15 +35,18 @@ EXPECTED_NAMES = {
     "CheckResult",
     "PlannedCheck",
     "ReviewPlan",
+    "ReviewProvenance",
     "InputManifest",
     "ReviewRun",
     "ProblemDetail",
+    "AIReviewFailure",
     "DocumentImport",
     "RequirementCandidate",
     "RequirementCandidateBatch",
     "RequirementCandidateConfirmation",
     "RequirementExtractionRequest",
     "ReviewRequest",
+    "SelectedCheck",
     "Explanation",
     "EvidenceCitation",
     "BudgetStatus",
@@ -73,3 +84,23 @@ def test_committed_schema_matches_models() -> None:
     committed = SCHEMA_PATH.read_text(encoding="utf-8")
     assert json.loads(committed) == build_contract_schema()
     assert committed == contract_schema_json(), "run: python scripts/export_schemas.py"
+
+
+def test_review_provenance_rejects_a_provider_attempt_outside_live_mode() -> None:
+    with pytest.raises(ValidationError, match="requires live mode"):
+        ReviewProvenance(
+            ai_planning_requested=True,
+            provider_request_attempted=True,
+            mode="replay",
+            outcome="accepted",
+        )
+
+
+def test_review_provenance_requires_reason_for_deterministic_rejection() -> None:
+    with pytest.raises(ValidationError, match="requires a reason"):
+        ReviewProvenance(
+            ai_planning_requested=True,
+            provider_request_attempted=False,
+            mode="off",
+            outcome="rejected",
+        )
