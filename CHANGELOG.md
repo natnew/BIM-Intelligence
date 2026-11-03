@@ -4,6 +4,20 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### UI-005E / T-7 / M3 — Automatic architectural reel and product-led captions (3 November 2026)
+
+- Add a 7-second autoplay to the Project Home reel, with a Play/Pause control. It pauses on
+  hover, keyboard focus and hidden tabs, respects reduced motion, restarts the timer after manual
+  navigation and cleans up on unmount. Replace the six scene captions with the owner-supplied
+  product copy while keeping the images, order, alt text and Home composition. Slide 6 retains
+  its concept-visualisation disclosure.
+- Frontend lint, formatting, typecheck, generated-types check and production build pass; all
+  **148 tests in 10 files** pass. Local browser checks confirmed the interval, wrap, pauses and
+  reduced-motion behaviour. The integrated browser did not reliably honour requested viewports,
+  so the 1920 × 1080 and 390 px targets remain unverified. No dependency, backend or paid call
+  changed or occurred; owner review is pending and T-7/M3 remain in progress. See
+  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#ui-005e--automatic-architectural-reel-and-product-led-captions).
+
 ### UI-008 / T-7 / M3 — Guided AI review with an objective dock (3 November 2026)
 
 - Add explicit all-or-selected confirmed-requirement scope, a custom objective, revision-pinned

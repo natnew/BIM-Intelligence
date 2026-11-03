@@ -1035,7 +1035,7 @@ T-7 / M3 refinement, not task or milestone completion.
 | Placement | The architectural reel follows *Choose how to begin* and precedes *How BIM Intelligence works* in Project Home's start view. It is not shown in review setup; the existing banner and routes are unchanged. | `components/ProjectHome.tsx` |
 | Scenes | Six owner-supplied AI-generated scenes appear in order: Architectural Vision, Architectural Design, Design Collaboration, Construction Delivery, Digital Twin and BIM Intelligence. The last is labelled as a concept visualisation, not a screenshot of the implemented application. | `components/home/ArchitecturalReel.tsx` |
 | Layout and loading | UI-005D centred the reel at half its original width; UI-007 later aligned it to the right as described in §28. Its responsive 16:9 image frame scales proportionally. The frame uses `cover` for landscape scenes and `contain` for the portrait concept. Controls reflow at narrow widths and retain their labels and usable targets. Only the selected image is rendered; the first is eager and subsequent scenes use lazy loading when selected. A visible error invites selection of another scene if an image fails to load. | `components/home/ArchitecturalReel.tsx`, `index.css` |
-| Navigation and access | Previous/next buttons, six labelled pagination buttons, left/right arrow keys and horizontal touch swipes change the scene. The selected button exposes its pressed state and the caption is announced politely. There is no autoplay; the brief transition is disabled for reduced motion. | `components/home/ArchitecturalReel.tsx`, `index.css` |
+| Navigation and access | Previous/next buttons, six labelled pagination buttons, left/right arrow keys and horizontal touch swipes change the scene. The selected button exposes its pressed state and the caption is announced politely. There is no autoplay (superseded by UI-005E, §30); the brief transition is disabled for reduced motion. | `components/home/ArchitecturalReel.tsx`, `index.css` |
 | Research graphics | Two owner-supplied graphics and the requested captions appear at the end of *The professional problem* in the README. Their claims and sources have not been independently verified; the descriptive alt text is not a full text equivalent of their numerical contents. | `README.md`, `docs/assets/research/` |
 
 Provenance, local browser evidence, verification limitations and rollback instructions are in
@@ -1099,3 +1099,22 @@ Automated results, synthetic browser evidence, rollback guidance and limitations
 [UI_CHANGELOG.md](./UI_CHANGELOG.md#ui-008--guided-ai-review-with-an-objective-dock). The
 integrated browser did not provide a genuine 1920 × 1080 CSS viewport; owner review at that target
 remains outstanding. No live Meta request was made, and T-7/M3 remain in progress.
+
+## 30. UI-005E — Automatic architectural reel and product-led captions
+
+**Status:** implemented on `feature/ui-005e-reel-refinement` from `main` at `2e9cba6`
+(3 November 2026); owner visual review is pending. This is a T-7 / M3 presentation refinement,
+not task or milestone completion. It supersedes §26's *There is no autoplay* statement and its
+scene names; §26 remains a historical record. Image order, filenames, alt text, frame and
+§28 placement are unchanged.
+
+| Area | Behaviour |
+|---|---|
+| Captions | The six scenes are titled *Review your architectural models*, *Validate against project requirements*, *Investigate coordination issues*, *Make findings accessible for review*, *Support digital twin information quality* and *Bring AI into model review*, each with the owner-supplied description. Slides 1–5 are marked as AI-generated architectural imagery; slide 6 states that it is a concept visualisation, not a screenshot of the implemented application, and does not depict implemented clash-detection or multi-model coordination features. The captions do not claim federation, shared real-time workspaces, automatic clash detection, site synchronisation, digital twin certification or cross-discipline issue assignment. Slide 6's Muse Spark wording describes the intended provider; live compatibility remains unverified. |
+| Autoplay | The reel advances every 7 seconds and wraps from 6 to 1. It pauses while a mouse pointer hovers over it, while keyboard focus is inside it (not after a mouse click), and while the document is hidden. Previous, Next, a pagination dot, an arrow key or a swipe restarts the full interval, so no scene is skipped. The next image is preloaded before rotation. Timers and listeners are removed on unmount. |
+| Play/Pause | A labelled button before the pagination dots toggles *Pause/Play automatic image rotation*. An explicit Play resumes rotation even while hovered or focused. |
+| Reduced motion | When `prefers-reduced-motion: reduce` applies, the reel starts paused and advances only after an explicit Play; the fade remains disabled. If the preference turns on mid-session without an explicit choice, rotation stops. |
+| Announcements | While rotating, the caption's live region is `off`; when paused or manually controlled it is `polite`. Hidden caption sizers keep the reel height constant and are hidden from assistive technology. |
+
+Automated results, browser evidence, the viewport-emulation limitation and rollback guidance are
+recorded in [UI_CHANGELOG.md](./UI_CHANGELOG.md#ui-005e--automatic-architectural-reel-and-product-led-captions).
