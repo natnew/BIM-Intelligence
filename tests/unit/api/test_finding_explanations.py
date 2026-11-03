@@ -13,6 +13,7 @@ import hashlib
 import json
 import socket
 from collections.abc import Callable
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
 
@@ -308,14 +309,72 @@ def test_per_run_call_cap_stops_a_second_paid_explanation(
     assert request["model"] == "muse-spark-1.3"
     assert request["response_format"]["type"] == "json_schema"
     assert request["response_format"]["json_schema"]["name"] == "explanationdraft"
-    assert request["max_completion_tokens"] == 500
+    assert request["max_completion_tokens"] == 2_000
     assert "max_tokens" not in request
-    assert "reasoning_effort" not in request
+    assert request["reasoning_effort"] == "low"
     evidence = json.loads(request["messages"][1]["content"])
     assert evidence["finding"]["id"] == finding["id"]
     assert [record["ref"]["global_id"] for record in evidence["model_index_elements"]] == [
         GLOBAL_IDS["W-002"]
     ]
+
+
+def test_fix_003_verify_009_token_exhaustion_is_labelled_token_limit_not_budget(
+    client: TestClient, settings: Settings, review_session: str, tmp_path: Path
+) -> None:
+    """Regression for the VERIFY-009 live failure: length-stopped output with no visible text."""
+    run = _review(client, review_session)
+    finding = _fire_finding(client, review_session, run["id"])
+    run_dir = _run_dir(settings, review_session, run["id"])
+    before = {name: (run_dir / name).read_bytes() for name in (RUN_FILE, FINDINGS_FILE)}
+    completions = CapturingCompletions(
+        None,
+        input_tokens=1_203,
+        output_tokens=500,
+        reasoning_tokens=498,
+        finish_reason="length",
+    )
+    live = live_settings(tmp_path)
+    _use_stub_live_client(client, live, completions)
+
+    response = _explain(client, review_session, run["id"], finding["id"])
+
+    assert response.status_code == 200, response.text
+    explanation = response.json()
+    assert explanation["source"] == "deterministic_template"
+    assert explanation["grounding_status"] == "fallback"
+    assert explanation["fallback_reason"] == "token_limit"
+    assert explanation["model"] is None
+    assert explanation["finding_id"] == finding["id"]
+    assert len(completions.requests) == 1
+    assert completions.requests[0]["max_completion_tokens"] == 2_000
+    assert completions.requests[0]["reasoning_effort"] == "low"
+    assert {name: (run_dir / name).read_bytes() for name in before} == before
+    ledger = json.loads((live.data_dir / "llm" / "budget.json").read_text())["requests"]
+    assert [row["outcome"] for row in ledger] == ["token_limit"]
+    assert ledger[0]["reasoning_tokens"] == 498
+    assert ledger[0]["visible_content"] is False
+
+
+def test_explanation_cannot_exceed_its_configured_allowance_and_keeps_findings_intact(
+    client: TestClient, settings: Settings, review_session: str, tmp_path: Path
+) -> None:
+    run = _review(client, review_session)
+    finding = _fire_finding(client, review_session, run["id"])
+    findings_before = (_run_dir(settings, review_session, run["id"]) / FINDINGS_FILE).read_bytes()
+    completions = CapturingCompletions(json.dumps(_grounded(finding)))
+    _use_stub_live_client(client, live_settings(tmp_path), completions)
+
+    explanation = _explain(client, review_session, run["id"], finding["id"]).json()
+
+    assert explanation["source"] == "ai_generated"
+    assert completions.requests[0]["max_completion_tokens"] == 2_000
+    assert (
+        _run_dir(settings, review_session, run["id"]) / FINDINGS_FILE
+    ).read_bytes() == findings_before
+    assert Settings(data_dir=tmp_path).llm_max_call_budget_usd == Decimal("0.10")
+    assert Settings(data_dir=tmp_path).llm_max_run_budget_usd == Decimal("0.10")
+    assert Settings(data_dir=tmp_path).llm_project_budget_usd == Decimal("5.00")
 
 
 # -- request validation and provenance ----------------------------------------------------

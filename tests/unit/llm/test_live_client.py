@@ -346,7 +346,75 @@ def test_non_planning_requests_keep_the_500_token_cap(tmp_path: Path) -> None:
             [ChatMessage(role="user", content="safe prompt")],
             response_model=ReviewPlan,
             max_output_tokens=501,
-            purpose="explanation",
+            purpose="extraction",
             run_id="run-1",
         )
     assert sdk.chat.completions.calls == 0
+    request_without_reasoning = _SdkClient(_response())
+    LiveClient(
+        settings, ledger=_ledger(settings), sdk_client=cast(OpenAI, request_without_reasoning)
+    ).complete(
+        [ChatMessage(role="user", content="safe prompt")],
+        response_model=ReviewPlan,
+        max_output_tokens=500,
+        purpose="extraction",
+        run_id="run-2",
+    )
+    assert "reasoning_effort" not in request_without_reasoning.chat.completions.requests[0]
+
+
+def test_explanation_requests_use_their_own_allowance_at_low_reasoning_effort(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    sdk = _SdkClient(_response())
+    LiveClient(settings, ledger=_ledger(settings), sdk_client=cast(OpenAI, sdk)).complete(
+        [ChatMessage(role="user", content="safe prompt")],
+        response_model=ReviewPlan,
+        max_output_tokens=settings.llm_max_explanation_output_tokens,
+        purpose="explanation",
+        run_id="run-1",
+    )
+    request = sdk.chat.completions.requests[0]
+    assert request["max_completion_tokens"] == 2_000
+    assert request["reasoning_effort"] == "low"
+    assert "max_tokens" not in request
+
+    over_cap = _SdkClient(_response())
+    with pytest.raises(TokenLimitError):
+        LiveClient(settings, ledger=_ledger(settings), sdk_client=cast(OpenAI, over_cap)).complete(
+            [ChatMessage(role="user", content="safe prompt")],
+            response_model=ReviewPlan,
+            max_output_tokens=settings.llm_max_explanation_output_tokens + 1,
+            purpose="explanation",
+            run_id="run-2",
+        )
+    assert over_cap.chat.completions.calls == 0
+
+
+def test_verify_009_explanation_exhaustion_is_a_token_limit_failure(tmp_path: Path) -> None:
+    """Reproduce the live VERIFY-009 explanation response: length-stopped, reasoning-only."""
+    settings = _settings(tmp_path)
+    sdk = _SdkClient(
+        _response(
+            content=None,
+            input_tokens=1_203,
+            output_tokens=500,
+            reasoning_tokens=498,
+            finish_reason="length",
+        )
+    )
+    with pytest.raises(TokenLimitError):
+        LiveClient(settings, ledger=_ledger(settings), sdk_client=cast(OpenAI, sdk)).complete(
+            [ChatMessage(role="user", content="safe evidence prompt " * 80)],
+            response_model=ReviewPlan,
+            max_output_tokens=500,
+            purpose="explanation",
+            run_id="run-1",
+        )
+    row = json.loads((settings.data_dir / "llm" / "budget.json").read_text())["requests"][0]
+    assert row["outcome"] == "token_limit"
+    assert row["finish_reason"] == "length"
+    assert row["output_tokens"] == 500
+    assert row["reasoning_tokens"] == 498
+    assert row["visible_content"] is False

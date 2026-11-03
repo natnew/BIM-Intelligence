@@ -62,6 +62,37 @@ def test_planning_worst_case_reservation_matches_standard_price_configuration(
     assert reservation.estimated_cost_usd < settings.llm_max_call_budget_usd
 
 
+def test_explanation_worst_case_reservation_stays_within_unchanged_budgets(
+    tmp_path: Path,
+) -> None:
+    settings = Settings(data_dir=tmp_path)
+    ledger = create_budget_ledger(settings)
+
+    planning = ledger.reserve(
+        request_id="planning-request",
+        run_id="shared-run",
+        estimated_input_tokens=8_000,
+        max_output_tokens=settings.llm_max_planning_output_tokens,
+    )
+    explanation = ledger.reserve(
+        request_id="explanation-request",
+        run_id="shared-run",
+        estimated_input_tokens=8_000,
+        max_output_tokens=settings.llm_max_explanation_output_tokens,
+    )
+
+    assert settings.llm_max_explanation_output_tokens == 2_000
+    assert explanation.estimated_cost_usd == Decimal("0.0185")
+    assert explanation.estimated_cost_usd <= settings.llm_max_call_budget_usd == Decimal("0.10")
+    assert (
+        planning.estimated_cost_usd + explanation.estimated_cost_usd
+        <= settings.llm_max_run_budget_usd
+        == Decimal("0.10")
+    )
+    assert settings.llm_project_budget_usd == Decimal("5.00")
+    assert settings.llm_max_calls_per_run == 2
+
+
 def test_reads_existing_ledger_rows_after_diagnostic_fields_are_added(tmp_path: Path) -> None:
     path = tmp_path / "ledger.json"
     path.write_text(

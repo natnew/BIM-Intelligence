@@ -42,6 +42,9 @@ logger = logging.getLogger(__name__)
 _MODEL_KEY_PATTERN = re.compile(r"\b(?:LLM_[A-Za-z0-9_-]{8,}|sk-[A-Za-z0-9_-]{16,})\b")
 _SAFE_METADATA_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\Z")
 _SAFE_FINISH_REASON = re.compile(r"[a-z][a-z0-9_]{0,31}\Z")
+# Muse Spark documents ``low`` reasoning effort and rejects ``none``; structured planning and
+# explanation requests use it so reasoning tokens do not exhaust the completion allowance.
+_LOW_REASONING_PURPOSES = frozenset({"plan", "explanation"})
 T = TypeVar("T", bound=BaseModel)
 
 
@@ -169,6 +172,14 @@ class LiveClient:
     def mode(self) -> LLMMode:
         return self.settings.llm_mode
 
+    def _output_limit(self, purpose: str) -> int:
+        """Planning and explanation have separate completion allowances (ADR-027, ADR-028)."""
+        if purpose == "plan":
+            return self.settings.llm_max_planning_output_tokens
+        if purpose == "explanation":
+            return self.settings.llm_max_explanation_output_tokens
+        return self.settings.llm_max_output_tokens_per_call
+
     def complete(
         self,
         messages: Sequence[ChatMessage],
@@ -184,11 +195,7 @@ class LiveClient:
                 f"Estimated input exceeds the "
                 f"{self.settings.llm_max_input_tokens_per_call}-token per-call target."
             )
-        output_limit = (
-            self.settings.llm_max_planning_output_tokens
-            if purpose == "plan"
-            else self.settings.llm_max_output_tokens_per_call
-        )
+        output_limit = self._output_limit(purpose)
         if max_output_tokens > output_limit:
             raise TokenLimitError(f"Output exceeds the {output_limit}-token per-call cap.")
         sdk_messages = [_sdk_message(message) for message in messages]
@@ -216,8 +223,8 @@ class LiveClient:
                 max_output_tokens=max_output_tokens,
             )
             try:
-                if purpose == "plan":
-                    provider_request_attempted = True
+                provider_request_attempted = True
+                if purpose in _LOW_REASONING_PURPOSES:
                     response = self._client.chat.completions.create(
                         model=self.settings.llm_model,
                         messages=sdk_messages,
@@ -226,7 +233,6 @@ class LiveClient:
                         reasoning_effort="low",
                     )
                 else:
-                    provider_request_attempted = True
                     response = self._client.chat.completions.create(
                         model=self.settings.llm_model,
                         messages=sdk_messages,

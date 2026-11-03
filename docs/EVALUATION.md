@@ -297,6 +297,50 @@ local validation, error classification and safeguards only; Meta's live acceptan
 non-strict JSON Schema format and end-to-end planner relevance remain unverified and require
 VERIFY-009. FIX-002 does not complete T-5 or M2.
 
+### FIX-003 offline grounded-explanation correction (3 November 2026)
+
+The owner-approved VERIFY-009 live session on `b95dadbe2d0475aa3c107227a9d0af2cae2c2c47`
+accepted a Muse Spark 1.3 review plan but the single approved explanation request stopped at
+`finish_reason=length` with 500 completion tokens (498 reasoning) and no visible content, so
+schema validation and grounding were never exercised live. FIX-003 gives explanations a 2,000-token
+allowance at `reasoning_effort="low"`, adds the `token_limit` fallback reason and leaves planning,
+the explanation prompt, schema, validation and grounding unchanged.
+
+Offline regression coverage, all with stubbed SDK transports or `FakeClient`:
+
+| Requirement | Test |
+|---|---|
+| Explanation request sends `max_completion_tokens=2000`, `reasoning_effort="low"`, no `max_tokens` | `tests/unit/llm/test_live_client.py::test_explanation_requests_use_their_own_allowance_at_low_reasoning_effort`; `tests/unit/api/test_finding_explanations.py::test_per_run_call_cap_stops_a_second_paid_explanation` |
+| Planning request body unchanged | `tests/unit/llm/test_live_client.py::test_live_client_uses_stubbed_sdk_and_reconciles_usage`; `tests/unit/api/test_reviews.py` |
+| Other workflows keep 500 tokens and no reasoning-effort parameter | `tests/unit/llm/test_live_client.py::test_non_planning_requests_keep_the_500_token_cap` |
+| VERIFY-009 response (`length`, 500/498, no content) is `token_limit` | `tests/unit/llm/test_live_client.py::test_verify_009_explanation_exhaustion_is_a_token_limit_failure`; `tests/unit/api/test_finding_explanations.py::test_fix_003_verify_009_token_exhaustion_is_labelled_token_limit_not_budget` |
+| Spending rejection remains `budget_limit` | `tests/unit/api/test_finding_explanations.py::test_budget_rejection_falls_back_before_any_provider_request` |
+| Schema-valid, correctly cited explanation passes validation and grounding | `tests/unit/api/test_finding_explanations.py::test_grounded_ai_explanation_is_labelled_and_leaves_run_files_untouched`; `tests/unit/llm/test_explanations.py::test_valid_grounded_explanation_is_labelled_ai_generated` |
+| Unsupported citations fail grounding with a labelled fallback | `tests/unit/api/test_finding_explanations.py::test_ungrounded_ai_output_falls_back_with_grounding_failed`, `::test_citation_for_another_element_falls_back_with_grounding_failed` |
+| `run.json`/`findings.json` unchanged; monetary limits unchanged | `tests/unit/api/test_finding_explanations.py::test_explanation_cannot_exceed_its_configured_allowance_and_keeps_findings_intact`; `tests/unit/llm/test_budget.py::test_explanation_worst_case_reservation_stays_within_unchanged_budgets` |
+| Frontend token-limit message and label validation | `frontend/src/components/ModelWorkspace.test.tsx` ("FIX-003: describes a completion-token limit…"); `frontend/src/api/bim.test.ts` ("accepts a token-limit fallback…") |
+
+Local verification on the FIX-003 working tree based on `b95dadbe2d0475aa3c107227a9d0af2cae2c2c47`:
+
+| Command | Result |
+|---|---|
+| `.\.venv\Scripts\python.exe -m ruff check .` | Passed |
+| `.\.venv\Scripts\python.exe -m ruff format --check .` | Passed; 165 files already formatted |
+| `.\.venv\Scripts\python.exe -m mypy` | Passed; 131 source files |
+| `.\.venv\Scripts\python.exe scripts\export_schemas.py --check` | Passed; generated schema up to date |
+| `.\.venv\Scripts\python.exe -m pytest -q` | 659 passed, 1 live test skipped, 1 third-party deprecation warning |
+| `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm run types:check` (from `frontend/`) | Passed |
+| `npm test` (from `frontend/`) | 150 passed in 10 files |
+| `npm run build` (from `frontend/`) | Passed; existing large-chunk and Three.js `IMPORT_IS_UNDEFINED` warnings remain |
+
+At configured Standard rates the 8,000-input/2,000-completion explanation reservation is
+**USD 0.01850**; one planning and one explanation reservation in a review total **USD 0.03700**.
+The USD 0.10 per-call/review limits, USD 5.00 project allowance and two-call cap were not changed.
+No live or paid provider call was made. These results verify request construction, classification,
+grounding logic and labels offline only; whether Muse Spark returns a complete grounded
+explanation within the new allowance is OQ-08 and requires an owner-approved live retest.
+FIX-003 does not complete T-5 or M2.
+
 ### Dataset hashes
 
 | Generated input | SHA-256 |

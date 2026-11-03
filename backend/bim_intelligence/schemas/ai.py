@@ -12,6 +12,7 @@ ExplanationFallbackReason = Literal[
     "ai_disabled",
     "unsupported_evidence",
     "budget_limit",
+    "token_limit",
     "ai_request_failed",
     "ai_output_invalid",
     "grounding_failed",
@@ -45,9 +46,11 @@ class Explanation(FrozenContractModel):
         description=(
             "Why a deterministic template was returned instead of an AI interpretation: "
             "``ai_disabled`` (no client configured), ``unsupported_evidence`` (evidence cannot "
-            "be grounded safely), ``budget_limit`` (an application budget, call or token limit), "
-            "``ai_request_failed``, ``ai_output_invalid`` (schema-invalid response) or "
-            "``grounding_failed``. Always null for ``ai_generated``."
+            "be grounded safely), ``budget_limit`` (an application spending or call limit), "
+            "``token_limit`` (the response exhausted the explanation completion-token allowance "
+            "before a complete answer was returned), ``ai_request_failed``, "
+            "``ai_output_invalid`` (schema-invalid response) or ``grounding_failed``. Always "
+            "null for ``ai_generated``."
         ),
     )
 

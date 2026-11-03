@@ -31,6 +31,8 @@ const FALLBACK_REASON_TEXT: Record<NonNullable<Explanation['fallback_reason']>, 
   unsupported_evidence:
     'This finding cannot be grounded safely, for example a multi-element finding.',
   budget_limit: 'The spend or call limit was reached.',
+  token_limit:
+    'The AI explanation reached its completion-token limit. The verified finding remains available, and a deterministic explanation is shown instead.',
   ai_request_failed: 'The AI request failed.',
   ai_output_invalid: 'The AI response was invalid.',
   grounding_failed: 'The AI text cited facts outside the evidence and was discarded.',

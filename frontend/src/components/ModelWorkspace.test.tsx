@@ -1210,6 +1210,27 @@ describe('FINAL-UI-001 explanation requests', () => {
     expect(result).not.toHaveTextContent(/AI interpretation/);
   });
 
+  it('FIX-003: describes a completion-token limit without claiming a spend or call limit', async () => {
+    vi.mocked(explainFinding).mockResolvedValue({
+      ...templateExplanation,
+      fallback_reason: 'token_limit',
+    });
+    renderWorkspace();
+
+    fireEvent.click(await screen.findByRole('button', { name: /W-002/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Explain finding' }));
+
+    const result = await screen.findByTestId('explanation-result');
+    expect(result).toHaveAttribute('data-source', 'deterministic_template');
+    expect(result).toHaveTextContent('Deterministic template · AI not used');
+    expect(result).toHaveTextContent(
+      'token_limit — The AI explanation reached its completion-token limit. The verified finding remains available, and a deterministic explanation is shown instead.',
+    );
+    expect(result).not.toHaveTextContent(/spend or call limit/);
+    expect(result).not.toHaveTextContent(/AI interpretation/);
+    expect(result).toHaveTextContent('Modelnone');
+  });
+
   it('does not infer Replay for an explanation from current health state', async () => {
     renderWorkspace();
 

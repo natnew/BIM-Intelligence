@@ -613,6 +613,28 @@ describe('objective review and finding explanation requests', () => {
     expect(explanation.fallback_reason).toBe('grounding_failed');
   });
 
+  it('accepts a token-limit fallback and a budget-limit fallback as distinct labelled templates', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          Response.json({ ...templateExplanation, fallback_reason: 'token_limit' }),
+        )
+        .mockResolvedValueOnce(
+          Response.json({ ...templateExplanation, fallback_reason: 'budget_limit' }),
+        ),
+    );
+
+    const tokenLimited = await explainFinding('session-id', 'run-id', 'finding-id', etag);
+    const budgetLimited = await explainFinding('session-id', 'run-id', 'finding-id', etag);
+
+    expect(tokenLimited.fallback_reason).toBe('token_limit');
+    expect(budgetLimited.fallback_reason).toBe('budget_limit');
+    expect(tokenLimited.source).toBe('deterministic_template');
+    expect(tokenLimited.model).toBeNull();
+  });
+
   it.each([
     { ...aiExplanation, finding_id: 'other-finding' },
     { ...aiExplanation, fallback_reason: 'grounding_failed' },

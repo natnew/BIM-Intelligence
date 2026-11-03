@@ -4,6 +4,22 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### FIX-003 / T-5 / M2 — Muse Spark grounded explanation reliability (3 November 2026)
+
+- Give finding explanations a separate `LLM_MAX_EXPLANATION_OUTPUT_TOKENS` completion allowance
+  (default 2,000) sent at low reasoning effort, after the owner-approved VERIFY-009 live session
+  showed the single explanation request stopping at `length` with 500 completion tokens, 498 of
+  them reasoning, and no visible output while live planning succeeded. Planning, extraction, the
+  explanation prompt, schema, Pydantic validation and deterministic grounding are unchanged.
+- Add the `token_limit` explanation fallback reason for completion-allowance exhaustion and keep
+  `budget_limit` for spending or call limits; regenerate the schema and TypeScript types and show
+  an accurate token-limit message in the evidence inspector. Monetary limits are unchanged: the
+  2,000-token explanation reservation is USD 0.01850 and planning plus explanation is USD 0.03700,
+  within the USD 0.10 per-call/review limits and USD 5.00 project allowance.
+- Offline stub tests reproduce the VERIFY-009 response and verify request parameters,
+  classification, grounding, immutability and labels. No live request was made; live grounded
+  explanations remain unverified (OQ-08). FIX-003 does not complete T-5 or M2.
+
 ### FIX-002 / T-5 / M2 — Structured Muse Spark review planning (3 November 2026)
 
 - Give objective planning a dedicated 2,000-token completion allowance and low reasoning effort;
