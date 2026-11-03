@@ -609,7 +609,8 @@ Viewer-specific imports remain inside `frontend/src/viewer/`, and the viewer mod
 | Least privilege | No model-exposed tools are implemented in T-5; plans contain check IDs only. The model cannot access a file system, shell or arbitrary network. |
 | Network | Only `LiveClient` can call the OpenAI SDK; `LLM_BASE_URL` is restricted to `https://api.meta.ai/v1`. No telemetry. Server binds to `127.0.0.1` unless explicitly overridden. |
 | Prompt injection | BEP/TXT/Markdown content is untrusted. Extraction runs outside a tool loop; output is schema-validated and quoted text/paragraph ids are checked against the stored document. Candidate confirmation is required before execution. |
-| Spending | Persistent, lock-protected application ledger reserves cost before requests and reconciles usage. Default `LLM_MODE=off`, retries zero, at most two live calls per review. These safeguards cannot cap provider account billing; the project owner must separately approve each live test. |
+| Spending | Persistent, lock-protected application ledger reserves cost before requests and reconciles usage. Planning allows up to 2,000 completion tokens at low reasoning effort; other workflows retain the 500-token allowance. Default `LLM_MODE=off`, retries zero, at most two live calls per review, USD 0.10 per call/review and USD 5.00 project allowance. These safeguards cannot cap provider account billing; the project owner must separately approve each live test. |
+| Response diagnostics | The ledger records only safe metadata when returned: actual model id, response id, finish reason, total completion tokens (`output_tokens`), reasoning tokens, visible-content presence and outcome. It does not record prompts, completion/refusal text or credentials. |
 | Secret scanning | Gitleaks workflow in CI plus repository scripts and a staged pre-commit hook. Scanner output is redacted; one narrowly scoped allowlist covers a known synthetic GlobalId false positive. |
 | Confidential material | `hackathon-private/` is git-ignored; public docs summarise rather than copy it (brief §10). |
 | Dependencies | Pinned in `pyproject.toml` and `package-lock.json`; licence table in README (NFR-15). |
@@ -636,7 +637,7 @@ Viewer-specific imports remain inside `frontend/src/viewer/`, and the viewer mod
 | Confirmed check's stored payload no longer hashes to its `rule_version` | `CheckResult.status="error"` naming the check; it is never executed as a weaker check. *Implemented (T-2).* |
 | Narrative document invalid UTF-8 or empty | 422 response; no narrative document is stored. |
 | Narrative extraction unavailable / malformed output | The extraction endpoint returns a sanitized 503 or rejects the invalid candidate output; it creates no `Requirement`. |
-| LLM unavailable, output invalid, or plan rejected | Planner keeps the deterministic default plan (`plan_source=default`); explanation returns its deterministic template with a `fallback_reason`. Retry count defaults to zero. |
+| Strict objective planning is unavailable, has invalid output, is truncated, refused or content-filtered | Return a typed planning failure and publish no run or findings; the caller must explicitly choose deterministic continuation where supported. `token_limit` identifies truncation/exhaustion, while `invalid_output` is reserved for visible content that fails JSON/Pydantic validation. Refusal/filter text is not retained or returned. |
 | Whitespace-only review objective | 422 `request-validation` before any planner request or run is recorded. *Implemented (T-5).* |
 | Explanation requested for a finding the run did not record | 404 `finding-not-found`; nothing is explained. *Implemented (T-5).* |
 | Explanation evidence disagrees with the run (other session, changed requirement revision or check, rejected requirement, source outside the manifest, missing or altered model version) | 409 `explanation-provenance-mismatch`; no evidence is sent to the model. *Implemented (T-5).* |
@@ -644,7 +645,7 @@ Viewer-specific imports remain inside `frontend/src/viewer/`, and the viewer mod
 | Plan contains unknown, duplicate, unconfirmed or excess check | The entire proposal is rejected and the deterministic default plan is used; execution still resolves check ids server-side. |
 | `MAX_PLAN_CHECKS` or `MAX_TOOL_CALLS_PER_RUN` reached | Every confirmed check not executed within a cap is recorded as `CheckResult.status="skipped"`; the run ends `partial`, never `completed`. *Implemented (T-4).* |
 | Grounding failure or multi-element finding | AI text is discarded and a deterministic explanation template is returned; explanations are not written to `findings.json`. *Implemented (T-5).* |
-| Live request exceeds a budget or input/output cap | Reject before network access. The persistent ledger prevents concurrent reservations from reusing allowance. |
+| Live request exceeds a budget or input/output cap | Reject before network access. Planning is capped at 2,000 completion tokens; other workflows remain capped at 500. The persistent ledger prevents concurrent reservations from reusing allowance. |
 | Provider usage is missing | Charge the maximum reservation and fail closed for the request. |
 | Budget ledger is corrupt, unavailable or locked | Live requests and budget-status diagnostics fail closed; no implicit fresh ledger is created over unreadable state. |
 | Live provider error or timeout | SDK retries default to zero; only a sanitized error type is surfaced. A reservation is conservatively charged if usage is unavailable. |

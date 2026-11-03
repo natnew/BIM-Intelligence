@@ -21,23 +21,51 @@ TEST_API_KEY = "LLM_TEST_" + "x" * 24
 
 
 class CapturingCompletions:
-    """Returns ``content`` as the assistant message and records every request."""
+    """Stub response transport recording the exact SDK request and safe response metadata."""
 
-    def __init__(self, content: str, *, input_tokens: int = 900, output_tokens: int = 120) -> None:
+    def __init__(
+        self,
+        content: str | None,
+        *,
+        input_tokens: int = 900,
+        output_tokens: int = 120,
+        model: str = "muse-spark-1.3",
+        response_id: str = "stub-response",
+        finish_reason: str | None = "stop",
+        reasoning_tokens: int | None = None,
+        refusal: str | None = None,
+    ) -> None:
         self.content = content
         self.input_tokens = input_tokens
         self.output_tokens = output_tokens
+        self.model = model
+        self.response_id = response_id
+        self.finish_reason = finish_reason
+        self.reasoning_tokens = reasoning_tokens
+        self.refusal = refusal
         self.requests: list[dict[str, Any]] = []
 
     def create(self, **kwargs: Any) -> object:
         self.requests.append(kwargs)
+        completion_details = (
+            SimpleNamespace(reasoning_tokens=self.reasoning_tokens)
+            if self.reasoning_tokens is not None
+            else None
+        )
         return SimpleNamespace(
-            id="stub-response",
-            choices=[SimpleNamespace(message=SimpleNamespace(content=self.content))],
+            id=self.response_id,
+            model=self.model,
+            choices=[
+                SimpleNamespace(
+                    finish_reason=self.finish_reason,
+                    message=SimpleNamespace(content=self.content, refusal=self.refusal),
+                )
+            ],
             usage=SimpleNamespace(
                 prompt_tokens=self.input_tokens,
                 completion_tokens=self.output_tokens,
                 prompt_tokens_details=SimpleNamespace(cached_tokens=0),
+                completion_tokens_details=completion_details,
             ),
         )
 

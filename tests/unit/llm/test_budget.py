@@ -1,16 +1,19 @@
 from __future__ import annotations
 
+import json
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
 
+from bim_intelligence.config import Settings
 from bim_intelligence.llm.budget import (
     BudgetLedger,
     TokenUsage,
 )
 from bim_intelligence.llm.errors import BudgetLimitError, BudgetStateError
+from bim_intelligence.llm.factory import create_budget_ledger
 
 
 def _ledger(path: Path, *, project: str = "0.02", call: str = "0.01") -> BudgetLedger:
@@ -38,6 +41,55 @@ def test_rejects_worst_case_request_before_reserving(tmp_path: Path) -> None:
             max_output_tokens=500,
         )
     assert ledger.status().request_count == 0
+
+
+def test_planning_worst_case_reservation_matches_standard_price_configuration(
+    tmp_path: Path,
+) -> None:
+    settings = Settings(data_dir=tmp_path)
+    ledger = create_budget_ledger(settings)
+
+    reservation = ledger.reserve(
+        request_id="planning-request",
+        run_id="planning-run",
+        estimated_input_tokens=8_000,
+        max_output_tokens=settings.llm_max_planning_output_tokens,
+    )
+
+    assert settings.llm_max_output_tokens_per_call == 500
+    assert settings.llm_max_planning_output_tokens == 2_000
+    assert reservation.estimated_cost_usd == Decimal("0.0185")
+    assert reservation.estimated_cost_usd < settings.llm_max_call_budget_usd
+
+
+def test_reads_existing_ledger_rows_after_diagnostic_fields_are_added(tmp_path: Path) -> None:
+    path = tmp_path / "ledger.json"
+    path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "requests": [
+                    {
+                        "request_id": "old-request",
+                        "run_id": "old-run",
+                        "estimated_input_tokens": 1_000,
+                        "max_output_tokens": 500,
+                        "estimated_cost_usd": "0.003375",
+                        "charged_cost_usd": "0.003375",
+                        "input_tokens": 1_000,
+                        "output_tokens": 500,
+                        "cached_input_tokens": 0,
+                        "actual_cost_usd": "0.003375",
+                        "model": "muse-spark-1.3",
+                        "outcome": "success",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert _ledger(path).status().request_count == 1
 
 
 def test_persists_spend_and_request_metadata(tmp_path: Path) -> None:

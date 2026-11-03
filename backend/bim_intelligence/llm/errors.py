@@ -4,9 +4,16 @@
 class LLMClientError(Exception):
     """Base class for failures that can safely be handled without exposing provider details."""
 
-    def __init__(self, message: str, *, provider_request_attempted: bool = False) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        provider_request_attempted: bool = False,
+        model: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.provider_request_attempted = provider_request_attempted
+        self.model = model
 
 
 class LLMUnavailableError(LLMClientError):
@@ -19,6 +26,18 @@ class LLMRequestError(LLMClientError):
 
 class LLMOutputError(LLMClientError):
     """Provider content did not validate against the requested Pydantic response model."""
+
+
+class LLMMissingOutputError(LLMRequestError):
+    """The provider completed a request without visible response content."""
+
+
+class LLMRefusalError(LLMRequestError):
+    """The provider refused the request; refusal text is not retained or exposed."""
+
+
+class LLMContentFilterError(LLMRequestError):
+    """The provider filtered the response; filtered content is not retained or exposed."""
 
 
 class ReplayMismatchError(LLMClientError):

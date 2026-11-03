@@ -19,6 +19,9 @@ _ALLOWED_LEDGER_OUTCOMES = frozenset(
         "usage_unavailable",
         "timeout",
         "missing_output",
+        "token_limit",
+        "refused",
+        "content_filter",
         "usage_limit_exceeded",
         "invalid_output",
         "success",
@@ -31,12 +34,17 @@ class TokenUsage:
     input_tokens: int
     output_tokens: int
     cached_input_tokens: int = 0
+    reasoning_tokens: int | None = None
 
     def __post_init__(self) -> None:
         if min(self.input_tokens, self.output_tokens, self.cached_input_tokens) < 0:
             raise ValueError("Token counts must not be negative.")
         if self.cached_input_tokens > self.input_tokens:
             raise ValueError("Cached input tokens cannot exceed total input tokens.")
+        if self.reasoning_tokens is not None and (
+            self.reasoning_tokens < 0 or self.reasoning_tokens > self.output_tokens
+        ):
+            raise ValueError("Reasoning tokens must not exceed total completion tokens.")
 
 
 @dataclass(frozen=True)
@@ -148,8 +156,12 @@ class BudgetLedger:
                     "input_tokens": None,
                     "output_tokens": None,
                     "cached_input_tokens": None,
+                    "reasoning_tokens": None,
                     "actual_cost_usd": None,
                     "model": None,
+                    "response_id": None,
+                    "finish_reason": None,
+                    "visible_content": None,
                     "outcome": "reserved",
                 }
             )
@@ -163,6 +175,9 @@ class BudgetLedger:
         usage: TokenUsage | None,
         model: str,
         outcome: str,
+        response_id: str | None = None,
+        finish_reason: str | None = None,
+        visible_content: bool | None = None,
     ) -> Decimal:
         with self._locked_state() as state:
             row = self._find_request(state, reservation.request_id)
@@ -178,11 +193,15 @@ class BudgetLedger:
                 row["input_tokens"] = usage.input_tokens
                 row["output_tokens"] = usage.output_tokens
                 row["cached_input_tokens"] = usage.cached_input_tokens
+                row["reasoning_tokens"] = usage.reasoning_tokens
                 row["actual_cost_usd"] = str(actual_cost)
             row["charged_cost_usd"] = str(
                 actual_cost if actual_cost is not None else reservation.estimated_cost_usd
             )
             row["model"] = model
+            row["response_id"] = response_id
+            row["finish_reason"] = finish_reason
+            row["visible_content"] = visible_content
             row["outcome"] = outcome
             self._write_state(state)
         if actual_cost is not None and actual_cost > reservation.estimated_cost_usd:
@@ -240,23 +259,29 @@ class BudgetLedger:
             )
         seen_ids: set[str] = set()
         for row in state["requests"]:
+            legacy_keys = {
+                "request_id",
+                "run_id",
+                "estimated_input_tokens",
+                "max_output_tokens",
+                "estimated_cost_usd",
+                "charged_cost_usd",
+                "input_tokens",
+                "output_tokens",
+                "cached_input_tokens",
+                "actual_cost_usd",
+                "model",
+                "outcome",
+            }
+            current_keys = legacy_keys | {
+                "reasoning_tokens",
+                "response_id",
+                "finish_reason",
+                "visible_content",
+            }
             if (
                 not isinstance(row, dict)
-                or set(row)
-                != {
-                    "request_id",
-                    "run_id",
-                    "estimated_input_tokens",
-                    "max_output_tokens",
-                    "estimated_cost_usd",
-                    "charged_cost_usd",
-                    "input_tokens",
-                    "output_tokens",
-                    "cached_input_tokens",
-                    "actual_cost_usd",
-                    "model",
-                    "outcome",
-                }
+                or set(row) not in (legacy_keys, current_keys)
                 or not isinstance(row.get("request_id"), str)
                 or not row["request_id"]
                 or row["request_id"] in seen_ids
@@ -297,7 +322,12 @@ class BudgetLedger:
                     or max_output > self.max_output_tokens
                 ):
                     raise InvalidOperation
-                for token_key in ("input_tokens", "output_tokens", "cached_input_tokens"):
+                for token_key in (
+                    "input_tokens",
+                    "output_tokens",
+                    "cached_input_tokens",
+                    "reasoning_tokens",
+                ):
                     token_count = row.get(token_key)
                     if token_count is not None and (
                         isinstance(token_count, bool)
@@ -313,6 +343,14 @@ class BudgetLedger:
                     and cached_tokens > input_tokens
                 ):
                     raise InvalidOperation
+                reasoning_tokens = row.get("reasoning_tokens")
+                output_tokens = row.get("output_tokens")
+                if (
+                    reasoning_tokens is not None
+                    and output_tokens is not None
+                    and reasoning_tokens > output_tokens
+                ):
+                    raise InvalidOperation
                 actual_cost = row.get("actual_cost_usd")
                 if actual_cost is not None:
                     actual_cost_decimal = Decimal(str(actual_cost))
@@ -324,12 +362,23 @@ class BudgetLedger:
                         "input_tokens",
                         "output_tokens",
                         "cached_input_tokens",
+                        "reasoning_tokens",
                         "actual_cost_usd",
                         "model",
+                        "response_id",
+                        "finish_reason",
+                        "visible_content",
                     )
                 ):
                     raise InvalidOperation
                 if row.get("model") is not None and not isinstance(row["model"], str):
+                    raise InvalidOperation
+                for text_key in ("response_id", "finish_reason"):
+                    if row.get(text_key) is not None and not isinstance(row[text_key], str):
+                        raise InvalidOperation
+                if row.get("visible_content") is not None and not isinstance(
+                    row["visible_content"], bool
+                ):
                     raise InvalidOperation
             except (InvalidOperation, ValueError):
                 raise BudgetStateError(

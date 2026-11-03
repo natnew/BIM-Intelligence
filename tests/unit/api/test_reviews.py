@@ -26,7 +26,7 @@ from support.ids import FIXTURE_IDS_BYTES, upload_ids
 from support.llm_stub import CapturingCompletions, live_settings, stub_live_client
 
 FIXTURE_SHA256 = hashlib.sha256(FIXTURE_BYTES).hexdigest()
-PLANNER_PROMPT = Path(planner_module.__file__).with_name("prompts") / "planner.v1.md"
+PLANNER_PROMPT = Path(planner_module.__file__).with_name("prompts") / "planner.v2.md"
 
 
 @pytest.fixture
@@ -119,8 +119,14 @@ def test_objective_reaches_the_planner_in_the_provider_request_body(
     assert len(completions.requests) == 1
     request = completions.requests[0]
     assert request["model"] == "muse-spark-1.3"
-    assert request["response_format"] == {"type": "json_object"}
-    assert request["max_tokens"] == settings.llm_max_output_tokens_per_call
+    assert request["max_completion_tokens"] == settings.llm_max_planning_output_tokens
+    assert "max_tokens" not in request
+    assert request["reasoning_effort"] == "low"
+    response_format = request["response_format"]
+    assert response_format["type"] == "json_schema"
+    assert response_format["json_schema"]["name"] == "reviewplan"
+    assert response_format["json_schema"]["schema"]["required"] == ["checks"]
+    assert "strict" not in response_format["json_schema"]
     system, user = request["messages"]
     assert system == {"role": "system", "content": PLANNER_PROMPT.read_text(encoding="utf-8")}
     assert user["role"] == "user"
@@ -291,6 +297,63 @@ def test_rejected_live_plan_is_typed_and_never_publishes_findings(
         "provider_request_attempted": True,
         "model": "muse-spark-1.3",
         "reason_code": "plan_rejected",
+    }
+    assert len(completions.requests) == 1
+    runs_dir = settings.data_dir / "sessions" / review_session / RUNS_DIR
+    assert not runs_dir.exists() or not any(runs_dir.iterdir())
+
+
+def test_truncated_live_plan_reports_token_limit_without_publishing_a_run(
+    client: TestClient, review_session: str, tmp_path: Path, settings: Settings
+) -> None:
+    completions = CapturingCompletions(
+        '{"checks": [',
+        output_tokens=2_000,
+        finish_reason="length",
+    )
+    live = live_settings(tmp_path)
+    cast(FastAPI, client.app).dependency_overrides[get_llm_client] = lambda: stub_live_client(
+        live, completions
+    )
+
+    response = client.post(
+        f"{API_PREFIX}/sessions/{review_session}/reviews",
+        json={"objective": "Review only the confirmed requirements"},
+    )
+
+    problem = assert_problem(response, 503, "ai-review-unavailable")
+    assert problem["ai_review_failure"] == {
+        "mode": "live",
+        "provider_request_attempted": True,
+        "model": "muse-spark-1.3",
+        "reason_code": "token_limit",
+    }
+    assert len(completions.requests) == 1
+    assert completions.requests[0]["max_completion_tokens"] == 2_000
+    runs_dir = settings.data_dir / "sessions" / review_session / RUNS_DIR
+    assert not runs_dir.exists() or not any(runs_dir.iterdir())
+
+
+def test_invalid_live_json_reports_schema_error_without_publishing_a_run(
+    client: TestClient, review_session: str, tmp_path: Path, settings: Settings
+) -> None:
+    completions = CapturingCompletions("not-json", output_tokens=5, finish_reason="stop")
+    live = live_settings(tmp_path)
+    cast(FastAPI, client.app).dependency_overrides[get_llm_client] = lambda: stub_live_client(
+        live, completions
+    )
+
+    response = client.post(
+        f"{API_PREFIX}/sessions/{review_session}/reviews",
+        json={"objective": "Review only the confirmed requirements"},
+    )
+
+    problem = assert_problem(response, 503, "ai-review-unavailable")
+    assert problem["ai_review_failure"] == {
+        "mode": "live",
+        "provider_request_attempted": True,
+        "model": "muse-spark-1.3",
+        "reason_code": "invalid_output",
     }
     assert len(completions.requests) == 1
     runs_dir = settings.data_dir / "sessions" / review_session / RUNS_DIR

@@ -189,6 +189,15 @@ No milestone is complete solely because its contributing task labels exist. Orig
 - **Milestones:** M2.
 - **Verification (3 November 2026):** `.\.venv\Scripts\python.exe -m pytest -q` — **637 passed, 1 live test skipped, 1 third-party deprecation warning**; `.\.venv\Scripts\ruff.exe check .`, `.\.venv\Scripts\ruff.exe format --check .`, `.\.venv\Scripts\mypy.exe` (131 source files) and `.\.venv\Scripts\python.exe scripts\export_schemas.py --check` — passed. From `frontend/`, `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm run types:check`, `npm test` (**10 files, 129 tests passed**) and `npm run build` — passed; Vite's existing large-chunk warning remains. `git diff --check` — passed. The Live test was skipped and no live/paid request was made.
 
+#### FIX-002 — Repair Muse Spark structured review planning (T-5 / M2)
+
+- **Objective:** Correct the observed missing-output failure in objective planning without changing deterministic validation, findings, model-version references, UI or monetary safeguards.
+- **Implementation:** Planning uses a 2,000-token completion allowance, low reasoning effort, Chat Completions `max_completion_tokens`, a JSON Schema response format without the optional strict flag, and versioned `planner.v2.md`. Other workflows retain the 500-token allowance. Safe response metadata is recorded in the existing budget ledger; truncation/exhaustion, missing content, refusals, filters and schema-invalid output have distinct outcomes.
+- **Budget calculation:** At configured Standard rates, the uncached 8,000-input/2,000-completion maximum reserves USD 0.01850, below the unchanged USD 0.10 per-call/review limits. The USD 5.00 project allowance, two-call cap, and pre-request reservation remain unchanged.
+- **Verification:** Stubbed SDK transport tests exercise the real `LiveClient` request body and response classification. The full offline backend validation evidence is recorded in [EVALUATION §8](./EVALUATION.md#fix-002-offline-review-planning-correction-3-november-2026). No live API call is made.
+- **Status:** **Implemented and offline-verified** after local test, Ruff, mypy and schema checks. Live Meta acceptance of JSON Schema and the integrated planner remains unverified; FIX-002 does not complete T-5, M0 or M2. Do not claim live integration until the separately authorised VERIFY-009 gate passes.
+- **Rollback:** Revert the FIX-002 changes to the approved source, test and documentation paths as one change; retain the pre-existing ledger format compatibility and do not delete budget history. The prior 500-token planner request can then be restored with `planner.v1.md`.
+
 ### T-6 — Benchmark and Evaluation
 
 - **Objective:** Measure deterministic finding quality and reproducibility on independently labelled, redistributable test data; evaluate the T-5 offline safety contract separately from model quality.

@@ -10,7 +10,7 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Generic, Literal, Protocol, TypedDict, TypeVar
+from typing import Generic, Literal, Protocol, TypeVar
 
 from openai import APIError, OpenAI
 from openai.types.chat import (
@@ -18,6 +18,7 @@ from openai.types.chat import (
     ChatCompletionSystemMessageParam,
     ChatCompletionUserMessageParam,
 )
+from openai.types.shared_params.response_format_json_schema import ResponseFormatJSONSchema
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from bim_intelligence.config import LLMMode, Settings
@@ -25,16 +26,22 @@ from bim_intelligence.llm.budget import BudgetLedger, BudgetReservation, TokenUs
 from bim_intelligence.llm.errors import (
     BudgetStateError,
     LLMClientError,
+    LLMContentFilterError,
+    LLMMissingOutputError,
     LLMOutputError,
+    LLMRefusalError,
     LLMRequestError,
     ReplayMismatchError,
     TokenLimitError,
 )
 from bim_intelligence.schemas.canonical import canonical_json
+from bim_intelligence.schemas.runs import ReviewPlan
 from bim_intelligence.store.locking import FileLock
 
 logger = logging.getLogger(__name__)
 _MODEL_KEY_PATTERN = re.compile(r"\b(?:LLM_[A-Za-z0-9_-]{8,}|sk-[A-Za-z0-9_-]{16,})\b")
+_SAFE_METADATA_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\Z")
+_SAFE_FINISH_REASON = re.compile(r"[a-z][a-z0-9_]{0,31}\Z")
 T = TypeVar("T", bound=BaseModel)
 
 
@@ -57,8 +64,13 @@ class TokenUsageModel(BaseModel):
     cached_input_tokens: int = Field(default=0, ge=0)
 
 
-class _JsonObjectFormat(TypedDict):
-    type: Literal["json_object"]
+@dataclass(frozen=True)
+class _ResponseMetadata:
+    model: str
+    response_id: str | None
+    finish_reason: str | None
+    visible_content: bool | None
+    refused: bool
 
 
 @dataclass(frozen=True)
@@ -121,8 +133,8 @@ class FakeClient:
         raw = self._responses.pop(0)
         self.calls += 1
         try:
-            value = response_model.model_validate(raw)
-        except ValidationError:
+            value = _validate_response(response_model, raw)
+        except (ValidationError, TypeError, ValueError):
             raise LLMOutputError(
                 "Model output did not match the required response schema."
             ) from None
@@ -172,11 +184,15 @@ class LiveClient:
                 f"Estimated input exceeds the "
                 f"{self.settings.llm_max_input_tokens_per_call}-token per-call target."
             )
-        if max_output_tokens > self.settings.llm_max_output_tokens_per_call:
-            raise TokenLimitError(
-                f"Output exceeds the "
-                f"{self.settings.llm_max_output_tokens_per_call}-token per-call cap."
-            )
+        output_limit = (
+            self.settings.llm_max_planning_output_tokens
+            if purpose == "plan"
+            else self.settings.llm_max_output_tokens_per_call
+        )
+        if max_output_tokens > output_limit:
+            raise TokenLimitError(f"Output exceeds the {output_limit}-token per-call cap.")
+        sdk_messages = [_sdk_message(message) for message in messages]
+        response_format = _json_schema_format(response_model)
         try:
             (self.settings.data_dir / "llm").mkdir(parents=True, exist_ok=True)
         except OSError:
@@ -191,6 +207,7 @@ class LiveClient:
         reservation: BudgetReservation | None = None
         request_id = str(uuid.uuid4())
         provider_request_attempted = False
+        metadata: _ResponseMetadata | None = None
         try:
             reservation = self.ledger.reserve(
                 request_id=request_id,
@@ -199,13 +216,23 @@ class LiveClient:
                 max_output_tokens=max_output_tokens,
             )
             try:
-                provider_request_attempted = True
-                response = self._client.chat.completions.create(
-                    model=self.settings.llm_model,
-                    messages=[_sdk_message(message) for message in messages],
-                    max_tokens=max_output_tokens,
-                    response_format=_JsonObjectFormat(type="json_object"),
-                )
+                if purpose == "plan":
+                    provider_request_attempted = True
+                    response = self._client.chat.completions.create(
+                        model=self.settings.llm_model,
+                        messages=sdk_messages,
+                        max_completion_tokens=max_output_tokens,
+                        response_format=response_format,
+                        reasoning_effort="low",
+                    )
+                else:
+                    provider_request_attempted = True
+                    response = self._client.chat.completions.create(
+                        model=self.settings.llm_model,
+                        messages=sdk_messages,
+                        max_completion_tokens=max_output_tokens,
+                        response_format=response_format,
+                    )
             except APIError as exc:
                 self.ledger.settle(
                     reservation,
@@ -215,55 +242,131 @@ class LiveClient:
                 )
                 raise LLMRequestError(
                     f"Meta Model API request failed ({type(exc).__name__}); no provider detail "
-                    "was exposed."
+                    "was exposed.",
+                    model=self.settings.llm_model,
                 ) from None
 
+            metadata = _response_metadata(response, fallback_model=self.settings.llm_model)
             usage = _usage_from_response(response)
+            if metadata.refused:
+                self.ledger.settle(
+                    reservation,
+                    usage=usage,
+                    model=metadata.model,
+                    outcome="refused",
+                    response_id=metadata.response_id,
+                    finish_reason=metadata.finish_reason,
+                    visible_content=metadata.visible_content,
+                )
+                raise LLMRefusalError(
+                    "The provider refused the request; refusal content was not retained."
+                )
+            if metadata.finish_reason == "content_filter":
+                self.ledger.settle(
+                    reservation,
+                    usage=usage,
+                    model=metadata.model,
+                    outcome="content_filter",
+                    response_id=metadata.response_id,
+                    finish_reason=metadata.finish_reason,
+                    visible_content=metadata.visible_content,
+                )
+                raise LLMContentFilterError(
+                    "The provider filtered the response; filtered content was not retained."
+                )
+            if metadata.finish_reason == "length":
+                self.ledger.settle(
+                    reservation,
+                    usage=usage,
+                    model=metadata.model,
+                    outcome="token_limit",
+                    response_id=metadata.response_id,
+                    finish_reason=metadata.finish_reason,
+                    visible_content=metadata.visible_content,
+                )
+                raise TokenLimitError(
+                    "Provider output was truncated by the completion-token limit."
+                )
             if usage is None:
                 self.ledger.settle(
                     reservation,
                     usage=None,
-                    model=self.settings.llm_model,
+                    model=metadata.model,
                     outcome="usage_unavailable",
+                    response_id=metadata.response_id,
+                    finish_reason=metadata.finish_reason,
+                    visible_content=metadata.visible_content,
                 )
                 raise BudgetStateError(
                     "Provider usage was unavailable; maximum reserved cost was charged."
                 )
-            try:
-                content = _content_from_response(response)
-            except LLMOutputError:
+            if usage.input_tokens > self.settings.llm_max_input_tokens_per_call:
                 self.ledger.settle(
                     reservation,
                     usage=usage,
-                    model=self.settings.llm_model,
-                    outcome="missing_output",
-                )
-                raise
-            if (
-                usage.input_tokens > self.settings.llm_max_input_tokens_per_call
-                or usage.output_tokens > max_output_tokens
-            ):
-                self.ledger.settle(
-                    reservation,
-                    usage=usage,
-                    model=self.settings.llm_model,
+                    model=metadata.model,
                     outcome="usage_limit_exceeded",
+                    response_id=metadata.response_id,
+                    finish_reason=metadata.finish_reason,
+                    visible_content=metadata.visible_content,
                 )
-                raise TokenLimitError("Provider usage exceeded the configured token limit.")
-            response_model_id = getattr(response, "model", None)
-            actual_model = (
-                response_model_id.strip()
-                if isinstance(response_model_id, str) and response_model_id.strip()
-                else self.settings.llm_model
-            )
-            try:
-                value = response_model.model_validate_json(content)
-            except (ValidationError, ValueError):
+                raise TokenLimitError("Provider usage exceeded the configured input token limit.")
+            if usage.output_tokens > max_output_tokens:
                 self.ledger.settle(
                     reservation,
                     usage=usage,
-                    model=self.settings.llm_model,
+                    model=metadata.model,
+                    outcome="token_limit",
+                    response_id=metadata.response_id,
+                    finish_reason=metadata.finish_reason,
+                    visible_content=metadata.visible_content,
+                )
+                raise TokenLimitError(
+                    "Provider usage exceeded the configured completion-token limit."
+                )
+            content = _content_from_response(response)
+            if content is None:
+                outcome = (
+                    "token_limit" if usage.output_tokens >= max_output_tokens else "missing_output"
+                )
+                self.ledger.settle(
+                    reservation,
+                    usage=usage,
+                    model=metadata.model,
+                    outcome=outcome,
+                    response_id=metadata.response_id,
+                    finish_reason=metadata.finish_reason,
+                    visible_content=metadata.visible_content,
+                )
+                if outcome == "token_limit":
+                    raise TokenLimitError(
+                        "Provider output ended at the completion-token limit without content."
+                    )
+                raise LLMMissingOutputError("Provider returned no visible completion content.")
+            try:
+                value = _validate_response_json(response_model, content)
+            except (ValidationError, TypeError, ValueError):
+                if usage.output_tokens >= max_output_tokens:
+                    self.ledger.settle(
+                        reservation,
+                        usage=usage,
+                        model=metadata.model,
+                        outcome="token_limit",
+                        response_id=metadata.response_id,
+                        finish_reason=metadata.finish_reason,
+                        visible_content=metadata.visible_content,
+                    )
+                    raise TokenLimitError(
+                        "Provider output reached the completion-token limit before validation."
+                    ) from None
+                self.ledger.settle(
+                    reservation,
+                    usage=usage,
+                    model=metadata.model,
                     outcome="invalid_output",
+                    response_id=metadata.response_id,
+                    finish_reason=metadata.finish_reason,
+                    visible_content=metadata.visible_content,
                 )
                 raise LLMOutputError(
                     "Model output did not match the required response schema."
@@ -271,19 +374,24 @@ class LiveClient:
             self.ledger.settle(
                 reservation,
                 usage=usage,
-                model=self.settings.llm_model,
+                model=metadata.model,
                 outcome="success",
+                response_id=metadata.response_id,
+                finish_reason=metadata.finish_reason,
+                visible_content=metadata.visible_content,
             )
             return Completion(
                 value=value,
                 usage=usage,
-                model=actual_model,
-                response_id=getattr(response, "id", None),
+                model=metadata.model,
+                response_id=metadata.response_id,
                 provider_request_attempted=True,
             )
         except LLMClientError as exc:
             if provider_request_attempted:
                 exc.provider_request_attempted = True
+            if metadata is not None and exc.model is None:
+                exc.model = metadata.model
             raise
         finally:
             self._request_lock.release()
@@ -382,7 +490,7 @@ class ReplayClient:
         ):
             raise ReplayMismatchError("Offline recording does not match this request.")
         try:
-            value = response_model.model_validate(payload["content"])
+            value = _validate_response(response_model, payload["content"])
             usage = TokenUsage(**payload["usage"])
             model = str(payload["model"])
         except (KeyError, TypeError, ValueError, ValidationError):
@@ -408,24 +516,94 @@ def _usage_from_response(response: object) -> TokenUsage | None:
     if usage is None:
         return None
     details = getattr(usage, "prompt_tokens_details", None)
+    completion_details = getattr(usage, "completion_tokens_details", None)
     try:
+        reasoning_tokens_value = getattr(completion_details, "reasoning_tokens", None)
         return TokenUsage(
             input_tokens=int(usage.prompt_tokens),
             output_tokens=int(usage.completion_tokens),
             cached_input_tokens=int(getattr(details, "cached_tokens", 0) or 0),
+            reasoning_tokens=(
+                int(reasoning_tokens_value) if reasoning_tokens_value is not None else None
+            ),
         )
     except (AttributeError, TypeError, ValueError):
         return None
 
 
-def _content_from_response(response: ChatCompletion) -> str:
+def _response_metadata(response: ChatCompletion, *, fallback_model: str) -> _ResponseMetadata:
+    response_model = getattr(response, "model", None)
+    model = (
+        response_model.strip()
+        if isinstance(response_model, str) and _SAFE_METADATA_ID.fullmatch(response_model.strip())
+        else fallback_model
+    )
+    response_id_value = getattr(response, "id", None)
+    response_id = (
+        response_id_value.strip()
+        if isinstance(response_id_value, str)
+        and _SAFE_METADATA_ID.fullmatch(response_id_value.strip())
+        else None
+    )
+    try:
+        choice = response.choices[0]
+        message = choice.message
+    except (AttributeError, IndexError, TypeError):
+        choice = None
+        message = None
+    finish_reason_value = getattr(choice, "finish_reason", None)
+    finish_reason = (
+        finish_reason_value
+        if isinstance(finish_reason_value, str)
+        and _SAFE_FINISH_REASON.fullmatch(finish_reason_value)
+        else None
+    )
+    content = getattr(message, "content", None)
+    visible_content = isinstance(content, str) and bool(content.strip())
+    refusal = getattr(message, "refusal", None)
+    return _ResponseMetadata(
+        model=model,
+        response_id=response_id,
+        finish_reason=finish_reason,
+        visible_content=visible_content if message is not None else None,
+        refused=isinstance(refusal, str) and bool(refusal.strip()),
+    )
+
+
+def _content_from_response(response: ChatCompletion) -> str | None:
     try:
         content = response.choices[0].message.content
     except (AttributeError, IndexError, TypeError):
-        content = None
-    if not isinstance(content, str) or not content:
-        raise LLMOutputError("Provider returned no structured text.")
-    return content
+        return None
+    return content if isinstance(content, str) and content.strip() else None
+
+
+def _validate_response_json(response_model: type[T], content: str) -> T:
+    return _validate_response(response_model, json.loads(content))
+
+
+def _validate_response(response_model: type[T], payload: object) -> T:
+    if isinstance(payload, BaseModel):
+        payload = payload.model_dump(mode="json")
+    if response_model is ReviewPlan and (not isinstance(payload, dict) or "checks" not in payload):
+        raise ValueError("A review plan must include the checks field.")
+    return response_model.model_validate(payload)
+
+
+def _json_schema_format(response_model: type[BaseModel]) -> ResponseFormatJSONSchema:
+    schema = response_model.model_json_schema()
+    if response_model is ReviewPlan:
+        properties = schema.get("properties")
+        if isinstance(properties, dict):
+            schema["required"] = list(properties)
+    schema_name = re.sub(r"[^a-zA-Z0-9_-]", "_", response_model.__name__).strip("_").lower()[:64]
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": schema_name or "response",
+            "schema": schema,
+        },
+    }
 
 
 def _sdk_message(

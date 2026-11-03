@@ -268,6 +268,35 @@ fallback, replay repeatability and no live client construction. The runner repor
 calls, zero live Meta API requests and USD 0 spend. The configured model identifier in result
 metadata is informational only; it was **not invoked**.
 
+### FIX-002 offline review-planning correction (3 November 2026)
+
+The approved FIX-002 changes use a planning-only 2,000-token completion allowance and
+`reasoning_effort="low"`, while other workflows retain their 500-token default. The `LiveClient`
+stub-transport tests verify the outgoing `max_completion_tokens` and non-strict JSON Schema request
+body, as well as valid local plan validation, malformed and truncated outputs, provider refusals,
+content filters, and safe response diagnostics. API regression tests verify that completion-limit
+failures are reported as `token_limit`, while visible malformed JSON remains an invalid-output
+failure.
+
+Final local verification on the dirty working tree based on source commit
+`cbb4361612bbdeb40d6a4c4530e1773db041544d`:
+
+| Command | Result |
+|---|---|
+| `.venv\Scripts\ruff.exe check .` | Passed |
+| `.venv\Scripts\ruff.exe format --check .` | Passed; 165 files already formatted |
+| `.venv\Scripts\mypy.exe` | Passed; 131 source files |
+| `.venv\Scripts\python.exe scripts\export_schemas.py --check` | Passed; generated schema up to date |
+| `.venv\Scripts\python.exe -m pytest -q` | 653 passed, 1 live test skipped, 1 third-party deprecation warning |
+| `git diff --check` | Passed |
+
+At configured Standard rates, the 8,000-input/2,000-completion reservation is **USD 0.01850**.
+The existing USD 0.10 per-call/review limits and USD 5.00 project allowance were not increased.
+No live or paid provider call was made. Consequently, this verifies offline request construction,
+local validation, error classification and safeguards only; Meta's live acceptance of the
+non-strict JSON Schema format and end-to-end planner relevance remain unverified and require
+VERIFY-009. FIX-002 does not complete T-5 or M2.
+
 ### Dataset hashes
 
 | Generated input | SHA-256 |
