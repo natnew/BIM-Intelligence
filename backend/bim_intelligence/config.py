@@ -70,6 +70,7 @@ class Settings(BaseSettings):
     llm_max_input_tokens_per_call: int = Field(default=8_000, ge=1, le=8_000)
     llm_max_output_tokens_per_call: int = Field(default=500, ge=1, le=500)
     llm_max_planning_output_tokens: int = Field(default=2_000, ge=1, le=2_000)
+    llm_max_explanation_output_tokens: int = Field(default=2_000, ge=1, le=2_000)
     llm_max_calls_per_run: int = Field(default=2, ge=1, le=2)
     llm_max_call_budget_usd: Decimal = Field(default=Decimal("0.10"), gt=0, le=Decimal("0.10"))
     llm_max_run_budget_usd: Decimal = Field(default=Decimal("0.10"), gt=0, le=Decimal("0.10"))

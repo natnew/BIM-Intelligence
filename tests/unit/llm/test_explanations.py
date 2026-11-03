@@ -331,6 +331,15 @@ def test_consistent_explanation_labels_validate() -> None:
             "fallback_reason": "budget_limit",
         }
     )
+    token_limited = Explanation.model_validate(
+        {
+            **_BASE,
+            "source": "deterministic_template",
+            "grounding_status": "fallback",
+            "fallback_reason": "token_limit",
+        }
+    )
 
     assert ai.fallback_reason is None
     assert template.model is None
+    assert token_limited.fallback_reason == "token_limit"

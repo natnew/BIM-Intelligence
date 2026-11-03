@@ -33,6 +33,7 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 | [ADR-025](#adr-025-hackathon-release-gate-and-demonstration-fallback) | Hackathon release gate and demonstration fallback | Adopted |
 | [ADR-026](#adr-026-explicit-ai-review-policy-and-run-provenance) | Explicit AI review policy and run provenance | Adopted |
 | [ADR-027](#adr-027-fix-002-muse-spark-structured-review-planning) | FIX-002 Muse Spark structured review planning | Adopted |
+| [ADR-028](#adr-028-fix-003-muse-spark-grounded-explanation-allowance-and-token-limit-labelling) | FIX-003 Muse Spark grounded explanation allowance and token-limit labelling | Proposed; awaiting owner acceptance of the FIX-003 implementation |
 
 ---
 
@@ -411,6 +412,7 @@ Before each live call, reserve application budget using configured per-million t
 | ID | Question | Related | Needed by |
 |---|---|---|---|
 | OQ-02 | Does Meta accept the FIX-002 non-strict JSON Schema response format for live Muse Spark review planning? | ADR-002, ADR-012, ADR-027 | VERIFY-009 |
+| OQ-08 | Does Muse Spark return a complete, schema-valid and grounded explanation within the FIX-003 2,000-token allowance at low reasoning effort? The one live VERIFY-009 explanation exhausted the prior 500-token allowance on reasoning tokens alone. | ADR-009, ADR-027, ADR-028 | Owner-approved live explanation retest |
 | OQ-03 | Benchmark base model choice and licence | ADR-011 | Day 2 |
 | OQ-04 | Does the planner add measurable value over the default plan? | ADR-003 | Day 7 evaluation |
 | OQ-05 | `ifctester` licence string | ADR-004 | Before publishing licence table |
@@ -713,6 +715,59 @@ VERIFY-009 live gate. No live request is authorised by this decision.
 [Chat Completions parameter reference](https://dev.meta.ai/docs/protocols/chat-completions);
 and the FIX-002 offline verification record in [T-5](./IMPLEMENTATION_PLAN.md#t-5--meta-muse-spark-integration)
 and [EVALUATION §8](./EVALUATION.md#fix-002-offline-review-planning-correction-3-november-2026).
+
+## ADR-028 FIX-003 Muse Spark grounded explanation allowance and token-limit labelling
+
+**Status: Proposed 3 November 2026; awaiting owner acceptance of the FIX-003 implementation.**
+
+**Context.** The owner-approved VERIFY-009 live session (candidate
+`b95dadbe2d0475aa3c107227a9d0af2cae2c2c47`) accepted a Muse Spark 1.3 review plan on the first
+request, but the single authorised explanation request returned `finish_reason=length` with 500
+completion tokens, of which 498 were reasoning tokens, and no visible content. The ledger recorded
+`token_limit`; explanation JSON validation and deterministic grounding were never reached. The
+application returned a correctly labelled deterministic template, but mapped the failure to
+`budget_limit`, and the inspector described it as an exhausted spend or call limit although no
+monetary or call limit had been reached. Explanation requests were also sent without the
+`reasoning_effort="low"` setting that FIX-002 adopted for planning.
+
+**Decision.** Give finding explanations their own completion allowance,
+`LLM_MAX_EXPLANATION_OUTPUT_TOKENS` (default and ceiling 2,000), and send explanation requests at
+`reasoning_effort="low"`, matching the verified planning request shape. Other workflows keep the
+500-token default. Retain the existing JSON Schema response format, the `_ExplanationDraft`
+contract, local Pydantic validation and the deterministic `_verify_grounding` checks unchanged;
+the explanation prompt `explanation.v1.md` is unchanged because no evidence shows the prompt
+caused the failure.
+
+Separate the explanation fallback vocabulary: `token_limit` is raised when the provider exhausts
+the completion allowance (`TokenLimitError`), and `budget_limit` is reserved for application
+spending or call limits (`BudgetLimitError`). The frontend states the token-limit case as "The AI
+explanation reached its completion-token limit. The verified finding remains available, and a
+deterministic explanation is shown instead." Neither case is described as a provider outage,
+schema error or insufficient financial budget.
+
+Keep every monetary limit unchanged. At configured Standard rates the uncached 8,000-input /
+2,000-completion explanation reservation is USD 0.01850, within the USD 0.10 per-call limit; a
+planning and an explanation reservation together are USD 0.03700, within the USD 0.10 per-review
+limit and the USD 5.00 project allowance. The two-call review cap and pre-request reservation
+remain in force, and the ledger's per-request output ceiling is the maximum of the three configured
+allowances so a reservation is never rejected for an allowance the client permits.
+
+**Alternatives.** Raising the shared 500-token cap would also change extraction; rejected, as in
+ADR-027. Keeping `budget_limit` as a combined category would continue to misreport the observed
+failure to users; rejected. Reducing citation requirements so that shorter output passes would
+weaken ADR-009 grounding; rejected. Revising the prompt before measuring the effect of the
+allowance would add an unverified variable; deferred until evidence requires it.
+
+**Trade-offs.** A planning plus explanation review may now reserve up to USD 0.03700 instead of
+USD 0.030625, still within unchanged limits. Offline stub tests verify the request body,
+classification and labels only; whether Muse Spark completes a grounded explanation within 2,000
+tokens at low reasoning effort is OQ-08 and requires a separately approved live retest. No live
+request is authorised by this decision.
+
+**Evidence.** The sanitised VERIFY-009 live result recorded in
+[T-5](./IMPLEMENTATION_PLAN.md#t-5--meta-muse-spark-integration); offline `LiveClient`
+stub-transport and API regression tests named for VERIFY-009 and FIX-003; and the FIX-003 offline
+verification record in [EVALUATION §8](./EVALUATION.md#fix-003-offline-grounded-explanation-correction-3-november-2026).
 
 ## Implementation outcomes — 1 November 2026
 

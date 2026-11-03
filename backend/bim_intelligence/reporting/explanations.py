@@ -279,7 +279,9 @@ def _fallback_reason(exc: Exception) -> ExplanationFallbackReason:
         return "grounding_failed"
     if isinstance(exc, LLMOutputError):
         return "ai_output_invalid"
-    if isinstance(exc, (BudgetLimitError, TokenLimitError)):
+    if isinstance(exc, TokenLimitError):
+        return "token_limit"
+    if isinstance(exc, BudgetLimitError):
         return "budget_limit"
     return "ai_request_failed"
 

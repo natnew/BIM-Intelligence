@@ -401,6 +401,7 @@ const EXPLANATION_FALLBACK_REASONS: readonly NonNullable<Explanation['fallback_r
   'ai_disabled',
   'unsupported_evidence',
   'budget_limit',
+  'token_limit',
   'ai_request_failed',
   'ai_output_invalid',
   'grounding_failed',

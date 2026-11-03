@@ -73,10 +73,13 @@ def list_findings(
         "any disagreement is 409 ``explanation-provenance-mismatch``. An unknown finding is "
         "404 ``finding-not-found``. ``If-Match`` names the model version the client is "
         "viewing; one other than the run's model is 412 ``model-version-mismatch``. When the "
-        "client is off, a budget or call limit is reached, the request or response fails, or "
-        "the output cites anything outside the evidence, a deterministic template is returned "
-        "with ``source=deterministic_template``, ``grounding_status=fallback`` and a "
-        "``fallback_reason``. An ``ai_generated`` explanation has passed grounding and names "
+        "client is off, a spending or call limit is reached (``budget_limit``), the response "
+        "exhausts the explanation completion-token allowance (``token_limit``), the request or "
+        "response fails, or the output cites anything outside the evidence, a deterministic "
+        "template is returned with ``source=deterministic_template``, "
+        "``grounding_status=fallback`` and a ``fallback_reason``. Explanation requests use the "
+        "separate ``LLM_MAX_EXPLANATION_OUTPUT_TOKENS`` allowance at low reasoning effort. "
+        "An ``ai_generated`` explanation has passed grounding and names "
         "its model. Explanations are never written to ``findings.json`` and never create or "
         "change a Finding."
     ),
@@ -123,5 +126,5 @@ def explain_review_finding(
         index,
         client,
         run_id=run_id,
-        max_output_tokens=settings.llm_max_output_tokens_per_call,
+        max_output_tokens=settings.llm_max_explanation_output_tokens,
     )
