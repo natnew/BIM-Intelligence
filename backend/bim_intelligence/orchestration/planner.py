@@ -61,7 +61,7 @@ class PlanProposal:
     provider_request_attempted: bool
 
 
-_PROMPT = Path(__file__).with_name("prompts") / "planner.v1.md"
+_PROMPT = Path(__file__).with_name("prompts") / "planner.v2.md"
 
 
 def propose_plan(
@@ -119,7 +119,7 @@ def propose_plan(
                 ChatMessage(role="user", content=_json_text(user_payload)),
             ],
             response_model=ReviewPlan,
-            max_output_tokens=settings.llm_max_output_tokens_per_call,
+            max_output_tokens=settings.llm_max_planning_output_tokens,
             purpose="plan",
             run_id=run_id,
         )
@@ -128,6 +128,7 @@ def propose_plan(
             "Model plan did not match the permitted response schema.",
             reason_code="invalid_output",
             provider_request_attempted=exc.provider_request_attempted,
+            model=exc.model,
         ) from None
     except LLMClientError:
         raise

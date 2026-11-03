@@ -238,7 +238,7 @@ def run_review(
             if failure is not None:
                 reason_code = _planning_failure_reason(failure)
                 provider_request_attempted = failure.provider_request_attempted
-                model = failure.model if isinstance(failure, PlanViolation) else None
+                model = failure.model
                 if reason_code == "unsupported_scope":
                     raise UnsupportedReviewScopeError(
                         mode=_review_mode(execution_mode),

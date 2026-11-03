@@ -24,7 +24,10 @@ def create_budget_ledger(settings: Settings) -> BudgetLedger:
         output_price_per_m=output_price,
         max_calls_per_run=settings.llm_max_calls_per_run,
         max_input_tokens=settings.llm_max_input_tokens_per_call,
-        max_output_tokens=settings.llm_max_output_tokens_per_call,
+        max_output_tokens=max(
+            settings.llm_max_output_tokens_per_call,
+            settings.llm_max_planning_output_tokens,
+        ),
     )
 
 

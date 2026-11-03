@@ -306,8 +306,11 @@ def test_per_run_call_cap_stops_a_second_paid_explanation(
     assert len(completions.requests) == 1
     request = completions.requests[0]
     assert request["model"] == "muse-spark-1.3"
-    assert request["response_format"] == {"type": "json_object"}
-    assert request["max_tokens"] == 500
+    assert request["response_format"]["type"] == "json_schema"
+    assert request["response_format"]["json_schema"]["name"] == "explanationdraft"
+    assert request["max_completion_tokens"] == 500
+    assert "max_tokens" not in request
+    assert "reasoning_effort" not in request
     evidence = json.loads(request["messages"][1]["content"])
     assert evidence["finding"]["id"] == finding["id"]
     assert [record["ref"]["global_id"] for record in evidence["model_index_elements"]] == [

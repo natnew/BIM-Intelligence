@@ -4,6 +4,20 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ## Unreleased
 
+### FIX-002 / T-5 / M2 — Structured Muse Spark review planning (3 November 2026)
+
+- Give objective planning a dedicated 2,000-token completion allowance and low reasoning effort;
+  preserve the 500-token cap for other workflows and migrate Chat Completions to
+  `max_completion_tokens`. Request a JSON Schema response format without assuming provider strict
+  mode, and version the exact planning contract in `planner.v2.md`.
+- Record safe response metadata in the budget ledger and distinguish completion-limit failures,
+  missing output, refusals, content filters and genuine schema-invalid output. Preserve the 8,000
+  input cap, two-call limit, USD 0.10 per-call/review limits and USD 5.00 project allowance; the
+  uncached 8,000/2,000 planning reservation at configured Standard rates is USD 0.01850.
+- Offline stub tests verify the actual `LiveClient` request body and response diagnostics. No live
+  Meta request or paid call was made; provider acceptance and planner quality remain subject to
+  VERIFY-009. FIX-002 does not complete T-5 or M2.
+
 ### UI-005E / T-7 / M3 — Automatic architectural reel and product-led captions (3 November 2026)
 
 - Add a 7-second autoplay to the Project Home reel, with a Play/Pause control. It pauses on

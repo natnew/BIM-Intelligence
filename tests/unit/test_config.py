@@ -24,6 +24,7 @@ class TestDefaults:
         assert settings.llm_max_retries == 0
         assert settings.llm_max_input_tokens_per_call == 8_000
         assert settings.llm_max_output_tokens_per_call == 500
+        assert settings.llm_max_planning_output_tokens == 2_000
         assert settings.llm_max_calls_per_run == 2
         assert settings.llm_max_run_budget_usd == Decimal("0.10")
         assert settings.llm_project_budget_usd == Decimal("5.00")
@@ -108,6 +109,13 @@ class TestLiveMode:
     def test_budget_limits_cannot_exceed_t5_caps(self) -> None:
         with pytest.raises(ValidationError):
             Settings(llm_project_budget_usd=5.01)
+
+    def test_planning_output_allowance_is_bounded_at_two_thousand_tokens(self) -> None:
+        assert (
+            Settings(llm_max_planning_output_tokens=1_500).llm_max_planning_output_tokens == 1_500
+        )
+        with pytest.raises(ValidationError):
+            Settings(llm_max_planning_output_tokens=2_001)
 
     def test_production_requires_the_approved_live_configuration(self) -> None:
         with pytest.raises(ValidationError, match="BIMI_ENVIRONMENT=production"):

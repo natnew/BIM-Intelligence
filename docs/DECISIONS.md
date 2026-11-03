@@ -32,6 +32,7 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 | [ADR-024](#adr-024-muse-spark-remains-an-optional-grounded-interpretation-provider) | Muse Spark remains an optional, grounded interpretation provider | Adopted |
 | [ADR-025](#adr-025-hackathon-release-gate-and-demonstration-fallback) | Hackathon release gate and demonstration fallback | Adopted |
 | [ADR-026](#adr-026-explicit-ai-review-policy-and-run-provenance) | Explicit AI review policy and run provenance | Adopted |
+| [ADR-027](#adr-027-fix-002-muse-spark-structured-review-planning) | FIX-002 Muse Spark structured review planning | Adopted |
 
 ---
 
@@ -409,7 +410,7 @@ Before each live call, reserve application budget using configured per-million t
 
 | ID | Question | Related | Needed by |
 |---|---|---|---|
-| OQ-02 | Does Meta's strict JSON-schema mode accept nested Pydantic models with enums and optional fields as we define them? | ADR-002, ADR-012 | Day 1 |
+| OQ-02 | Does Meta accept the FIX-002 non-strict JSON Schema response format for live Muse Spark review planning? | ADR-002, ADR-012, ADR-027 | VERIFY-009 |
 | OQ-03 | Benchmark base model choice and licence | ADR-011 | Day 2 |
 | OQ-04 | Does the planner add measurable value over the default plan? | ADR-003 | Day 7 evaluation |
 | OQ-05 | `ifctester` licence string | ADR-004 | Before publishing licence table |
@@ -659,6 +660,59 @@ request.
 
 **Unresolved.** User-approved Live planner evidence, UI exposure of explicit continuation, and
 authentication and access controls before any public deployment.
+
+---
+
+## ADR-027 FIX-002 Muse Spark structured review planning
+
+**Status: Adopted 3 November 2026 under explicit owner approval for FIX-002.**
+
+**Context.** The owner-reported FIX-001 investigation found five Muse Spark 1.3 planning requests
+with usage but no visible completion; each consumed the full 500-token output allowance. The
+ledger recorded `missing_output`, and JSON parsing, Pydantic validation and plan-registry checks
+were not reached. The observed failure was therefore not a schema failure. Reasoning-token
+exhaustion is the leading explanation, but remains unconfirmed because the original requests did
+not capture finish reason or reasoning-token usage. The private evidence remains in its owner-
+managed location and was not inspected or copied for this change.
+
+**Decision.** Give objective review planning a separate maximum completion allowance of 2,000
+tokens and send `reasoning_effort="low"`; retain the 500-token ceiling for other workflows. Use
+Chat Completions `max_completion_tokens`, which Meta documents as supported while retaining
+`max_tokens` only as a deprecated alias. Meta documents `low` reasoning effort and explicitly
+states that `"none"` is unsupported for Muse Spark. Request a JSON Schema response format derived
+from the Pydantic response model, with the plan's `checks` field required; omit the optional
+`strict` flag and continue to validate locally, including confirmed-check, duplicate, scope and
+execution-cap rules. Use the versioned `planner.v2.md` contract.
+
+Record only safe response metadata in the budget ledger: actual model id, response id, finish
+reason, total completion tokens (`output_tokens`), reasoning tokens when present, visible-content
+presence and outcome. Do not retain prompts, response text, refusal text or credentials. Treat
+truncation and completion-limit exhaustion as `token_limit`; reserve `invalid_output` for content
+that is present but fails JSON/Pydantic validation. Missing output below the limit, refusals and
+content-filter outcomes are distinct ledger outcomes with sanitised exceptions.
+
+Keep application budgets unchanged: 8,000 estimated input tokens; USD 0.10 per call and per
+review; two calls per review; and USD 5.00 project allowance. At Standard rates of USD 1.25/M
+input and USD 4.25/M output, the uncached 8,000/2,000 worst-case reservation is USD 0.01850,
+within the existing per-call ceiling. Reservations still occur before the provider request and
+the ledger remains fail-closed.
+
+**Alternatives.** Raising the shared 500-token cap would also change extraction and explanation
+workflows; rejected. Disabling reasoning would be rejected by Muse Spark. Enabling strict
+provider-side schema mode without compatibility evidence would be speculative; strict mode is
+omitted. Reclassifying missing content as schema-invalid would repeat the observed diagnostic
+error; rejected.
+
+**Trade-offs.** The planning allowance increases the maximum reserved amount for a planning
+request, but remains below the unchanged USD 0.10 call/review budgets. The local stub verifies
+request construction and deterministic error classification only. Provider acceptance of this
+JSON Schema and live planning relevance remain unverified and require the separately approved
+VERIFY-009 live gate. No live request is authorised by this decision.
+
+**Evidence.** FIX-001 owner-reported observations; offline LiveClient transport tests; Meta's
+[Chat Completions parameter reference](https://dev.meta.ai/docs/protocols/chat-completions);
+and the FIX-002 offline verification record in [T-5](./IMPLEMENTATION_PLAN.md#t-5--meta-muse-spark-integration)
+and [EVALUATION §8](./EVALUATION.md#fix-002-offline-review-planning-correction-3-november-2026).
 
 ## Implementation outcomes — 1 November 2026
 
