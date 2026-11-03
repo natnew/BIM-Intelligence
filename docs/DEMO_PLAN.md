@@ -2,17 +2,19 @@
 
 **Required output:** one functioning three-minute video. This is the owner-directed delivery
 requirement; confirm the official event rules and eligibility before submission (OPEN-02).
-**Status, 1 November 2026:** the script below is an exactly 180-second **proposed fallback**, not a
-recording. No video, actual duration or working video link has been supplied or verified. The
-deterministic workflow was exercised on the synthetic fixture; the requested user-facing Meta
-workflow and one-click sample are not implemented. Do not claim that this fallback meets
-unverified event eligibility.
+**Status, 3 November 2026:** the storyboard below is a **planned 180-second recording**, not
+evidence that a video was recorded, rehearsed, uploaded or accepted. VERIFY-010 passed one
+authorised live synthetic plan and grounded explanation on
+`588e6adf9ca71079eadc0e5b33422dc6605df743`; the preceding VERIFY-009 acceptance failed.
+Any new paid request needs separate owner approval. Official event rules and eligibility remain
+unverified.
 
 ## 1. Product and evidence boundary
 
 BIM Intelligence is one AI-native AEC model-review application. The existing demonstrable
-workflow is a single IFC session with deterministic IDS/native checks, source-backed findings and
-3D element inspection. UI-003's Project Home, upload and viewer walkthrough is recorded in
+workflow is a single IFC session with guided objective planning, deterministic IDS/native checks,
+source-backed findings, 3D element inspection and an on-request explanation. UI-003's Project
+Home, upload and viewer walkthrough is recorded in
 [UI_CHANGELOG.md](./UI_CHANGELOG.md). The T-6 benchmark has a locally recorded result on a small
 synthetic IFC4 model; its limitations and the outstanding hosted-CI status are in
 [EVALUATION.md](./EVALUATION.md).
@@ -23,17 +25,15 @@ Do not script or narrate the following as working before the gates pass:
 |---|---|---|
 | One-IFC Project Home and review workspace | UI-003 tests and recorded browser walkthrough | May show the tested session → IFC/IDS upload → workspace → review path. |
 | Deterministic IDS/native checks and source-backed evidence | Tests and UI-003 browser walkthrough on committed synthetic fixtures | May show only the actual run, check outcomes, selected finding and element evidence. |
-| Muse Spark-assisted workflow | Backend planner/explanation have offline Fake/Replay tests; one basic live smoke is owner-reported, but live BIM use and frontend integration are unverified | Show a Meta-assisted objective/explanation only after a real approved integration test. Label the actual plan/explanation source and any fallback. Never present default, Fake or Replay output as a live inference. |
+| Muse Spark-assisted workflow | VERIFY-010 passed one owner-approved live synthetic planner and grounded explanation; VERIFY-009 failed at explanation generation | Show a genuine Live plan/explanation only if the actual recording session is separately approved and succeeds. Label source, model and grounding; never present default, Fake or Replay output as a live inference. |
 | Report/export | Run manifests and evidence exist in API contracts; complete report endpoint/UI remains outstanding | Do not show a fabricated report or download. Include only after the actual export passes provenance checks. |
 | Camera recovery controls | UI-004A Fit, Reset and Focus are merged and were exercised in the synthetic browser walkthrough | Show the real controls and their actual effect; do not imply unimplemented camera modes. |
-| Recent sessions / sample catalogue | Project Home marks them unavailable | A one-click synthetic sample may be included only after it exists and is tested; until then use the current create/upload workflow. |
+| Recent sessions / sample catalogue | Browser-local recent sessions are implemented; no one-click sample catalogue | Reopen a valid local session if useful; for a fresh demo manually upload the committed synthetic fixture. |
 | Two-model federation and clashes | FED-001 is a synthetic geometry feasibility harness, not an integrated application workflow | Include only after every coordination go/no-go condition passes; otherwise omit all clash/federation claims. |
 
-If coordination is a no-go, the intended delivery fallback is the working IDS/native review with
-the Meta-assisted path only when its frontend integration and required owner-authorised verification
-are real. If Meta integration or live use is not approved/verified, say so plainly; a deterministic
-only recording must not be described as Meta-assisted or as satisfying an unverified eligibility
-rule.
+Coordination is currently a no-go: omit it. If Live use is not separately approved or the
+recording session fails, use the explicitly labelled deterministic fallback below. Do not describe
+that fallback as Meta-assisted or as satisfying an unverified eligibility rule.
 
 ## 2. Three-minute storyboard
 
@@ -43,16 +43,16 @@ Use the actual application throughout; the final title card is a labelled closin
 
 | Time | Shot and actual screen action | Concise narration |
 |---|---|---|
-| 0:00–0:12 | **1 — Home:** show BIM Intelligence and the offline health state. | “BIM Intelligence is an AEC model-review prototype built during this hackathon. This walkthrough uses synthetic data with AI switched off.” |
-| 0:12–0:32 | **2 — Inputs:** create a session; choose the synthetic IFC and IDS; show the indexed and two-requirement confirmations. | “A reviewer creates a session, imports one read-only IFC and an IDS, and sees which requirements are executable.” |
-| 0:32–0:50 | **3 — Model:** open the workspace, show the IFC4 summary and three rendered walls, then orbit the model. | “The viewer renders the actual model. Its version hash ties subsequent evidence to these source bytes.” |
-| 0:50–1:10 | **4 — Review:** select **Run review** and show coverage and **Deterministic default**. | “The deterministic review executes two IDS checks. The run completed, but both checks found an issue; completion does not mean compliance.” |
-| 1:10–1:35 | **5 — Fire rating:** select W-002; show the highlighted wall, observed and expected values, rule and source requirement. | “W-002 is an external wall without the required fire rating. The finding links the affected element to the exact check and source requirement.” |
-| 1:35–1:55 | **6 — Classification:** select W-003 and show its linked element and missing classification evidence. | “W-003 lacks the required classification. These findings come from the deterministic IDS checks, not from a language model.” |
-| 1:55–2:15 | **7 — Model selection:** reset the view and click W-001; show its properties and zero linked findings. | “Selecting a wall in the model opens its element record. No linked finding here means only that this run did not flag it.” |
-| 2:15–2:35 | **8 — Navigation:** reselect W-002, use **Focus selected**, pan or zoom, then **Fit model** and **Reset view**. | “Finding and model selection stay connected. Focus, Fit and Reset provide a way to investigate and recover the view.” |
-| 2:35–2:50 | **9 — AI boundary:** show the selected finding's **AI explanation · not connected** notice. | “Muse Spark is the intended interpretation provider, but this build does not expose that workflow. No AI response is shown.” |
-| 2:50–3:00 | **10 — Close:** display the final title card below. | “Our original work links versioned IFC review, deterministic evidence and 3D investigation, using open-source BIM tools.” |
+| 0:00–0:12 | **1 — Home:** introduce the application and its actual configuration. | “Architects and BIM Coordinators need to check project information without losing the connection to the model.” |
+| 0:12–0:32 | **2 — Inputs:** create a session and manually upload the synthetic IFC and IDS. | “This prototype reads one IFC without changing it and imports the reviewed IDS specifications as confirmed checks.” |
+| 0:32–0:49 | **3 — Model:** show the indexed IFC, confirmed requirements and 3D model. | “The model version and confirmed requirements bind this review to its inputs.” |
+| 0:49–1:10 | **4 — Guided objective:** show the scope selector and enter the fire-rating objective; request an authorised AI review. | “The reviewer selects the permissible requirements and asks Muse Spark to propose relevant checks.” |
+| 1:10–1:30 | **5 — Actual plan:** show the returned Live mode, model, selected check and coverage. | “Code validates the proposed plan against the confirmed scope and execution limits before any check runs.” |
+| 1:30–1:50 | **6 — Finding:** select the W-002 fire-rating finding and show observed/expected evidence and its source check. | “IfcTester, not the model, identifies the missing fire-rating information and records the evidence.” |
+| 1:50–2:10 | **7 — 3D investigation:** highlight W-002; demonstrate **Focus selected**, **Fit model** and **Reset view**, then select an element. | “The finding and the model are linked, so the reviewer can investigate the affected element in context.” |
+| 2:10–2:30 | **8 — Explanation:** explicitly request and show the actual grounded AI explanation and its source label. | “On request, Muse drafts an explanation from the recorded evidence. The application checks its citations and identifiers.” |
+| 2:30–2:50 | **9 — Boundaries:** show check coverage and explanation provenance, including any skipped check. | “The finding is deterministic; the explanation is model-generated. A partial review or grounded response is not a blanket compliance verdict.” |
+| 2:50–3:00 | **10 — Close:** show the title card and third-party credits. | “BIM Intelligence combines versioned review, transparent evidence and 3D investigation.” |
 
 ### Dataset, attribution and evidence captions
 
@@ -63,10 +63,10 @@ Use the actual application throughout; the final title card is a labelled closin
   [MIT licence](../LICENSE). The IFC SHA-256 is
   `f2bd00074c54866d95c5c344a1c604e01cdb8ea394b9b20937952b7b38c74348`; the IDS SHA-256 is
   `e602233db1e9aa8e77b2a4f90371db42df9879ee2f6331251f7aab84f2f1ce74`.
-- Suggested on-screen captions: **Synthetic IFC/IDS · AI off**; **IFC4 · model version f2bd00074c54**;
-  **2 IDS checks · 2 findings · deterministic default**; **W-002 · missing FireRating**;
-  **W-003 · missing classification**; **W-001 · no linked findings in this run**.
-  Captions describe actual results and must not hide a different or failed run.
+- Suggested on-screen captions: **Synthetic IFC/IDS**; **IFC4 · model version f2bd00074c54**;
+  **Live Muse plan · confirmed-check scope**; **W-002 · deterministic IDS finding**;
+  **AI-generated explanation · grounding passed**. Use each only if the recorded run actually
+  displays it; do not hide skipped checks, a different plan or a failure.
 - Credit the project's original session/version integration, deterministic review/evidence
   workflow and 3D interaction as hackathon work. Identify IfcOpenShell, IfcTester and That Open
   Components as third-party tools, not original project code. Distribution-specific notices and
@@ -78,9 +78,12 @@ Use the actual application throughout; the final title card is a labelled closin
 
 ### Browser preparation and recording
 
-1. Use a fresh local session and the exact synthetic fixtures above. Start the existing backend and
-   frontend using the [setup instructions](../README.md#local-setup), with `LLM_MODE=off` and
-   `ALLOW_LIVE_LLM=false`; verify the health panel. Do not open private models or documents.
+1. Obtain separate owner approval for the recording session's paid calls. Use a fresh local
+   session and the exact synthetic fixtures above. Start the backend and frontend using the
+   [setup instructions](../README.md#local-setup) and
+   [Live configuration](../README.md#configure-an-authorised-live-demonstration). Verify the
+   displayed mode; health alone does not establish provider connectivity. Do not open private
+   models or documents.
 2. Prewarm the application and local viewer assets, then return to Project Home. Have the two
    fixture files ready in the file chooser; do not pre-populate or substitute findings. Rehearse
    the real upload, review and selection path before recording.
@@ -95,7 +98,7 @@ Use the actual application throughout; the final title card is a labelled closin
    source attribution and the final link. A planned 3:00 timeline is not evidence of a 3:00 file.
 
 **Final title card, 2:50–3:00:** “BIM Intelligence | AEC model review” followed by
-“Synthetic IFC/IDS · deterministic findings · AI off”. Add a small attribution line:
+“Synthetic IFC/IDS · deterministic findings · separately labelled AI”. Add a small attribution line:
 “Built during the hackathon with IfcOpenShell, IfcTester and That Open Components”. Do not display
 a repository or video link as public until it is accessible and verified.
 
@@ -142,11 +145,13 @@ is not a clash substitute.
 
 ## 5. Safe fallback
 
-If a live provider, optional coordination path, report, viewer control or recording step fails,
-remove that segment and retain only the last verified single-model review path. A recorded clip is
-not a substitute for an untested product feature. If the remaining recording cannot truthfully
-meet the Meta-assisted or official submission criteria, report that gap to the owner rather than
-claiming success.
+If Live is not approved or the provider fails, keep the same ten shot boundaries and 180-second
+target, but change shots 4–5 to show **Continue without AI** and the actual deterministic plan;
+change shot 8 to show the explicitly labelled deterministic template; and change shot 9 and the
+title card to say **AI off / deterministic fallback**. Never reuse narration or captions that
+claim a Live plan or AI-generated explanation. A failed viewer interaction or recording step
+must be reported rather than fabricated. If this reduced scope cannot meet the official
+submission criteria, report that gap to the owner.
 
 If a session has expired, create a new one and re-upload the two synthetic fixtures. If a required
 viewer interaction fails, stop and report the failure rather than substituting a static image. A
@@ -155,7 +160,7 @@ verified, its use is authorised, and it is visibly labelled as a recording. The 
 smoke has no raw request/response recording in this repository, so it cannot be turned into a
 verified replay here. Never invent one.
 
-## 6. RELEASE-001 release report — no-go
+## 6. RELEASE-001 release report — historical no-go (1 November 2026)
 
 1. **Working:** manual single-IFC/IDS upload, deterministic review, two-way finding/element
    selection, evidence inspection and the UI-004A camera controls were exercised on synthetic
@@ -190,3 +195,13 @@ verified replay here. Never invent one.
    no verified final release commit.
 10. **Recommendation:** **NO-GO** for release or submission until the missing work and owner
     decisions are completed and the integrated candidate is reverified.
+
+## 7. Current release position — 3 November 2026
+
+The historical report above predates the merged guided AI interface, browser-local history,
+FIX-002, FIX-003 and the VERIFY-010 synthetic live pass. Its older statement that these
+interfaces did not exist is not current. VERIFY-009 remains a failure, and VERIFY-010 is one
+successful scenario, not general reliability evidence. The latest hosted main workflow failed
+before jobs started; no clean install, benchmark Playwright smoke, video, public-access decision,
+official rules or complete distribution-rights review has been verified. T-7/M3 and T-8 remain
+in progress, M4 remains gated by M3, and the release/submission decision remains **NO-GO**.

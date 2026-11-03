@@ -1,15 +1,17 @@
 # BIM Intelligence — Technical Architecture
 
-**Version:** 0.4 (architecture baseline 26 October 2026; §8.1, §10.2, §11 and §14 updated 28 October 2026 for T-1.1; §8.2, §10.2, §11, §12 and §14 updated 29 October 2026 for T-2–T-4; §7, §9–§11 and §13–§17 updated for the T-5 offline implementation)
-**Status:** Partially implemented. Rows and paragraphs marked *Implemented* or ✓ are backed by unit tests; every other statement about behaviour describes design intent, not measured results.
+**Version:** 0.4; implementation reconciliation 3 November 2026.
+**Status:** Partially implemented. Implemented behaviour is distinguished below from planned
+enhancements; a single live synthetic acceptance is not evidence of general provider reliability.
 **Audience:** Engineers and coding agents implementing the MVP during the Meta Global AI Developer Hackathon (26 October – 4 November 2026).
 
-**Release-baseline clarification, 1 November 2026:** UI-004A is merged, including the verified
-single-model camera and selection controls. Objective planning and grounded explanations have
-offline-tested backend/API-client paths but no connected browser controls. Recent-session history,
-one-click sample loading and report export are not implemented. FED-001 is a synthetic test
-harness, not an integrated federation or clash feature. See
-[EVALUATION.md](./EVALUATION.md#release-001-offline-verification--1-november-2026).
+**Current source baseline:** merged `main` at
+`588e6adf9ca71079eadc0e5b33422dc6605df743`. The browser has guided objective planning,
+on-request explanations, browser-local recent sessions and single-model camera/selection controls.
+VERIFY-010 exercised a live plan and grounded explanation on one synthetic fixture; VERIFY-009
+failed at explanation generation. One-click sample loading and report export are not implemented.
+FED-001 is a synthetic test harness, not an integrated federation or clash feature. See
+[EVALUATION.md](./EVALUATION.md#8-results).
 
 Notation used in this document:
 
@@ -23,7 +25,10 @@ Requirement identifiers (`FR-…`, `NFR-…`, `C-…`) refer to [REQUIREMENTS.md
 
 ## 1. Executive technical overview
 
-BIM Intelligence is an AI-native review assistant for architectural IFC models. It is designed to let an Architect, BIM Manager or BIM Coordinator state a review objective in plain language, have the system select and run the appropriate deterministic checks against the model and the project's own information requirements, and then inspect the findings in a 3D viewer with grounded explanations and a traceable report.
+BIM Intelligence is an experimental AI-native review assistant for architectural IFC models. An
+Architect, BIM Manager or BIM Coordinator can select confirmed requirements, request a bounded
+plan, run deterministic checks and inspect findings in a 3D viewer. Separately labelled
+explanations are available on request; a complete traceable report remains planned.
 
 The architecture rests on one invariant that every component enforces:
 
@@ -35,11 +40,11 @@ Consequences of that invariant:
 |---|---|---|
 | Reading IFC properties, relationships, geometry | ✔ IfcOpenShell | ✘ never |
 | Executing checks (IDS, native rules) | ✔ IfcTester + rule engine | ✘ never |
-| Deciding *which* checks to run for a stated objective | ✔ default plan always available | ✔ proposes a bounded plan from the tool registry |
+| Deciding *which* checks to run for a stated objective | ✔ validates confirmed check IDs and supports explicit deterministic continuation | ✔ proposes a bounded plan |
 | Extracting requirements from a BEP | ✔ source-quote verification, IDS compilation | ✔ proposes candidate requirements with verbatim quotes |
 | Collecting evidence for a finding | ✔ | ✘ |
 | Explaining a finding and recommending a fix | ✔ templated fallback, grounding check | ✔ drafts prose from the evidence bundle |
-| Writing the report | ✔ assembles from JSON | ✔ optional narrative summary (grounded) |
+| Writing the report | Planned | Planned, subject to grounding |
 
 The system is a **single Python process** (FastAPI) plus a **single-page TypeScript frontend** (React + That Open Components). There are no microservices, no message queue and no database in the MVP; session state lives on the local file system. This is the smallest architecture that supports a credible end-to-end demonstration and leaves clean seams for later hardening.
 
@@ -60,18 +65,20 @@ Before a model is issued (ISO 19650 "shared" or "published" state), the authorin
 
 ```mermaid
 flowchart LR
-    A["Upload IFC"] --> B["Upload BEP / IDS"]
-    B --> C["Review candidate requirements<br/>confirm · edit · reject"]
+    A["Upload IFC"] --> B["Import reviewed IDS"]
+    B --> C["Confirm check scope"]
     C --> D["State review objective"]
-    D --> E["Orchestrator plans checks"]
+    D --> E["Validated plan or explicit continuation"]
     E --> F["Deterministic validation"]
     F --> G["Evidence gathering"]
-    G --> H["AI explanation<br/>grounded + labelled"]
-    H --> I["3D triage<br/>findings ↔ elements"]
-    I --> J["Report · BCF"]
+    G --> I["3D triage<br/>findings ↔ elements"]
+    I --> H["Optional explanation<br/>grounded AI or labelled template"]
 ```
 
-The human remains in control at two mandatory points: **requirement confirmation** (FR-REQ-04) and **finding triage**. The orchestrator can never execute a check derived from an unconfirmed requirement.
+The browser imports IDS specifications as confirmed checks; the reviewer must determine their
+suitability before import. Narrative candidate extraction and human confirmation are currently
+API-only and can bind only to an existing confirmed check. The orchestrator cannot execute an
+unconfirmed requirement. Report and BCF export are planned.
 
 ### 2.3 What the system is not
 
@@ -120,87 +127,46 @@ flowchart TB
         FE["Frontend SPA<br/>React · TypeScript · That Open Components"]
     end
     subgraph Backend["Backend process · Python 3.12 · FastAPI"]
-        API["HTTP API + SSE"]
+        API["Synchronous HTTP API"]
         ORCH["Review Orchestrator"]
         BIM["BIM Services<br/>IfcOpenShell · IfcTester"]
         STORE["Session Store<br/>local file system"]
     end
     LLM["Meta Model API<br/>api.meta.ai/v1 · muse-spark-1.3"]
-    Files["IFC · BEP · IDS files"]
+    Files["IFC · IDS · Markdown / TXT"]
 
     User -->|"uploads, objectives, triage"| FE
-    FE <-->|"JSON over HTTPS, SSE progress"| API
+    FE <-->|"JSON and IFC over local HTTP"| API
     Files --> FE
     API --> ORCH
     ORCH --> BIM
-    ORCH <-->|"tool-calling · structured output<br/>Bearer MODEL_API_KEY"| LLM
+    ORCH <-->|"structured plan, no callable tools"| LLM
     BIM --> STORE
     API --> STORE
 ```
 
-The **execution boundary** is the backend process. Only it holds the API key, reads IFC files, and calls the LLM. The browser receives derived JSON and loads the IFC a second time for geometry (see §12 for why).
+The **execution boundary** for review and model calls is the backend process, which alone holds
+the API key. The browser also receives the version-pinned IFC bytes to load geometry locally
+(§12); the model provider receives selected summaries or evidence, not the IFC file.
 
 ### 5.2 Backend components
 
 ```mermaid
 flowchart LR
-    subgraph api["api/"]
-        R1["sessions router"]
-        R2["model router"]
-        R3["requirements router"]
-        R4["review router + SSE"]
-        R5["findings · report router"]
-    end
-    subgraph orchestration["orchestration/"]
-        PL["Planner"]
-        TR["Tool Registry"]
-        LOOP["Tool-call loop<br/>iteration cap · schema validation"]
-    end
-    subgraph llm["llm/"]
-        CL["LLMClient protocol"]
-        META["MetaModelAPIClient<br/>openai SDK + base_url"]
-        MOCK["RecordingClient / FakeClient"]
-    end
-    subgraph bim["bim/"]
-        LOAD["IfcLoader"]
-        IDX["ModelIndex builder"]
-        Q["Inspection queries"]
-    end
-    subgraph requirements["requirements/"]
-        DOC["Document text extraction"]
-        EXT["Requirement extractor"]
-        IDSC["IDS compiler"]
-    end
-    subgraph validation["validation/"]
-        IDSR["IDS runner · ifctester"]
-        RULES["Native rule engine"]
-        NORM["Finding normaliser"]
-    end
-    subgraph investigation["investigation/"]
-        EVID["Evidence collector"]
-    end
-    subgraph reporting["reporting/"]
-        EXPL["Explainer"]
-        GRND["Grounding checker"]
-        REP["Report builder · Markdown · BCF"]
-    end
-    schemas["schemas/ · Pydantic domain models"]
-    store["store/ · SessionStore"]
-
-    api --> orchestration
-    api --> bim
-    api --> requirements
-    api --> reporting
-    orchestration --> TR
-    TR --> Q
-    TR --> validation
-    TR --> investigation
-    orchestration --> llm
-    requirements --> llm
-    reporting --> llm
-    validation --> bim
-    investigation --> bim
-    api --> store
+    API["API routes"] --> REQ["IDS import and narrative candidates"]
+    API --> BIM["IFC ingestion and Model Index"]
+    API --> ORCH["Synchronous bounded review"]
+    API --> EXPL["Explanation and provenance check"]
+    API --> STORE["Versioned session store"]
+    REQ --> VAL["IfcTester and native rule registry"]
+    ORCH --> VAL
+    ORCH --> CLIENT["LLMClient · Live / Replay / Off"]
+    EXPL --> CLIENT
+    VAL --> BIM
+    ORCH --> STORE
+    EXPL --> STORE
+    CLIENT --> META["Meta Model API<br/>Live only"]
+    SCHEMA["Pydantic contracts"] -.-> API
 ```
 
 ---
@@ -209,17 +175,17 @@ flowchart LR
 
 | Component | Responsibility | LLM? | Key dependencies |
 |---|---|---|---|
-| **api/** | HTTP surface, request validation, SSE progress stream, error mapping. No business logic. | No | FastAPI, Pydantic |
-| **schemas/** | Single source of truth for domain models (`Session`, `ModelSummary`, `ElementRef`, `Requirement`, `CheckSpec`, `Finding`, `Evidence`, `Explanation`, `Report`, `RunLog`). JSON Schema exported for tools and frontend types. | No | Pydantic v2 |
+| **api/** | HTTP surface, request validation and error mapping; review execution is synchronous. SSE remains planned. | No | FastAPI, Pydantic |
+| **schemas/** | Domain models including `Session`, `ModelSummary`, `Requirement`, `CheckSpec`, `Finding`, `ReviewRun` and `Explanation`; JSON Schema is exported for frontend types. `Report` and `RunLog` are planned. | No | Pydantic v2 |
 | **store/** | `SessionStore` — create/read session directories; stage, validate and publish content-addressed model versions under a per-session file lock; activate a version with one atomic write of the session record; recover abandoned staging (ADR-017). | No | stdlib |
-| **bim/** | Open IFC with IfcOpenShell; build `ModelIndex` (elements, psets, classifications, containment, types, materials, storey elevations, bounding boxes where cheap); read-only inspection queries used as tools. | No | ifcopenshell 0.9 |
+| **bim/** | Open IFC with IfcOpenShell and build a read-only `ModelIndex` of element identity, property sets, classifications, types and containment. Materials, storey elevations and bounding boxes are not indexed. | No | ifcopenshell 0.9 |
 | **requirements/** | Store IDS, Markdown and TXT sources; import IDS as confirmed requirements; propose quote-verified narrative candidates and bind only human-confirmed candidates to an existing confirmed `CheckSpec`. New narrative criteria are not authored. *Implemented (T-2/T-4/T-5 offline path).* | Yes (extraction) | validation/ |
 | **validation/** | Compile IDS 1.0 documents to `CheckSpec`s and hydrate them back; run IDS via IfcTester; run registered native rules; normalise to `Finding`. Pure functions of (ModelIndex, IFC file, CheckSpec). *Implemented (T-2): IDS compiler, runner and normaliser; T-4: `classification.consistent_by_type` v1.0.0.* | No | ifctester, xmlschema |
-| **investigation/** | Build `EvidenceBundle` per finding: element record, container, siblings and their status, property statistics, source requirement. | No | bim/ |
-| **orchestration/** | Filter optional objective plans to confirmed immutable check ids; execute synchronously with a deterministic default fallback and bounded checks. *Implemented (T-4/T-5 offline path); no free-running tool loop.* | Yes (planning) | llm/ |
+| **investigation/** | A richer `EvidenceBundle` with siblings and property statistics is planned; current explanation evidence is assembled from the pinned finding, requirement and model index. | No | bim/ |
+| **orchestration/** | Validate objective plans against confirmed immutable check ids and execute bounded checks synchronously. Strict AI failures publish no run; deterministic continuation is explicit or permitted by the optional API policy. *Implemented (T-4/T-5 offline path); no free-running tool loop.* | Yes (planning) | llm/ |
 | **llm/** | `LLMClient.complete(messages, response_model, max_output_tokens, purpose, run_id) -> Completion[T]`; `LiveClient` alone uses OpenAI SDK networking, `FakeClient` is in-memory, `RecordingClient` stores response data and a request hash (not prompts), `ReplayClient` is offline. Persistent spend ledger and token usage accounting. | — | openai ≥ 1.x |
 | **reporting/** | Produce separately labelled explanations from a verified `Finding`, matching requirement and pinned Model Index; validate element citations and values or return a deterministic template. Explanations are not stored in `findings.json`. *Implemented (T-5 offline path).* | Yes (prose) | schemas/ |
-| **frontend/** | Upload, requirement confirmation UI, objective input, progress, findings list and detail, 3D viewer with highlight sync, report view. | No | React, TS, @thatopen/* 3.6, three ≥ 0.182, web-ifc ≥ 0.0.77 |
+| **frontend/** | Upload and imported requirements, objective/scope, explicit continuation, findings, on-request explanations and 3D selection; recent-session IDs are stored locally. Narrative confirmation and report views remain planned. | No | React, TS, @thatopen/* 3.6, three ≥ 0.182, web-ifc ≥ 0.0.77 |
 | **tests/evaluation/** and **datasets/** | Benchmark generator (defect injection), ground truth, metrics runner, LLM replay fixtures. | Replay only | ifcopenshell.api |
 
 ---
@@ -228,7 +194,11 @@ flowchart LR
 
 ### 7.1 Why one orchestrator, not six agents
 
-The brief lists six logical responsibilities. Only three benefit from LLM reasoning (planning, requirement extraction, explanation). The remainder are deterministic services. **DECISION:** implement a single orchestrator with a typed, read-only tool registry, and treat the "Requirements Interpreter" and "Explainer" as separate structured-output calls outside the tool loop. Rationale: fewer LLM calls (NFR-05), simpler failure analysis, no inter-agent message protocol to debug in ten days. See [DECISIONS.md ADR-003](./DECISIONS.md#adr-003-single-orchestrator-with-typed-tool-registry).
+Planning, requirement extraction and explanation use separate structured-output calls. The
+implemented orchestrator selects and executes bounded, confirmed checks; it exposes no callable
+tools to the model. The more general typed tool registry in
+[ADR-003](./DECISIONS.md#adr-003-single-orchestrator-with-typed-tool-registry) remains an adopted
+design boundary, not an implemented model-directed tool loop.
 
 ### 7.2 Orchestration sequence
 
@@ -238,70 +208,60 @@ sequenceDiagram
     participant U as User
     participant API as FastAPI
     participant O as Orchestrator
-    participant L as Muse Spark
-    participant T as Tool Registry
+    participant L as AI client
     participant V as Validation
     participant X as Explainer
 
-    U->>API: POST /review {objective}
-    API->>O: start run (background task)
-    O->>O: load confirmed requirements, model summary
-    alt LLM enabled
-        O->>L: plan request (structured output ReviewPlan)
-        L-->>O: ReviewPlan {checks[], rationale}
-        O->>O: validate plan against registry and confirmed set
-    else LLM disabled or plan invalid
-        O->>O: default standard review plan
+    U->>API: POST review with objective and pinned scope
+    API->>O: synchronously load confirmed checks and model version
+    opt AI planning requested
+        O->>L: structured plan request
+        L-->>O: proposed check IDs and reasons
+        O->>O: validate schema, scope, uniqueness and caps
     end
-    loop each planned check (≤ cap)
-        O->>T: call tool (schema-validated args)
-        T->>V: execute IDS / native rule
-        V-->>T: Finding[]
-        T-->>O: results
-        O-->>API: SSE progress event
+    alt strict planning failure
+        O-->>API: typed failure; no run published
+        API-->>U: retry or explicitly continue without AI
+    else accepted plan or explicit deterministic continuation
+        loop each bounded check
+            O->>V: execute confirmed IDS or registered native rule
+            V-->>O: check result and deterministic findings
+        end
+        O->>API: atomically publish run and findings
+        API-->>U: terminal run and provenance
     end
-    O->>O: group findings, collect evidence
-    O->>X: explain groups (structured output)
-    X->>L: explanation request per group
-    L-->>X: Explanation
-    X->>X: grounding check → accept / regenerate once / template
-    O->>API: persist findings, explanations, run log
-    API-->>U: SSE complete {runId}
+    opt user requests an explanation for a published finding
+        U->>API: POST finding explanation
+        API->>X: verify pinned finding and evidence
+        opt supported AI request
+            X->>L: structured explanation request
+            L-->>X: explanation draft
+            X->>X: schema and deterministic grounding checks
+        end
+        X-->>U: labelled AI explanation or deterministic template
+    end
 ```
 
-### 7.3 Tool registry
+### 7.3 CheckSpec and native-rule registry
 
-Tools are plain Python functions with Pydantic argument and result models. The registry exports their JSON Schema to the LLM and validates arguments before execution (NFR-06).
-
-| Tool | Arguments | Returns | Side effects |
-|---|---|---|---|
-| `get_model_summary` | — | schema, counts by type, storeys, classification systems present, pset names present | none |
-| `list_confirmed_requirements` | — | requirement ids, titles, check types | none |
-| `query_elements` | `ifc_type`, optional `storey`, `name_pattern`, `limit` | `ElementRef[]` | none |
-| `get_element` | `global_id` | element record with psets, classification, container | none |
-| `run_ids_validation` | `requirement_ids[]` | `Finding[]` | writes findings to session |
-| `run_native_rule` | `rule_id`, `params` | `Finding[]` | writes findings to session |
-| `summarise_findings` | optional filters | counts by rule, severity, storey | none |
-
-**Design constraints**
-
-- All tools are **read-only with respect to the IFC** (C-04). Two tools write findings into the session store; that write is visible in the run log.
-- Hard caps: `MAX_TOOL_CALLS_PER_RUN` (default 12), `MAX_PLAN_CHECKS` (default 10), per-tool timeouts.
-- Unknown tool names and schema-invalid arguments are rejected, logged and surfaced as a plan error; they are never silently retried with model-generated corrections more than once.
-- The LLM never receives raw IFC content; it receives summaries, counts and bounded element lists.
+Imported IDS specifications and the explicitly registered
+`classification.consistent_by_type` v1.0.0 native rule are represented by immutable
+`CheckSpec`s. Server-side code resolves each confirmed check and its stored criteria; model
+output supplies neither executable code nor arguments. The runner enforces `MAX_PLAN_CHECKS`
+(default 10) and `MAX_TOOL_CALLS_PER_RUN` (default 12) as execution bounds, recording omitted
+checks as skipped. All execution is read-only with respect to the IFC. A model-callable
+inspection/execution tool registry and per-tool timeout machinery are not implemented.
 
 ### 7.4 Planner prompt contract
 
-The planner call uses structured output (JSON Schema, strict mode) with the `ReviewPlan` schema:
+The planner requests a provider-compatible JSON Schema without the optional strict flag; local
+Pydantic and plan validation remain authoritative. The `ReviewPlan` shape is:
 
 ```json
 {
-  "objective_summary": "string",
   "checks": [
-    {"tool": "run_ids_validation | run_native_rule", "arguments": {}, "reason": "string"}
-  ],
-  "out_of_scope": ["string"],
-  "assumptions": ["string"]
+    {"check_id": "confirmed-check-id", "reason": "why this check is relevant"}
+  ]
 }
 ```
 
@@ -309,7 +269,13 @@ The orchestrator then **filters** the plan against current confirmed checks and 
 
 ### 7.5 Protocol choice
 
-**DECISION:** use the Chat Completions protocol (`POST /v1/chat/completions`) through the `openai` Python SDK with `base_url="https://api.meta.ai/v1"`. The client requests JSON-object mode and validates the returned schema locally. **PROPOSAL:** evaluate the Responses API if cross-turn reasoning replay proves useful for multi-step planning. Model default: `muse-spark-1.3`; configuration may select other non-Contributor ids, subject to owner approval and current pricing. One basic live smoke is owner-reported; provider-side strict JSON-schema support and live BIM workflows remain unverified.
+**DECISION:** use Chat Completions (`POST /v1/chat/completions`) through the `openai` Python SDK
+at `https://api.meta.ai/v1`. FIX-002 requests non-strict JSON Schema with
+`max_completion_tokens` and low reasoning effort for planning; FIX-003 applies a separate
+allowance and low reasoning effort to explanations. Local validation is retained. VERIFY-009
+accepted a plan but exhausted the former explanation allowance; VERIFY-010 accepted both a
+plan and grounded explanation on one synthetic example. Strict provider-side schema support,
+broader reliability and the Responses API remain unverified.
 
 ### 7.6 T-5 implementation boundary
 
@@ -319,9 +285,18 @@ The default `BIMI_ENVIRONMENT=development` and `LLM_MODE=off` construct no live 
 
 Planning takes an optional review objective and may return only unique confirmed `CheckSpec` ids with explanations. An objective requires an accepted AI plan by default. A caller may explicitly set `ai_required=false` to permit deterministic fallback after a provider or plan failure, or set `continue_without_ai=true` to deliberately skip planning and run the deterministic plan. Unsupported scope is a typed 422 and is never broadened to the default plan. Optional `selected_checks` constrain planning and execution to current confirmed checks, each pinned to its `requirement_id`, `check_id` and `requirement_revision`; stale selections are rejected before execution. Strict failures return safe typed metadata and publish no run or findings. Each published run records planning mode, actual model when available, whether a provider request was attempted, outcome, fallback reason, selected scope and executed check ids. Historical runs remain readable with `provenance=null` and are not assigned a mode from current settings. Requirements extraction and explanations use separate structured requests, not calls in a model-directed tool loop.
 
-Muse Spark Standard prices are configurable in `Settings` (input, cached input and output USD per million tokens). Before each request the application estimates input from UTF-8 bytes plus message overhead and reserves the full output cap. The default input target is 8,000 tokens, output cap 500, per-review call cap two, per-call and per-review budget USD 0.10, and cumulative project ledger USD 5. The ledger persists under `DATA_DIR/llm/`, uses a cross-process file lock, charges the full reservation when usage is unavailable, and reconciles provider usage when returned. Corrupt or unavailable accounting fails closed. These are **application-level safeguards**, not provider-enforced account spending caps; deleting runtime data or using another application is outside this control. Safe aggregate status is available at `GET /api/v1/llm/budget`; prompts and credentials are not returned.
-
-The currently implemented request size at the configured ceiling estimates to USD 0.012125 uncached at the default published rates. No live call has been made, so Meta compatibility with this model, endpoint and structured-output schema remains unverified. An owner-approved one-request smoke test is required to resolve that risk; see [ADR-020](./DECISIONS.md#adr-020-t-5-meta-client-spend-ledger-and-human-gates) and OQ-02/OQ-07.
+Muse Spark Standard prices are configurable in `Settings` (input, cached input and output USD
+per million tokens). Before each request the application estimates input from UTF-8 bytes plus
+message overhead and reserves the full output cap. The default input target is 8,000 tokens;
+planning and explanations each allow 2,000 completion tokens, while other workflows allow 500.
+The limits remain two calls per review, USD 0.10 per call and per review, and USD 5 per project
+ledger. The ledger under `DATA_DIR/llm/` uses a cross-process file lock, charges the full
+reservation when usage is unavailable and reconciles returned usage. Corrupt or unavailable
+accounting fails closed. These are **application-level safeguards**, not provider billing caps.
+Safe aggregate status is available at `GET /api/v1/llm/budget`; prompts and credentials are not
+returned. At configured Standard rates, the uncached 8,000/2,000 reservation is USD 0.01850.
+See [ADR-020](./DECISIONS.md#adr-020-t-5-meta-client-spend-ledger-and-human-gates) and
+[EVALUATION §8](./EVALUATION.md#8-results).
 
 ---
 
@@ -337,12 +312,11 @@ flowchart TB
     I --> I2["Psets and Qtos via util.element.get_psets"]
     I --> I3["Classification references"]
     I --> I4["Spatial containment via util.element.get_container"]
-    I --> I5["Type objects · materials"]
-    I --> I6["Storeys with elevation"]
-    I1 & I2 & I3 & I4 & I5 & I6 --> P["Persist model_index.json<br/>+ model_summary.json"]
+    I --> I5["Type references · storey names"]
+    I1 & I2 & I3 & I4 & I5 --> P["Persist model_index.json<br/>+ model_summary.json"]
     P --> V["Validation"]
     V --> V1["IDS runner<br/>ifctester specs.validate"]
-    V --> V2["Native rules<br/>naming · classification · containment · identifiers"]
+    V --> V2["Registered native rule<br/>classification consistency"]
     V1 & V2 --> N["Finding normaliser"]
     N --> F["findings.json"]
 ```
@@ -361,7 +335,7 @@ The Model Index is a denormalised JSON snapshot built once per upload. It exists
 
 IfcTester is the reference IDS 1.0 implementation maintained alongside IfcOpenShell. The design: load the IDS (`ifctester.ids.open`) or build it from confirmed requirements, call `specs.validate(ifc_file)`, walk specification → requirement → failed entities and emit one `Finding` per (requirement, entity), and keep IfcTester's JSON report available for cross-checking (FR-VAL-01 acceptance).
 
-**Implemented (T-2/T-4, `validation/`, `requirements/`, `orchestration/`; [ADR-018](./DECISIONS.md#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock), [ADR-019](./DECISIONS.md#adr-019-t-4-native-rule-scope-and-bounded-deterministic-execution)).** The slice refines that design in three places:
+**Implemented (T-2/T-4, `validation/`, `requirements/`, `orchestration/`; [ADR-018](./DECISIONS.md#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock), [ADR-019](./DECISIONS.md#adr-019--t-4-native-rule-scope-and-bounded-deterministic-execution)).** The slice refines that design in three places:
 
 1. **Import compiles, it does not keep the document executable.** `validation.compile_ids` validates the upload against IfcTester's bundled IDS 1.0 XSD (loaded with remote schema imports disabled, so no outbound request is made) and turns every `<specification>` into one immutable `CheckSpec` whose payload is the element in XML Canonical Form with indentation removed; `rule_version` is the content hash of that payload and `rule_id` is `ids:<identifier or name>`. `requirements.import_ids_document` wraps each check in a `Requirement` with `origin="ids"`, `status="confirmed"`, `revision=confirmed_revision=1` and a `source` whose `quote` is the verbatim specification name, stores the document under `documents/{sha256}.ids`, and is idempotent on content (FR-REQ-05).
 2. **Each check is hydrated from its own payload and run in isolation.** `validation.run_ids_check` re-checks that the payload still hashes to `rule_version`, decodes it through the same XSD into a single-specification `ifctester.ids.Ids`, calls `Ids.validate(model)` (IfcTester's public entry point, which also resets its property caches) and normalises the result. A specification whose `ifcVersion` does not list the model's schema is `skipped`, not run; a required or optional specification with no applicable entity is `not_applicable`; a prohibited specification yields one `prohibited_entity` finding per matching entity; any exception raised inside the engine — or a check whose payload was altered after confirmation — is `error` with the message in `diagnostics`, and the next check still runs. Findings carry IfcTester's own `reason` as `observed`, the facet's rendered requirement text as `expected`, a `category` derived from the facet type (`property_requirement`, `classification_requirement`, …) and the element reference taken from the Model Index of the same version, so the viewer, `GET /elements/{globalId}` and `findings.json` agree by construction. The unit tests cross-check the normalised findings against `ifctester.reporter.Json` element for element.
@@ -421,7 +395,9 @@ flowchart LR
 - **Human confirmation** is a distinct API request. It can only bind a proposed candidate to the same already-confirmed check id; review execution still requires the resulting confirmed `Requirement`.
 - **Confidence** is model self-report only and never auto-confirms a candidate.
 
-**PROPOSAL:** chunked extraction for long BEPs is unnecessary given the 1M-token context of Muse Spark, but token cost scales with document length; the extractor should accept a page/section range filter.
+**PROPOSAL:** chunked extraction or a section-range filter for long BEPs is not implemented. The
+application currently limits each request to 8,000 estimated input tokens even if the provider
+advertises a larger context; an oversized document can therefore be rejected before a request.
 
 ---
 
@@ -431,23 +407,23 @@ flowchart LR
 
 ```mermaid
 erDiagram
-    SESSION ||--|| MODEL : contains
+    SESSION ||--o{ MODEL_VERSION : contains
     SESSION ||--o{ DOCUMENT : contains
     SESSION ||--o{ REQUIREMENT : contains
     SESSION ||--o{ REVIEW_RUN : contains
     DOCUMENT ||--o{ REQUIREMENT : "is source of"
-    REQUIREMENT ||--|| CHECK_SPEC : "compiles to"
+    REQUIREMENT ||--o| CHECK_SPEC : "references"
     REVIEW_RUN ||--|| REVIEW_PLAN : executes
     REVIEW_RUN ||--o{ CHECK_RESULT : records
     CHECK_RESULT ||--o{ FINDING : lists
     REVIEW_RUN ||--o{ FINDING : produces
     FINDING }o--|| REQUIREMENT : violates
     FINDING ||--o{ ELEMENT_REF : affects
-    FINDING ||--|| EVIDENCE_BUNDLE : "is supported by"
     FINDING ||--o| EXPLANATION : "is explained by"
-    REVIEW_RUN ||--|| REPORT : summarised_in
-    REVIEW_RUN ||--|| RUN_LOG : logged_in
 ```
+
+The explanation is an on-request response, not an immutable finding or a persisted report.
+`EvidenceBundle`, `Report` and a dedicated `RunLog` remain planned.
 
 ### 10.2 Core schemas
 
@@ -481,7 +457,8 @@ Every finding can be traced in both directions:
 
 `Document paragraph → Requirement (quote) → CheckSpec (IDS XML or rule+params) → Finding (observed/expected, method, rule version) → ElementRef (GlobalId) → Explanation (cited ids ⊆ evidence)`
 
-The report's traceability matrix is generated from these links; nothing in the report is hand-written.
+The run manifest and finding records preserve the implemented links. A complete report and its
+traceability matrix are not yet generated.
 
 ### 10.4 Grounding check
 
@@ -507,7 +484,7 @@ Base path `/api/v1`. JSON everywhere; errors follow a single `ProblemDetail` sch
 
 | Method | Path | Purpose | Requirement |
 |---|---|---|---|
-| `GET` | `/health` ✓ | Liveness, versions, LLM reachability flag (no key exposure) | NFR-09 |
+| `GET` | `/health` ✓ | Liveness, versions and safe configuration diagnostics, including mode and key-configured boolean; no provider reachability check or key exposure | NFR-09 |
 | `POST` | `/sessions` ✓ | Create review session; 201 with `Location` | — |
 | `GET` | `/sessions/{sid}` ✓ | Session status and model hash (never paths) | — |
 | `POST` | `/sessions/{sid}/model` ✓ | Upload IFC (multipart, `.ifc` only, ≤ `MAX_IFC_MB`); returns `ModelSummary` with `ETag` = the new version's quoted SHA-256; 409 `model-locked` while another upload is in progress; 413/415/422 as `ProblemDetail`; re-upload replaces the active version atomically (ADR-017) | FR-ING-01..03 |
@@ -532,13 +509,18 @@ Base path `/api/v1`. JSON everywhere; errors follow a single `ProblemDetail` sch
 | `GET` | `/sessions/{sid}/reviews/{runId}/report?format=json\|md` | Report | FR-REP-01 |
 | `GET` | `/sessions/{sid}/reviews/{runId}/report?format=bcf` | BCF 3.0 zip (P2) | FR-REP-03 |
 
-**Asynchrony.** Review runs are designed to execute as FastAPI `BackgroundTasks` in the same process with progress pushed over Server-Sent Events. **DECISION:** no task queue in the MVP. *Implemented (T-2/T-4):* the bounded deterministic IDS/native default review runs synchronously inside the request and returns the terminal run; the background-task and SSE path is added when planner and explanation work makes runs long enough to need it. **PROPOSAL:** if IFC indexing of large models blocks the event loop, move `bim/` work to a `ProcessPoolExecutor`.
+**Asynchrony.** The current bounded review is synchronous and returns a terminal run; it does
+not stream progress. [ADR-013](./DECISIONS.md#adr-013-fastapi-background-tasks-and-sse-no-task-queue)
+adopts same-process background tasks and SSE, so this is an implementation gap, not a revised
+decision. A process pool for large-model indexing remains a proposal.
 
 **CORS.** The browser may send `If-Match` and `If-None-Match`; neither is a CORS-safelisted request header, so both are in the preflight allow-list alongside `Content-Type` and `X-Correlation-ID`, and `ETag` is exposed to scripts. *Implemented (T-2, regression test `tests/unit/api/test_cors.py`).*
 
 **Authentication.** None in the MVP (localhost only). The API must refuse to start bound to a non-loopback interface unless `ALLOW_REMOTE=true` is set, to prevent accidental exposure of uploaded project files.
 
-The review workspace can initiate a review (the **Run review** action; introduced in T-4 as "Run standard review") for its session. It first reads the model summary, sends its ETag as `If-Match`, then loads the returned run and findings through the existing version-pinned endpoints. The workspace shows the run status and per-check outcomes, including diagnostics for skipped, not-applicable and error checks.
+The guided workspace submits the selected confirmed-check revisions and model ETag. Strict AI
+failure offers retry or explicit deterministic continuation. The returned run and findings are
+loaded through version-pinned endpoints, with per-check outcomes and provenance.
 
 ---
 
@@ -547,13 +529,12 @@ The review workspace can initiate a review (the **Run review** action; introduce
 ```mermaid
 flowchart TB
     subgraph App["React application"]
-        ST["Review store<br/>Zustand · session · requirements · findings · selection"]
-        UP["Upload panel"]
-        RQ["Requirements panel<br/>confirm · edit · reject"]
-        OB["Objective input + progress"]
+        ST["React state<br/>session · requirements · findings · selection"]
+        UP["Project Home and upload"]
+        RQ["Imported requirements and scope"]
+        OB["Objective dock and explicit continuation"]
         FL["Findings list + filters"]
         FD["Finding detail<br/>evidence · source quote · AI explanation"]
-        RP["Report view"]
         VW["Viewer component"]
     end
     subgraph TOC["That Open Components 3.6"]
@@ -569,7 +550,6 @@ flowchart TB
     OB --> API
     API --> ST
     ST --> FL --> FD
-    ST --> RP
     ST <-->|"selected GlobalIds"| VW
     VW --> W
     VW --> IL --> FM
@@ -585,15 +565,22 @@ flowchart TB
 
 ### 12.2 States to handle
 
-Every panel renders loading, empty, error and success states. Degraded mode (LLM unavailable) is shown as a persistent banner; AI explanations are labelled; deterministic findings carry a "verified by rule `<id> v<version>`" chip (FR-EXP-05).
+The workspace exposes loading, empty, error and result states, per-check coverage and actual
+plan/explanation source. AI-planning failures offer an explicit choice rather than silently
+asserting success. A full accessibility and all-state audit remains outstanding.
 
 ### 12.3 T-3 viewer and T-4 review entry point
 
-The T-3 workspace uses the existing model, review-run, findings and element endpoints. T-4 adds a **Run standard review** action (labelled **Run review** since UI-003, which also replaced manual session/run-id entry with a Project Home that creates sessions and uploads models and documents through the existing endpoints): it reads the model summary, sends its ETag as `If-Match` to the review endpoint, then loads that returned run and findings through the existing version-aware client. A review run is accepted only when its session and immutable `input_manifest.model_hash` match the active model summary. The model file and subsequent element lookups use that summary's `If-Match` ETag, and the summary is rechecked after loading the model and findings. A mismatch fails visibly instead of combining data from different model versions.
+The workspace uses the model, review-run, findings and element endpoints. Project Home creates
+sessions, uploads inputs and reopens browser-local recent session/run identifiers. UI-008 adds
+the objective dock and revision-pinned scope. A review run is accepted only when its session
+and immutable `input_manifest.model_hash` match the active model summary. The model file and
+subsequent element lookups use that summary's `If-Match` ETag, and the summary is rechecked
+after loading the model and findings. A mismatch fails visibly instead of combining versions.
 
 The findings list highlights the finding's affected GlobalIds with a dedicated deterministic viewer style. Selecting a rendered object resolves its GlobalId, loads that element's record and selects the first matching finding in the API's canonical order. Element details show identity, storey and a bounded property list with inherited-value provenance. Empty findings, loading, API/version errors and viewer-load errors are exposed in the interface.
 
-Viewer-specific imports remain inside `frontend/src/viewer/`, and the viewer module is code-split and loaded when a review workspace opens. The Fragments worker is bundled from `@thatopen/fragments/worker?url`; `predev` and `prebuild` copy the pinned `web-ifc` WASM files into ignored `frontend/public/web-ifc/`, and the IFC loader is configured to read them from `/web-ifc/`. The IFC remains read-only. The T-4 action starts the bounded synchronous default review; the workspace displays run status and per-check outcomes while preserving T-3 model selection and finding highlights.
+Viewer-specific imports remain inside `frontend/src/viewer/`, and the viewer module is code-split and loaded when a review workspace opens. The Fragments worker is bundled from `@thatopen/fragments/worker?url`; `predev` and `prebuild` copy the pinned `web-ifc` WASM files into ignored `frontend/public/web-ifc/`, and the IFC loader is configured to read them from `/web-ifc/`. The IFC remains read-only. Fit, Reset, Focus and bidirectional finding/element selection are implemented; the Model Browser lists readable storeys rather than a complete element tree.
 
 **Verification evidence (29 October 2026).** The minimal fixture rendered in the browser; selecting its W-002 finding highlighted the corresponding wall and displayed GlobalId `0QWMtUzsnUUONCUGc8Sqsa`. Clicking the model selected W-001 and then W-002, populated element details, and restored the matching finding when the affected wall was clicked. Frontend API and selection coordination tests are recorded in the T-3 task entry in `docs/IMPLEMENTATION_PLAN.md`.
 
@@ -642,15 +629,15 @@ Viewer-specific imports remain inside `frontend/src/viewer/`, and the viewer mod
 | Explanation requested for a finding the run did not record | 404 `finding-not-found`; nothing is explained. *Implemented (T-5).* |
 | Explanation evidence disagrees with the run (other session, changed requirement revision or check, rejected requirement, source outside the manifest, missing or altered model version) | 409 `explanation-provenance-mismatch`; no evidence is sent to the model. *Implemented (T-5).* |
 | Explanation `If-Match` names a model version other than the run's | 412 `model-version-mismatch` naming the run's model version. *Implemented (T-5).* |
-| Plan contains unknown, duplicate, unconfirmed or excess check | The entire proposal is rejected and the deterministic default plan is used; execution still resolves check ids server-side. |
+| Plan contains unknown, duplicate, unconfirmed or excess check | Reject the proposal; strict requests publish no run. A deterministic default is used only when the caller explicitly permits fallback or continues without AI. |
 | `MAX_PLAN_CHECKS` or `MAX_TOOL_CALLS_PER_RUN` reached | Every confirmed check not executed within a cap is recorded as `CheckResult.status="skipped"`; the run ends `partial`, never `completed`. *Implemented (T-4).* |
 | Grounding failure or multi-element finding | AI text is discarded and a deterministic explanation template is returned; explanations are not written to `findings.json`. *Implemented (T-5).* |
-| Live request exceeds a budget or input/output cap | Reject before network access. Planning is capped at 2,000 completion tokens; other workflows remain capped at 500. The persistent ledger prevents concurrent reservations from reusing allowance. |
+| Live request exceeds a budget or estimated input cap | Reject before network access. Planning and explanation have 2,000-token completion caps; other workflows have 500. A provider response that exhausts its completion cap is classified as `token_limit`. The ledger prevents concurrent reservations from reusing allowance. |
 | Provider usage is missing | Charge the maximum reservation and fail closed for the request. |
 | Budget ledger is corrupt, unavailable or locked | Live requests and budget-status diagnostics fail closed; no implicit fresh ledger is created over unreadable state. |
 | Live provider error or timeout | SDK retries default to zero; only a sanitized error type is surfaced. A reservation is conservatively charged if usage is unavailable. |
 | IDS or native check exception | That check's `CheckResult.status="error"` with the message in `diagnostics`; no finding is created; later checks continue and the run ends `partial`. *Implemented (T-2/T-4).* |
-| Frontend fails to load IFC | Findings list and report remain usable; viewer shows error and retry. |
+| Frontend fails to load IFC | The viewer exposes an error and retry; no report surface is implemented. |
 
 All errors are structured (`ProblemDetail`) with `type = https://github.com/natnew/BIM-Intelligence/problems/<slug>` (the same non-resolving, project-scoped URI convention as the schema bundle's `$id`) and are written to the run log with correlation id = `runId` once runs exist.
 
@@ -661,7 +648,8 @@ All errors are structured (`ProblemDetail`) with `type = https://github.com/natn
 - **Budget ledger** (`DATA_DIR/llm/budget.json`) records request ids, run ids, input/output/cached token counts when reported, estimates, actual calculated costs, model and outcome. It stores no prompts or API key. Writes and reservations are lock-protected.
 - **Safe diagnostics** (`GET /api/v1/llm/budget`) expose only project budget, spend, active reservation total, remaining amount and request count. They do not expose prompts, model output or key state.
 - **Replay** — recordings store a request hash rather than raw prompts and a validated/scrubbed response. Recordings live under an ignored runtime path; Replay reads them offline.
-- **Health endpoint** reports configuration presence only; it performs no model network call and never returns `MODEL_API_KEY`.
+- **Health endpoint** reports service and library versions, configured mode and model, and a
+  key-configured boolean. It performs no model network call and never returns `MODEL_API_KEY`.
 - **PROPOSAL:** OpenTelemetry tracing is unnecessary for the MVP; the run log is sufficient and inspectable.
 
 ---
@@ -676,18 +664,21 @@ flowchart LR
     GEN --> IFC["benchmark.ifc"]
     IFC --> RUN["run_eval.py<br/>ReplayClient or FakeClient"]
     GT --> RUN
-    RUN --> M["metrics.json<br/>precision · recall per rule<br/>grounding rate · tool validity · cost"]
+    RUN --> M["results.json<br/>precision · recall · controls<br/>offline safety checks"]
 ```
 
 | Layer | Tooling | What it proves |
 |---|---|---|
-| Unit | pytest | Model Index correctness vs direct IfcOpenShell reads; each native rule on hand-built fixtures; IDS compiler output validates against XSD; grounding checker on adversarial cases; tool registry rejects bad calls; config rejects contributor models. |
-| Scenario | pytest + FakeClient | End-to-end review on the benchmark with a scripted plan; default plan with LLM disabled; degraded-mode behaviour. |
+| Unit | pytest | Exercises Model Index construction, the registered native rule, IDS validation, plan filtering, grounding and configuration boundaries on the covered fixtures. A model-callable tool registry is not implemented. |
+| Scenario | pytest + FakeClient | Exercises fixture review, scripted plans and documented offline failure paths; the evidence is limited to the recorded scenarios. |
 | Benchmark | `tests/evaluation/run_eval.py` | Precision/recall per rule category against ground truth (NFR-02); determinism across two runs (NFR-01). |
-| Agent reliability | recorded live runs, replayed | Plan validity rate, tool-call schema validity, grounding pass rate, token cost per run. |
-| Frontend | Vitest + React Testing Library; Playwright smoke | Findings panel states; viewer loads benchmark and highlights a known GlobalId. |
+| AI integration | Fake/Replay client tests and recorded live observations | Offline contract checks and the individually recorded smoke, VERIFY-009 failure and VERIFY-010 pass; no general plan-validity rate or model-callable-tool measurement is established. |
+| Frontend | Vitest + React Testing Library; recorded browser walkthrough | Panel and mocked-viewer behaviour plus fixture-based browser observations. The required Playwright benchmark smoke remains outstanding. |
 
-Default pytest and CI must not make live requests. The smoke test is marked `live` and requires both `-m live`, `BIMI_LIVE_LLM=1` and the per-session approval token `BIMI_LIVE_APPROVAL=T5-META-MUSE-SPARK-SMOKE`, plus valid live settings. None of those authorisations has been supplied or exercised for this implementation.
+Default pytest and CI must not make live requests. The smoke test is marked `live` and requires
+`-m live`, `BIMI_LIVE_LLM=1`, the per-session approval token
+`BIMI_LIVE_APPROVAL=T5-META-MUSE-SPARK-SMOKE` and valid live settings. Earlier approvals applied
+only to their recorded sessions; they do not authorise another request.
 
 ---
 
@@ -700,8 +691,8 @@ Default pytest and CI must not make live requests. The smoke test is marked `liv
 | LLM calls per review | At most two live calls, enforced by the persistent ledger; extraction calls are bounded by the cumulative project budget and per-request caps. No model-directed loop or parallel live call. |
 | Token caps | Input target ≤ 8,000 estimated tokens per request. Output ≤ 500 tokens by default; objective planning (`LLM_MAX_PLANNING_OUTPUT_TOKENS`) and finding explanations (`LLM_MAX_EXPLANATION_OUTPUT_TOKENS`) each allow ≤ 2,000 tokens at low reasoning effort. Input is estimated from UTF-8 bytes plus message overhead; exceeding the target is rejected before the request. |
 | Configured pricing | Muse Spark Standard defaults: $1.25/M uncached input, $0.15/M cached input and $4.25/M output. Recheck [Meta's published pricing](https://dev.meta.ai/docs/pricing-rate-limits) before enabling live mode. Values are configuration, not constants in the accounting engine. |
-| Worst-case request estimate | 8,000 uncached input tokens plus 500 output tokens = **$0.012125**; a 2,000-token planning or explanation request = **$0.01850**, and one of each within a review = **$0.03700**. Default per-call/per-review application limit is $0.10; cumulative project ledger is $5.00. Actual provider usage is reconciled; if usage is missing, the reserved estimate is charged. |
-| Safeguard limitation | The ledger is an application control, not a provider-enforced account cap or billing guarantee. It cannot constrain spend made outside this application or after local runtime data is deliberately removed. No live usage has been measured. |
+| Worst-case request estimate | 8,000 uncached input tokens plus 500 output tokens = **$0.012125**; a 2,000-token planning or explanation request = **$0.01850**, and one of each within a review = **$0.03700**. Default per-call/per-review application limit is $0.10; cumulative project ledger is $5.00. Provider-reported usage is reconciled; if usage is missing, the reserved estimate is charged. |
+| Safeguard limitation | The ledger is an application control, not a provider-enforced account cap or billing guarantee. It cannot constrain spend made outside this application or after local runtime data is deliberately removed. Recorded live usage is scoped to the approved observations in [EVALUATION §8](./EVALUATION.md#8-results), not independently verified provider billing. |
 
 ---
 
@@ -710,7 +701,7 @@ Default pytest and CI must not make live requests. The smoke test is marked `liv
 | Option | When | Notes |
 |---|---|---|
 | **Local development (DECISION for hackathon)** | All development and the live demo | `uvicorn` on `127.0.0.1:8000`, Vite dev server on `5173` proxying `/api`. Single machine, no auth. |
-| Docker Compose | Reproducible judge/review environment | Two containers (backend, frontend static via nginx). Backend image must use `python:3.12` (IfcOpenShell wheels). Optional for submission. |
+| Docker Compose (proposal; not implemented) | Possible reproducible judge/review environment | Would require backend and frontend container configuration and separate verification. The proposed backend image would use `python:3.12` (IfcOpenShell wheels). |
 | Static frontend + hosted backend | Post-hackathon | Requires auth, object storage for IFC, process isolation for IfcOpenShell, and a task queue. Explicitly **out of scope** (brief §10: no production deployment). |
 
 ---
@@ -726,13 +717,13 @@ Full register: [RISKS.md](./RISKS.md). Top architectural risks:
 | LLM proposes invalid plans or fabricates facts | Plan filtering, schema validation, grounding checker, default plan, templated explanations. |
 | Requirement extraction quality on free-form BEP text | Verbatim quote check, human confirmation, IDS upload path as a bypass. |
 | Hackathon rules unverified (model usage, submission format) | Tracked as OPEN-02; architecture already centres on Meta models. |
-| Cost overrun from repeated live runs | Replay client for tests; token budget per run; explanation cache. |
+| Cost overrun from repeated live runs | Replay client for tests; fail-closed reservations, per-review call and spend limits; on-request explanations. |
 
 ---
 
 ## 20. MVP boundaries and future extensions
 
-### In scope (MVP, P0)
+### Intended MVP scope (P0; not all implemented)
 
 - One architectural IFC (IFC2X3 or IFC4), one simplified BEP, one IDS.
 - Requirement extraction with confirmation; IDS and native validation for required properties, naming and classification.
@@ -762,14 +753,14 @@ Full register: [RISKS.md](./RISKS.md). Top architectural risks:
 BIM-Intelligence/
 ├── backend/
 │   └── bim_intelligence/
-│       ├── api/              # FastAPI routers, request/response models, SSE
-│       ├── orchestration/    # planner, tool registry, tool loop, prompts/
+│       ├── api/              # FastAPI routers and request/response models; SSE planned
+│       ├── orchestration/    # planner, bounded runner and prompts/
 │       ├── llm/              # LLMClient protocol, Meta Model API client, fake, recording/replay
 │       ├── bim/              # IFC loading, ModelIndex, inspection queries
 │       ├── requirements/     # document text extraction, extractor, IDS import → Requirement
 │       ├── validation/       # IDS compiler and runner, native rules, finding normaliser
-│       ├── investigation/    # evidence collector
-│       ├── reporting/        # explainer, grounding, report builder, BCF export
+│       ├── investigation/    # richer evidence collector planned
+│       ├── reporting/        # explainer and grounding; report/BCF planned
 │       ├── schemas/          # Pydantic domain models (single source of truth)
 │       ├── store/            # SessionStore
 │       ├── config.py         # Settings (pydantic-settings), model-id validation
@@ -793,8 +784,8 @@ BIM-Intelligence/
 │   └── evaluation/           # run_eval.py, LLM recordings for replay, runs/ (git-ignored)
 ├── datasets/
 │   ├── generate.py           # synthetic benchmark generator and defect injector
-│   ├── synthetic/            # committed benchmark IFC, IDS, BEP and ground truth
-│   └── permitted/            # openly licensed samples with recorded licences
+│   ├── synthetic/            # generated benchmark outputs are ignored
+│   └── permitted/            # reserved for rights-verified samples
 ├── docs/
 ├── .github/                  # CI workflows, PR template, Dependabot
 ├── data/                     # git-ignored runtime sessions
@@ -949,12 +940,8 @@ not the later test-harness result.
 
 ### 21.6 Sample and private-data boundary
 
-`examples/` does not exist on the checked-out baseline. If a rights-cleared example is approved,
-use it for tracked manifests, attribution/provenance, preparation instructions and only genuinely
-redistributable small assets. Do not broaden binary IFC allow-lists or copy private models merely
-to populate that directory. Keep private IFCs, evaluation inputs and unapproved third-party assets
-in the owner-managed, git-ignored `local-private/` layout; no placeholder directories are created.
-The preferred external federation candidate is Duplex Apartment, subject to model compatibility
-and explicit rights verification. The one-click synthetic demo is the safe fallback and must
-identify its inputs as synthetic; it does not demonstrate federation unless two separately
-verified models and an actual clash run are present.
+`examples/` now contains descriptions, draft IDS files and other assets, but no tracked IFC
+models; applicability and redistribution rights remain to be verified. Do not broaden binary
+IFC allow-lists or copy private models merely to populate that directory. The manually uploaded
+synthetic fixture is the available fallback; a one-click sample is not implemented. Neither it
+nor the FED-001 harness demonstrates integrated federation or clash detection.

@@ -17,7 +17,8 @@ The benchmark checks whether the current deterministic review path:
 
 Fake/Replay checks separately exercise the existing T-5 offline safety contract. They do not measure
 live model relevance, structured-output reliability, explanation quality or token economics.
-Nothing in this evaluation makes a live Meta Model API request.
+The benchmark runner makes no live Meta Model API request. Separate, explicitly authorised
+historical live observations are recorded in §8.
 
 The accuracy target remains **at least 90% precision and 90% recall** (NFR-02). It has not been
 changed to fit the result.
@@ -229,10 +230,75 @@ no network or Meta API requests.
 
 ## 8. Results
 
-**Recorded run:** 29 October 2026, 20:09 UTC; Python 3.12.12, IfcOpenShell 0.9.0.post1, IfcTester
+**Evidence boundaries:** VERIFY-009 **failed** its live acceptance rubric; VERIFY-010 later
+**passed one synthetic live scenario** on the final source baseline. Neither result changes the
+other. Offline tests, provider-stub tests, user-observed live results and browser checks are
+distinguished below; no new paid request was made for this documentation reconciliation.
+
+**Recorded benchmark run:** 29 October 2026, 20:09 UTC; Python 3.12.12, IfcOpenShell 0.9.0.post1, IfcTester
 0.9.0; source commit `99d04633c517c052f80f87b5f7fb6f2ec640e909`. The working tree was dirty because
 T-6 changes were being evaluated; the recorded source commit is the base commit, not a claim that
 the working tree was committed. GitHub-hosted CI evidence is outstanding.
+
+### Manual Evaluation Run 3 and FIX-001 diagnostics (3 November 2026)
+
+The owner-reported manual evaluation made five live planning requests. Each exhausted its
+500-token completion allowance and returned no visible content; parsing, schema validation and
+plan filtering were not reached. The original finish reasons and reasoning-token counts were
+not captured. FIX-001 identified the failure stage, but reasoning exhaustion remained a
+hypothesis rather than a confirmed cause; the evidence does not establish a malformed output
+schema. The diagnostic work examined the baseline at
+`cbb4361612bbdeb40d6a4c4530e1773db041544d`; the original requests' exact source commit was not
+independently established in that report. Raw responses and private evidence are not reproduced.
+
+### VERIFY-009 live acceptance — FAIL (3 November 2026)
+
+On owner-approved candidate `b95dadbe2d0475aa3c107227a9d0af2cae2c2c47`, exactly two live
+requests with no retries used the committed synthetic IFC/IDS fixture:
+
+| Step | Recorded result |
+|---|---|
+| Planning | **Passed:** `muse-spark-1.3` selected the confirmed fire-rating check; `finish_reason=stop`, 579 input and 259 completion tokens, including 207 reasoning tokens. The deterministic check produced the expected W-002 finding. |
+| Explanation | **Failed:** `finish_reason=length`, 500 completion tokens including 498 reasoning tokens, with no visible content. Schema validation and grounding were not reached. A deterministic template was returned, but its cause was incorrectly presented as `budget_limit` despite no monetary/call-limit refusal. |
+| Overall | **FAIL** under the VERIFY-009 rubric. The application ledger recorded USD 0.00545325 for the two requests; this is not independently verified provider billing. |
+
+FIX-003 addressed the observed explanation allowance and labelling, not the failed test's
+historical outcome. No additional call is authorised by this record.
+
+### VERIFY-010 live planning and grounded explanation (3 November 2026)
+
+**PASS — one owner-approved synthetic scenario**, on merged `main`
+`588e6adf9ca71079eadc0e5b33422dc6605df743` after FIX-003. The integrated browser submitted an
+objective against the committed synthetic IFC/IDS pair. Exactly two provider requests were
+made, with no retries:
+
+| Step | Recorded result |
+|---|---|
+| Planning | `muse-spark-1.3`; `finish_reason=stop`; 579 input / 331 completion tokens, including 288 reasoning tokens. The proposed confirmed check was validated and executed deterministically. |
+| Explanation | `finish_reason=stop`; 1,203 input / 542 completion tokens, including 330 reasoning tokens. The response was `ai_generated`, model `muse-spark-1.3`, with `grounding_status=passed`. |
+| Artefact integrity | The recorded hashes of the deterministic run and findings were unchanged after explanation. The explanation was presented separately from the finding. |
+| Accounting | Application-ledger charge **USD 0.00593775** for the two requests, based on configured prices; provider billing was not independently verified. |
+
+The result shows that this provider request shape and evidence contract worked for this single
+fixture and objective. It does not establish availability, behaviour on other models or
+objectives, narrative-extraction quality, or the semantic correctness of every explanation
+sentence. Further Live testing requires a new owner-approved session and applicable data rights.
+
+### Browser evidence and hosted CI (3 November 2026)
+
+- UI-008's AI-Off synthetic browser check exercised strict failure, **Continue without AI**,
+  revision-pinned scope and persisted provenance; its integrated browser could not expose a
+  true 1920 × 1080 CSS viewport. VERIFY-010 separately observed the live plan and explanation in
+  the integrated browser; it is not an automated benchmark Playwright smoke.
+- UI-005E recorded 148 frontend tests and local carousel interaction checks. The integrated
+  browser measured a narrow 319 px layout with 16 px page overflow and had unreliable viewport
+  emulation. The later [merged PR #41](https://github.com/natnew/BIM-Intelligence/pull/41)
+  separately reports headless Chrome checks at 1920 × 1080 and 390 × 844: approximately
+  seven-second rotation, reduced-motion pause and no horizontal overflow at 390 px. These are
+  different observations; neither erases the 319 px finding.
+- [Hosted main run 41671878583](https://github.com/natnew/BIM-Intelligence/actions/runs/41671878583)
+  on `588e6adf9ca71079eadc0e5b33422dc6605df743` ended in **startup_failure** before any jobs
+  started. It supplies no hosted test result. Local success does not resolve this blocker.
 
 ### Composition and confusion counts
 
@@ -271,7 +337,8 @@ metadata is informational only; it was **not invoked**.
 ### FIX-002 offline review-planning correction (3 November 2026)
 
 The approved FIX-002 changes use a planning-only 2,000-token completion allowance and
-`reasoning_effort="low"`, while other workflows retain their 500-token default. The `LiveClient`
+`reasoning_effort="low"`; at this stage other workflows retained their 500-token default. FIX-003
+later gave explanations a separate 2,000-token allowance. The `LiveClient`
 stub-transport tests verify the outgoing `max_completion_tokens` and non-strict JSON Schema request
 body, as well as valid local plan validation, malformed and truncated outputs, provider refusals,
 content filters, and safe response diagnostics. API regression tests verify that completion-limit
@@ -292,10 +359,9 @@ Final local verification on the dirty working tree based on source commit
 
 At configured Standard rates, the 8,000-input/2,000-completion reservation is **USD 0.01850**.
 The existing USD 0.10 per-call/review limits and USD 5.00 project allowance were not increased.
-No live or paid provider call was made. Consequently, this verifies offline request construction,
-local validation, error classification and safeguards only; Meta's live acceptance of the
-non-strict JSON Schema format and end-to-end planner relevance remain unverified and require
-VERIFY-009. FIX-002 does not complete T-5 or M2.
+No live or paid provider call was made during this offline regression. It verifies request
+construction, local validation, error classification and safeguards only. The later live results
+above are separate evidence; FIX-002 alone does not complete T-5 or M2.
 
 ### FIX-003 offline grounded-explanation correction (3 November 2026)
 
@@ -336,9 +402,9 @@ Local verification on the FIX-003 working tree based on `b95dadbe2d0475aa3c10722
 At configured Standard rates the 8,000-input/2,000-completion explanation reservation is
 **USD 0.01850**; one planning and one explanation reservation in a review total **USD 0.03700**.
 The USD 0.10 per-call/review limits, USD 5.00 project allowance and two-call cap were not changed.
-No live or paid provider call was made. These results verify request construction, classification,
-grounding logic and labels offline only; whether Muse Spark returns a complete grounded
-explanation within the new allowance is OQ-08 and requires an owner-approved live retest.
+No live or paid provider call was made during this offline regression. These results verify
+request construction, classification, grounding logic and labels offline only. VERIFY-010 later
+passed one live explanation; broader reliability remains [OQ-08](./DECISIONS.md#open-questions-register).
 FIX-003 does not complete T-5 or M2.
 
 ### Dataset hashes
@@ -489,9 +555,10 @@ and cached-explanation states behaved as specified. Recent sessions stored ident
 reopened run `508400f0` with its findings. Layout metrics at 1920 × 1080, 1440 × 900 and 390 × 844
 matched the established three-/three-/one-column arrangement with no horizontal overflow.
 
-**Not measured:** `plan_source=llm`, `ai_generated` explanations and Replay labelling in the
-browser (Vitest only); accessibility beyond keyboard activation; live Meta behaviour. These
-results verify the interface wiring, not AI quality.
+**Not measured in this 2 November run:** `plan_source=llm`, `ai_generated` explanations and
+Replay labelling in the browser (Vitest only); accessibility beyond keyboard activation; live
+Meta behaviour. VERIFY-010 later observed the first two in a separate live synthetic scenario;
+integrated Replay remains unverified. These results do not measure AI quality.
 
 ## 9. Known limitations and gaps
 
@@ -505,8 +572,9 @@ results verify the interface wiring, not AI quality.
 - A benchmark BEP and objective set are generated for future planner evaluation; no planner
   relevance score was measured.
 - Fake/Replay checks do not establish live Muse Spark performance, API compatibility, cost or
-  token economics. The separate single live smoke observation in §8 establishes only basic
-  structured-output compatibility; further live evaluation requires explicit project-owner approval.
+  token economics. The separately recorded live smoke, VERIFY-009 failure and VERIFY-010
+  synthetic pass are bounded observations; further live evaluation requires explicit owner
+  approval.
 - Runtime performance and browser rendering on this benchmark were not evaluated by this runner.
 - The task result does not complete M1, M3 or M4 by itself. Their original exit criteria and
   remaining evidence are tracked in [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md).

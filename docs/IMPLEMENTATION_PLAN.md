@@ -27,9 +27,9 @@ Status vocabulary for tasks: `Not started`, `In progress`, `Implemented — veri
 |---|---|---|---|---|---|---|
 | **M0 — Foundations** | T-0, T-1, T-1.1; T-3 viewer spike; T-5 Meta API capability spike | Reproducible schemas and fixtures; safe IFC ingestion and a working model API; atomic model publication; initial viewer and Meta API integration risks assessed. | None. The T-3 spike requires the T-1 API and fixture; the T-5 spike requires explicit approval before any paid/live call. | Contract/type-generation and fixture tests pass; fixture upload produces a matching model summary; replacement/read consistency tests pass; a basic viewer load/GlobalId highlight and the authorised structured-output/tool-call API spike are demonstrated or explicitly approved as deferred. The original viewer and LLM spike intent is not silently removed. | **In progress** — the T-3 viewer spike is verified; one approved T-5 structured-output smoke passed (owner-reported), but remaining spike criteria still need acceptance review. | [T-0–T-1.1 history](../CHANGELOG.md#verified-implementation-history); [T-1.1 ADR](./DECISIONS.md#adr-017-content-addressed-model-versions-with-single-pointer-publication); [T-3 evidence](#t-3--interactive-3d-bim-viewer); [T-5 smoke evidence](./EVALUATION.md#t-5-live-structured-output-smoke-1-november-2026). |
 | **M1 — Deterministic Review** | T-2, T-4, T-6 | IDS validation, required non-overlapping native rule coverage, an end-to-end LLM-free review, benchmark ground truth and reproducible evaluation evidence. | M0; T-4 builds on T-2; T-6 can start after T-2 and run alongside T-4. | IDS results are cross-checked against IfcTester; required P0 native-rule tests pass; fixture review runs without an LLM; benchmark precision/recall, clean-control false positives and determinism are reported from a reproducible labelled dataset. | **In progress** — T-6 evidence passes locally; M1 remains open while its M0 prerequisite and hosted CI evidence are outstanding. | [T-2](https://github.com/natnew/BIM-Intelligence/pull/6); [T-4](#t-4--end-to-end-deterministic-review-workflow); [T-6 measured results](./EVALUATION.md#8-results); [CI evidence outstanding](#t-6--benchmark-and-evaluation). |
-| **M2 — AI-Native Review** | T-4, T-5, T-5.1 | Meta Muse Spark-assisted requirement interpretation and objective planning, filtered against confirmed checks, with explanations grounded in deterministic evidence and an explicit deterministic alternative. | M1 deterministic execution; T-5's full integration depends on T-4. API capability verification can run independently. | Scenario tests with FakeClient/Replay cover extraction, quote verification, confirmation, plan filtering, tool caps, grounded explanations, strict/optional objective policy, truthful provenance and degraded mode; any live test is explicitly authorised. A smoke test alone is insufficient. | **In progress** — T-5.1's offline API contract is implemented; UI continuation affordance, live BIM-workflow verification and remaining requirements/evaluation evidence are open. | [README development-status table](../README.md#development-status); [T-5 register](#t-5--meta-muse-spark-integration); [T-5.1 register](#t-51--explicit-ai-review-policy-and-provenance). |
-| **M3 — Demo-Ready Product** | T-3, T-4, T-6, T-7 | Owner-directed UI governance framework; interactive viewer and finding coordination; traceable report; integrated workflow, tested fallback and a rehearsed demonstration. | M1 and M2; T-3 can proceed after T-1 and in parallel with T-4–T-6. T-7 integrates T-3, T-4, T-5 and T-6. | A tested browser walkthrough uses the benchmark/fixture, selection and highlighting work for a finding, reports preserve provenance, fallback works, and the smoke test and documented setup pass. | **In progress** — the UI governance framework is established; report, integrated AI workflow and demonstration criteria remain. | [T-3 evidence](#t-3--interactive-3d-bim-viewer); [T-4 evidence](#t-4--end-to-end-deterministic-review-workflow); [T-6 results](./EVALUATION.md#8-results); [T-7 UI governance](./UI_SPEC.md); [Demo requirements](./DEMO_PLAN.md). |
-| **M4 — Submission** | T-8, supported by all previous completed tasks | Final hardening, verified documentation, measured evaluation results, recorded demo and owner-approved submission actions. | M3 and evidence from all applicable preceding tasks. | Final test and secret-scan evidence is recorded; claims match measured behaviour; demo and results are available; submission requirements are checked against official rules. Release, tagging or submission actions require owner approval. | **Not started** — T-6 measured results are now available; final hardening, CI, demo and submission evidence remain outstanding. | [Demo plan](./DEMO_PLAN.md); [T-6 results](./EVALUATION.md#8-results); submission requirements remain unverified. |
+| **M2 — AI-Native Review** | T-4, T-5, T-5.1 | Meta Muse Spark-assisted requirement interpretation and objective planning, filtered against confirmed checks, with explanations grounded in deterministic evidence and an explicit deterministic alternative. | M1 deterministic execution; T-5's full integration depends on T-4. API capability verification can run independently. | Scenario tests with FakeClient/Replay cover extraction, quote verification, confirmation, plan filtering, tool caps, grounded explanations, strict/optional objective policy, truthful provenance and degraded mode; any live test is explicitly authorised. A smoke test alone is insufficient. | **In progress** — explicit continuation is merged and VERIFY-010 passed one synthetic live plan/explanation. Full narrative authoring/confirmation UX, broader evaluation and milestone acceptance remain open. | [T-5 register](#t-5--meta-muse-spark-integration); [T-5.1 register](#t-51--explicit-ai-review-policy-and-provenance); [live evidence](./EVALUATION.md#verify-010-live-planning-and-grounded-explanation-3-november-2026). |
+| **M3 — Demo-Ready Product** | T-3, T-4, T-6, T-7 | Owner-directed UI governance framework; interactive viewer and finding coordination; traceable report; integrated workflow, tested fallback and a rehearsed demonstration. | M1 and M2; T-3 can proceed after T-1 and in parallel with T-4–T-6. T-7 integrates T-3, T-4, T-5 and T-6. | A tested browser walkthrough uses the benchmark/fixture, selection and highlighting work for a finding, reports preserve provenance, fallback works, and the smoke test and documented setup pass. | **In progress** — the integrated live synthetic path and explicit fallback have scoped evidence. Report/export, benchmark Playwright smoke, setup reproduction and demonstration acceptance remain open. | [T-3 evidence](#t-3--interactive-3d-bim-viewer); [T-6 results](./EVALUATION.md#8-results); [T-7 UI governance](./UI_SPEC.md); [Demo requirements](./DEMO_PLAN.md). |
+| **M4 — Submission** | T-8, supported by all previous completed tasks | Final hardening, verified documentation, measured evaluation results, recorded demo and owner-approved submission actions. | M3 and evidence from all applicable preceding tasks. | Final test and secret-scan evidence is recorded; claims match measured behaviour; demo and results are available; submission requirements are checked against official rules. Release, tagging or submission actions require owner approval. | **Not started** as a gated milestone: M3 is unmet. T-8 preparatory documentation and evidence work is **in progress** independently; final hardening, CI, video and submission acceptance remain outstanding. | [Demo plan](./DEMO_PLAN.md); [T-6 results](./EVALUATION.md#8-results); submission requirements remain unverified. |
 
 No milestone is complete solely because its contributing task labels exist. Original exit requirements remain outstanding unless explicitly met or superseded with project-owner approval.
 
@@ -129,10 +129,15 @@ No milestone is complete solely because its contributing task labels exist. Orig
 
 - **Objective:** Add bounded model-assisted requirement extraction, objective planning and grounded explanations without allowing the model to create findings or bypass human approval.
 - **Responsible components:** `llm/`, `requirements/`, `orchestration/`, `reporting/`, versioned prompt files and tests.
-- **Deliverables:** Config-gated Meta API client and offline Fake/Recording/Replay interfaces; persistent budget accounting; Markdown/TXT candidate extraction with verbatim quote checks and explicit human confirmation against an existing `CheckSpec`; filtered planner; grounded explanation with deterministic fallback and token accounting; provenance-verified explanation endpoint with labelled fallback reasons; typed frontend API functions for objective reviews and finding explanations. Full BEP-to-IDS authoring, UI panels and live workflow verification remain unfinished acceptance.
+- **Deliverables:** Config-gated Meta API client and offline Fake/Recording/Replay interfaces; persistent budget accounting; Markdown/TXT candidate extraction with verbatim quote checks and explicit human confirmation against an existing `CheckSpec`; filtered planner; grounded explanation with deterministic fallback and token accounting; provenance-verified explanation endpoint and integrated objective/explanation panels. Full BEP-to-IDS authoring and narrative confirmation UI remain unfinished.
 - **Dependencies:** T-4 for full integration; T-0 schemas. The API capability check can run independently but any paid/live call requires explicit session approval under C-06 and AGENTS.md §9.
 - **Acceptance tests:** Offline tests cover valid/invalid structured output; no-key Off/Replay; live configuration gating; budget rejection, persistence and concurrent reservation; sanitised timeout errors; quote/source validation and human confirmation; confirmed/unknown/duplicate/excess check plans; grounding rejection and deterministic fallback; default review correctness; objective-to-planner request body; whitespace-only objective rejection; explanation run/session/finding/requirement/check/source/model-version provenance; labelled fallback reasons; unchanged run artefacts; no non-loopback network access in default configuration. Default pytest does not invoke Live. The named live test requires `-m live`, `BIMI_LIVE_LLM=1`, `BIMI_LIVE_APPROVAL=T5-META-MUSE-SPARK-SMOKE`, valid live settings and owner approval.
-- **Status:** **In progress — backend/API-client verification is offline; one owner-approved live structured-output smoke test passed on 1 November 2026, as reported by the owner from a side chat.** This is basic API compatibility evidence, not verification of live planning, grounded explanations or the integrated workflow, and does not by itself complete M0 or M2. The offline-verified backend AI review path and typed API client were merged into `main` via [PR #26](https://github.com/natnew/BIM-Intelligence/pull/26). FINAL-UI-001 (2 November 2026, branch `FINAL-UI-001`, pull request pending owner review) connects the objective input and explanation request in the browser per the [UI_SPEC.md hand-off contract](./UI_SPEC.md#t-5-meta-assisted-review--frontend-integration-contract); it was verified with `LLM_MODE=off` only, so live or Replay planning and `ai_generated` explanations remain unverified in the integrated workflow.
+- **Status:** **In progress.** The offline-tested AI path and browser controls are merged.
+  VERIFY-009 failed at explanation generation; VERIFY-010 subsequently passed live planning and
+  grounding in one integrated synthetic scenario on
+  `588e6adf9ca71079eadc0e5b33422dc6605df743`. Integrated Replay, broader provider reliability,
+  narrative authoring/confirmation UX and the full M2 acceptance remain open. This does not
+  complete M0 or M2.
 - **Milestones:** M0 (API capability spike), M2 (integrated AI-native workflow).
 - **Offline verification (29 October 2026):** `.\.venv\Scripts\python.exe -m pytest -q` — **527 passed, 1 live test skipped, 1 third-party deprecation warning**; `.\.venv\Scripts\ruff.exe check .` — passed; `.\.venv\Scripts\ruff.exe format --check .` — passed; `.\.venv\Scripts\mypy.exe` — passed. From `frontend/`, `npm run types:check`, `npm run lint`, `npm run typecheck`, `npm test` (**3 files, 18 tests passed**), `npm run format:check` and `npm run build` — all passed. The default tests made no live Meta calls.
 - **Secret scan (Gitleaks 8.25.0, redacted):** `python scripts/secret_scan.py --working-tree` — no leaks; `python scripts/secret_scan.py --history` — no leaks across 37 commits. `python scripts/secret_scan.py --staged` passed with **no staged changes**. The project owner approved setting repository-local `core.hooksPath=.githooks`; the pre-commit hook ran successfully against the empty index.
@@ -176,7 +181,7 @@ No milestone is complete solely because its contributing task labels exist. Orig
   - Provider-reported usage: **42 input, 0 cached, 293 output tokens**. The application ledger holds **one request**, with **USD 0.00129775 charged against a USD 0.002395 reservation**.
   - The charge is calculated from configured prices, **not checked against Meta's prices or an invoice**. It is an application-accounting observation, not independently verified provider billing.
   - The short reply used 293 output tokens: **58.6% of the configured 500-token output cap**. This raises a headroom risk for longer structured explanations, not proof of truncation or explanation failure. See [R-API-06](./RISKS.md#3-model-and-api-limitations).
-  - This records the owner's observation; the side-chat source commit and raw response/ledger were not supplied or independently inspected here. The smoke test must **not be repeated** under this request. No additional paid call, cap increase or live explanation test is authorised; live explanation compatibility remains unverified.
+  - This records the owner's observation; the side-chat source commit and raw response/ledger were not supplied or independently inspected here. At that time, no additional paid call, cap increase or live explanation test was authorised, and live explanation compatibility remained unverified. VERIFY-010 later exercised one separately approved explanation; it does not authorise a repeat.
 
 ### T-5.1 — Explicit AI Review Policy and Provenance
 
@@ -185,7 +190,9 @@ No milestone is complete solely because its contributing task labels exist. Orig
 - **Deliverables:** Explicit production Live profile; strict-by-default objective requests with typed failure metadata; explicit optional fallback and deterministic continuation; revision-pinned selected-check scope; per-run planning/mode/model/request/fallback/check provenance; historical-run compatibility.
 - **Dependencies:** T-4 and T-5; contributes only to M2 and does not complete it.
 - **Acceptance tests:** Production configuration rejects Off, non-approved models and contributor mode while development remains Off by default; strict provider/budget/plan failures publish no run or findings; optional fallback and explicit continuation are distinguishable; selected scope rejects stale/unconfirmed/mismatched requirements and constrains manifest/execution; provider mode/model/attempt metadata and Replay mode persist truthfully; old run records without provenance remain readable; schema export and generated TypeScript checks match Pydantic contracts. All new tests use fakes, replay fixtures or stubbed provider transports, not a live/paid call.
-- **Status:** **Verified (offline contract).** Acceptance criteria pass on the current worktree. The existing UI does not expose a dedicated deterministic-continuation control; public deployment remains unapproved and unauthenticated; no live Muse planner run is claimed. These limitations keep M2 in progress.
+- **Status:** **Verified (offline contract).** UI-008 subsequently exposed explicit
+  deterministic continuation, and VERIFY-010 exercised one live planner path. Public deployment
+  remains unapproved and unauthenticated; the full M2 criteria remain open.
 - **Milestones:** M2.
 - **Verification (3 November 2026):** `.\.venv\Scripts\python.exe -m pytest -q` — **637 passed, 1 live test skipped, 1 third-party deprecation warning**; `.\.venv\Scripts\ruff.exe check .`, `.\.venv\Scripts\ruff.exe format --check .`, `.\.venv\Scripts\mypy.exe` (131 source files) and `.\.venv\Scripts\python.exe scripts\export_schemas.py --check` — passed. From `frontend/`, `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm run types:check`, `npm test` (**10 files, 129 tests passed**) and `npm run build` — passed; Vite's existing large-chunk warning remains. `git diff --check` — passed. The Live test was skipped and no live/paid request was made.
 
@@ -195,7 +202,9 @@ No milestone is complete solely because its contributing task labels exist. Orig
 - **Implementation:** Planning uses a 2,000-token completion allowance, low reasoning effort, Chat Completions `max_completion_tokens`, a JSON Schema response format without the optional strict flag, and versioned `planner.v2.md`. Other workflows retain the 500-token allowance. Safe response metadata is recorded in the existing budget ledger; truncation/exhaustion, missing content, refusals, filters and schema-invalid output have distinct outcomes.
 - **Budget calculation:** At configured Standard rates, the uncached 8,000-input/2,000-completion maximum reserves USD 0.01850, below the unchanged USD 0.10 per-call/review limits. The USD 5.00 project allowance, two-call cap, and pre-request reservation remain unchanged.
 - **Verification:** Stubbed SDK transport tests exercise the real `LiveClient` request body and response classification. The full offline backend validation evidence is recorded in [EVALUATION §8](./EVALUATION.md#fix-002-offline-review-planning-correction-3-november-2026). No live API call is made.
-- **Status:** **Implemented and offline-verified** after local test, Ruff, mypy and schema checks. Live Meta acceptance of JSON Schema and the integrated planner remains unverified; FIX-002 does not complete T-5, M0 or M2. Do not claim live integration until the separately authorised VERIFY-009 gate passes.
+- **Status:** **Implemented and offline-verified.** VERIFY-009 and VERIFY-010 subsequently
+  accepted a live synthetic plan; broader compatibility is not established. VERIFY-009 failed
+  its overall rubric, and FIX-002 does not complete T-5, M0 or M2.
 - **Rollback:** Revert the FIX-002 changes to the approved source, test and documentation paths as one change; retain the pre-existing ledger format compatibility and do not delete budget history. The prior 500-token planner request can then be restored with `planner.v1.md`.
 
 #### VERIFY-009 — Live Muse Spark acceptance (3 November 2026; owner-approved session `VERIFY-009-LIVE-2026-11-03`)
@@ -203,7 +212,9 @@ No milestone is complete solely because its contributing task labels exist. Orig
 - **Candidate:** `b95dadbe2d0475aa3c107227a9d0af2cae2c2c47` with synthetic `tests/fixtures/minimal.ifc` and `minimal.ids` only. Two live requests were approved and exactly two were made, with no retries; the application ledger charged USD 0.00545325 in total.
 - **Planning (passed):** The browser-submitted objective produced an accepted `muse-spark-1.3` plan selecting the confirmed fire-rating check; `finish_reason=stop`, 579 input / 259 completion tokens (207 reasoning). The deterministic IDS check executed against the pinned model version and produced the expected W-002 missing-FireRating finding; the UI showed Live mode, the actual model id and the AI-selected plan.
 - **Explanation (failed):** The single live explanation request returned `finish_reason=length`, 500 completion tokens of which 498 were reasoning tokens, and no visible content. Schema validation and grounding were never reached. The deterministic template was correctly labelled as a fallback, but the cause was reported as `budget_limit` ("spend or call limit") although no monetary or call limit was reached.
-- **Outcome:** **FAIL** under the VERIFY-009 rubric. Detailed sanitised evidence remains in the owner-managed `local-private/test-results/verify-009/` location and is not reproduced here. Live grounded explanations remain unverified; FIX-003 addresses the observed failure stage.
+- **Outcome:** **FAIL** under the VERIFY-009 rubric. Detailed sanitised evidence remains in the
+  owner-managed private evidence location and is not reproduced here. FIX-003 addresses the
+  observed failure stage; the later VERIFY-010 result does not change this failed outcome.
 
 #### FIX-003 — Muse Spark grounded explanation reliability (T-5 / M2)
 
@@ -211,8 +222,22 @@ No milestone is complete solely because its contributing task labels exist. Orig
 - **Implementation:** Finding explanations use a separate `LLM_MAX_EXPLANATION_OUTPUT_TOKENS` allowance (default and ceiling 2,000) and are sent with `reasoning_effort="low"`, matching the planning request shape. Planning keeps its 2,000-token allowance and `planner.v2.md`; other workflows keep 500 tokens without a reasoning-effort parameter. The explanation JSON Schema response format, `_ExplanationDraft` contract, local Pydantic validation, `_verify_grounding` checks and `explanation.v1.md` are unchanged. The explanation fallback vocabulary gains `token_limit` (`TokenLimitError`), leaving `budget_limit` for `BudgetLimitError`; the generated schema and TypeScript types were regenerated, and the inspector states the token-limit case explicitly. The ledger's per-request output ceiling now takes the maximum of the three configured allowances.
 - **Budget calculation:** At configured Standard rates the uncached 8,000-input/2,000-completion explanation reservation is USD 0.01850 (≤ USD 0.10 per call); planning plus explanation in one review is USD 0.03700 (≤ USD 0.10 per review). The USD 5.00 project allowance, two-call cap and pre-request reservation are unchanged.
 - **Verification:** Offline stub-transport and API regression tests reproduce the VERIFY-009 response (`length`, 500/498 tokens, no content) and assert `token_limit`, verify the explanation request body (2,000 `max_completion_tokens`, low reasoning effort, no `max_tokens`), planning's unchanged request body, `budget_limit` for genuine spending rejection, grounded acceptance, grounding and schema failures, immutable `run.json`/`findings.json`, unchanged monetary limits and the frontend token-limit message. Results are in [EVALUATION §8](./EVALUATION.md#fix-003-offline-grounded-explanation-correction-3-november-2026). No live request was made.
-- **Status:** **Implemented and offline-verified; awaiting owner review.** Whether Muse Spark completes a grounded explanation within the new allowance is [OQ-08](./DECISIONS.md#open-questions-register) and requires a separately approved live retest. FIX-003 does not complete T-5 or M2 and does not close VERIFY-009.
+- **Status:** **Implemented and offline-verified; ADR-028 awaits owner acceptance.** VERIFY-010
+  later passed one live explanation at the new allowance. Broader reliability remains
+  [OQ-08](./DECISIONS.md#open-questions-register); FIX-003 does not complete T-5 or M2 and
+  does not alter the VERIFY-009 failure.
 - **Rollback:** Revert the FIX-003 changes to `config.py`, `llm/client.py`, `llm/factory.py`, `reporting/explanations.py`, `api/findings.py`, `schemas/ai.py`, `.env.example`, `frontend/src/api/bim.ts`, `frontend/src/components/EvidenceInspector.tsx`, the regenerated schema/types, their tests and the FIX-003 documentation as one change, then re-run `python scripts\export_schemas.py` and `npm run types:generate`. Existing ledger rows remain readable; no budget history is deleted.
+
+#### VERIFY-010 — Live synthetic acceptance (3 November 2026)
+
+- **Candidate and outcome:** `588e6adf9ca71079eadc0e5b33422dc6605df743`; **PASS** for one
+  owner-approved synthetic fixture/objective. Exactly two requests, no retries: a validated
+  Muse-selected check and a separate `ai_generated`, grounding-passed explanation. Recorded
+  deterministic run/finding hashes did not change.
+- **Evidence and limits:** [EVALUATION §8](./EVALUATION.md#verify-010-live-planning-and-grounded-explanation-3-november-2026)
+  records token counts, application-ledger cost and browser scope. This is not a general
+  reliability result, an integrated Replay test, ADR-028 acceptance or permission for another
+  paid call.
 
 ### T-6 — Benchmark and Evaluation
 
@@ -232,7 +257,10 @@ No milestone is complete solely because its contributing task labels exist. Orig
 - **Deliverables:** Owner-directed UI governance framework (`docs/UI_SPEC.md`, `docs/UI_REFERENCES.md`, `docs/UI_CHANGELOG.md` and `frontend/AGENTS.md`), extended by the [UI constitution](./UI_CONSTITUTION.md), [refinement skill](../.github/skills/bim-ui-refinement/SKILL.md) and restricted [designer](../.github/agents/bim-ui-designer.agent.md)/[implementer](../.github/agents/bim-ui-implementer.agent.md) roles; requirement and objective panels; findings/detail views; model highlighting; JSON/Markdown report with provenance; replay/off mode; rehearsed demo. UI-002 Revision 2 adds an owner-approved Project Home and desktop-first review-workspace concept prototype; UI-003 implements that Project Home, upload sequence and review workspace; UI-004A adds fit/reset/focus navigation and selection corrections. The model tree, visibility controls, AI explanation surface and session catalogue remain proposed.
 - **Dependencies:** T-3, T-4, T-5 and T-6. Begin integration as dependencies become testable, without treating incomplete upstream work as finished.
 - **Acceptance tests:** UI changes follow explicit owner approval and are recorded with repeatable visual evidence; full browser walkthrough on the benchmark; findings link to their deterministic checks and model elements; report provenance is complete; replay/degraded mode works; browser smoke test passes.
-- **Status:** **In progress — owner-directed UI governance framework, isolated UI-001/UI-002 concept prototypes, UI-003 production Project Home / review workspace, UI-004A camera/selection corrections and the FINAL-UI-001 objective/explanation/recent-session integration (on its branch, pending owner review) exist; reporting, model-tree/visibility controls, the one-click synthetic sample, browser smoke test and demo acceptance remain incomplete.**
+- **Status:** **In progress —** Project Home, guided objective/scope, explicit continuation,
+  explanations, recent sessions and UI-004A camera/selection controls are merged. One live
+  synthetic browser scenario passed. Reporting, model-tree/visibility controls, the one-click
+  synthetic sample, benchmark Playwright smoke and demo acceptance remain incomplete.
 - **Milestones:** M3.
 - **Evidence:** [T-3](#t-3--interactive-3d-bim-viewer) and [T-4](#t-4--end-to-end-deterministic-review-workflow) record verified interface slices; [UI_SPEC.md](./UI_SPEC.md) defines the owner-directed governance framework. The complete integrated workflow, report and demo evidence remain outstanding.
 - **Framework extension (30 October 2026):** constitution-driven, bounded concept/prototype evaluation and separate implementation approval are documented; optional Copilot guards are proposed, not installed. Reference metadata checks located an ignored singular-path library; image/provider permissions remain unverified. No UI-001 or visual redesign starts here. T-7/M3 status, dependencies, exit criteria and delivery dates are unchanged.
@@ -258,9 +286,16 @@ No milestone is complete solely because its contributing task labels exist. Orig
   camera/selection behaviour, recent-session reopening and the 1920/1440/390 layouts. Evidence:
   [UI_CHANGELOG.md](./UI_CHANGELOG.md#final-ui-001--meta-assisted-review-integration-project-home-completion),
   [UI_SPEC.md §22](./UI_SPEC.md#22-final-ui-001--meta-assisted-review-integration-and-project-home-completion).
-  The one-click synthetic sample was not implemented because it needs files outside the approved
-  paths (`frontend/scripts`, `.gitignore` or a backend endpoint). `plan_source=llm`,
-  `ai_generated` and Replay labels are Vitest-verified only. T-7 and M3 remain in progress.
+  The one-click synthetic sample was not implemented. At the time of this historical run,
+  `plan_source=llm`, `ai_generated` and Replay labels were Vitest-verified only.
+- **Current merged correction (3 November 2026):** UI-008 merged in
+  [PR #40](https://github.com/natnew/BIM-Intelligence/pull/40) at
+  `2e9cba660f4b1f682b8e828fab7019bcb6b87cfb`; UI-005E merged in
+  [PR #41](https://github.com/natnew/BIM-Intelligence/pull/41) at
+  `cbb4361612bbdeb40d6a4c4530e1773db041544d`. VERIFY-010 observed a live plan and grounded
+  explanation on the final source baseline. The owner has accepted the slideshow; no further
+  slideshow change is requested. Integrated Replay, full accessibility, report and demo
+  acceptance remain unverified. See [UI_CHANGELOG.md](./UI_CHANGELOG.md).
 
 ### T-8 — Final Hardening, Documentation and Submission
 
@@ -282,8 +317,12 @@ No milestone is complete solely because its contributing task labels exist. Orig
   The requested final UI, recording, public repository, official submission fields and a release
   commit remain outstanding. Exact commands and limits are in
   [EVALUATION.md](./EVALUATION.md#release-001-offline-verification--1-november-2026) and
-  [DEMO_PLAN.md](./DEMO_PLAN.md); T-8 is in progress and the milestone table retains M4 as not
-  started.
+  [DEMO_PLAN.md](./DEMO_PLAN.md). This is a historical result; later evidence is below.
+- **DOCS-009 current evidence (3 November 2026):** documentation reconciliation is preparatory
+  T-8 work, while the M4 milestone remains gated by incomplete M3. VERIFY-010 passed one
+  synthetic live workflow; the latest hosted main run failed before jobs started, a clean
+  installation has not been reproduced, asset/official-rules checks remain open and no video
+  has been verified. See [EVALUATION §8](./EVALUATION.md#8-results) and [DEMO_PLAN.md](./DEMO_PLAN.md).
 
 ## 4. Revised delivery schedule
 
@@ -387,11 +426,12 @@ gate drops the coordination branch and preserves the single-IFC IDS/native revie
 recording remains subject to real UI integration and explicit owner approval for any live call.
 Official hackathon rules, eligibility and public asset rights must be checked before submission.
 
-The earlier reconciliation used main commit
+This historical overlay used main commit
 `1f3d13b78683692317e00f2279c3f0c4ac02f1c2` (31 October 2026). UI-003 and UI-004A have since
 merged; the verified main baseline on 1 November is
 `cf06328c874258efe8a49d0afa291d9aef278928`. T-7/M3 and T-8 remain **In progress**; the
-authoritative milestone table retains M4 as **Not started** pending M3. Earlier changelog and
-final-48-hour entries describe M4 as in progress; that status discrepancy is recorded rather than
-silently resolved. Reporting, integrated user-facing AI, acceptance evidence, recording and
-submission checks remain incomplete. No task or milestone is marked complete by this plan.
+authoritative milestone table retains M4 as **Not started** pending M3. Earlier references to M4
+as in progress describe preparatory T-8 work, not satisfaction of the M3 prerequisite or M4 exit
+criteria. On the later current baseline, integrated user-facing AI has a single synthetic live
+pass; report, broader acceptance evidence, recording and submission checks remain incomplete.
+No task or milestone is marked complete by this plan.

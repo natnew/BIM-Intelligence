@@ -10,8 +10,8 @@ changes rather than duplicating this detailed record.
 The UI-001 design proposal and private prototype evidence are recorded below. The owner selected
 Concept C as the UI-002 conceptual foundation and, on 30 October 2026, approved UI-003: the
 production implementation of that direction in the React application, recorded in the final entry.
-UI-003 has merged into `main`. UI-004A implements approved viewer and navigation corrections on an
-isolated branch; owner review remains pending, and T-7/M3 remain in progress.
+UI-003 has merged into `main`. The original UI-004A entry recorded an isolated branch and pending
+review; later merge and acceptance evidence is appended below. T-7/M3 remain in progress.
 
 Keep private verification evidence in the ignored, owner-managed `local-private/test-results/`
 and raw AEC tester feedback in `local-private/professional-feedback/`. Entries below use only
@@ -1498,3 +1498,32 @@ status and milestone criteria.
   frontend/src/components/home/ArchitecturalReel.test.tsx frontend/src/index.css`, then remove
   the UI-005E entries from this file, [UI_SPEC.md](./UI_SPEC.md) (§30 and the §26 note) and the
   root changelog. Do not mark T-7 or M3 complete.
+
+## DOCS-009 — Current UI reconciliation (3 November 2026)
+
+- **Baseline:** merged `main` at `588e6adf9ca71079eadc0e5b33422dc6605df743`. UI-005A/B/C/D,
+  UI-006B, UI-007, UI-008 and UI-005E are present; the earlier branch-only and pending-merge
+  entries describe their state when written. UI-008 merged in
+  [PR #40](https://github.com/natnew/BIM-Intelligence/pull/40) at
+  `2e9cba660f4b1f682b8e828fab7019bcb6b87cfb`; UI-005E merged in
+  [PR #41](https://github.com/natnew/BIM-Intelligence/pull/41) at
+  `cbb4361612bbdeb40d6a4c4530e1773db041544d`.
+- **Owner decision:** the owner has accepted the architectural slideshow and requested no
+  further changes to it. This does not imply acceptance of every other interface or milestone.
+- **Home:** the architectural hero, four workflow cards, four feature cards and six-image
+  seven-second reel are merged. The current feature-card copy still says Live integration is
+  unverified, although VERIFY-010 later passed one synthetic scenario; updating application copy
+  is outside this documentation-only task.
+- **Review and viewer:** guided objectives, revision-pinned scope, explicit continuation,
+  persisted AI provenance, on-request explanation labels, browser-local recent sessions and
+  Fit/Reset/Focus with bidirectional selection are implemented. UI-006B displays readable
+  storey names and keyboard-operable details, not a complete element tree or hide/isolate UI.
+- **Separate observations:** UI-008's Off-mode browser test and the UI-005E integrated-browser
+  timing/pause checks remain as recorded above. The latter reported unreliable viewport
+  emulation and 16 px overflow at measured 319 px. PR #41 separately reports headless Chrome
+  checks at 1920 × 1080 and 390 × 844, seven-second timing and no overflow at 390 px; these do
+  not erase the earlier observation. VERIFY-010 separately observed one Live synthetic plan
+  and grounded explanation; the benchmark Playwright smoke and complete accessibility review
+  remain outstanding. See [EVALUATION §8](./EVALUATION.md#8-results).
+- **Decision boundary:** this entry reconciles evidence only. T-7/M3 remain in progress; no
+  design, source, release or submission change is authorised by it.
