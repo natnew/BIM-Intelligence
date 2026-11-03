@@ -1435,3 +1435,66 @@ status and milestone criteria.
   associated frontend changes in the files listed above to the branch baseline, remove the
   UI-008 sections from this file, [UI_SPEC.md](./UI_SPEC.md) and the root changelog, and retain
   the earlier FINAL-UI-001 history and all unrelated work. Do not mark T-7 or M3 complete.
+
+## UI-005E — Automatic architectural reel and product-led captions
+
+### [UI-005E] — Add controlled autoplay and capability-led captions to the reel
+
+- **Iteration and mapping:** UI-005E, T-7 / M3, 3 November 2026. The owner explicitly approved
+  the bounded frontend change, with one implementation pass and one corrective pass, on
+  `feature/ui-005e-reel-refinement` from clean `main` at
+  `2e9cba660f4b1f682b8e828fab7019bcb6b87cfb`. Owner visual review remains pending; T-7 and M3
+  remain in progress.
+- **Scope and boundary:** Add a 7-second autoplay with wrap, hover/keyboard-focus/hidden-tab
+  pauses, a Play/Pause control, reduced-motion handling, a timer restart after manual navigation
+  and unmount cleanup. Replace the six scene captions with the owner's copy. The images,
+  filenames, order, alt text, frame and §28 placement are unchanged. Slides 1–5 retain the
+  AI-generated-imagery note; slide 6 retains the concept-visualisation disclosure and states that
+  it does not depict clash-detection or multi-model coordination features. No carousel library,
+  dependency, backend, upload, review-workspace or other Home section changed. No paid call,
+  commit, push, pull request or merge occurred.
+- **Design notes:** The pause behaviour follows the WAI-ARIA Authoring Practices carousel
+  pattern. Keyboard focus pauses rotation; mouse-click focus does not. The caption live region is
+  `off` while rotating and `polite` otherwise. Hidden caption sizers in a shared grid cell keep
+  the reel height constant across scenes. Reduced motion starts paused and plays only after an
+  explicit Play.
+- **Files changed:** `frontend/src/components/home/ArchitecturalReel.tsx`,
+  `ArchitecturalReel.test.tsx` (21 tests, replacing the former no-autoplay test) and
+  carousel-only rules in `frontend/src/index.css`. Documentation: this file,
+  [UI_SPEC.md](./UI_SPEC.md) §30 (and a superseding note in §26) and the root
+  [CHANGELOG.md](../CHANGELOG.md). `ProjectHome.test.tsx` is unchanged and still passes.
+- **Corrective pass:** At narrow widths the description and note use `hyphens: auto` and
+  `overflow-wrap: break-word`, and the caption padding is reduced. This reduced the narrow
+  caption column height from about 309 px to 258 px.
+- **Automated checks:** From `frontend/`, `npm run lint`, `npm run format:check`,
+  `npm run typecheck`, `npm run types:check`, `npm test` (**148 tests in 10 files**) and
+  `npm run build` all passed after the corrective pass. The build still reports the known That
+  Open / Three undefined-import warnings and a chunk larger than 500 kB.
+- **Browser evidence:** VS Code integrated browser (Chrome 150.0.7871.250 / Electron 43.8.3),
+  Vite on 127.0.0.1:5176 without a backend, so `/api/v1/health` returned 502 as expected. At a
+  measured 1920 × 1080 CSS viewport the advance gaps were 7003–7044 ms and the reel wrapped from
+  6 to 1. The frame stayed 495 × 278.44 px and the reel height stayed 441.1 px on all six slides.
+  Hover paused and resumed rotation. Keyboard Tab focus paused rotation, set the live region to
+  polite and showed a 3 px outline; blur resumed it. Clicking Next with a mouse kept rotation
+  running. Space/Enter toggled Play/Pause with focus retained. A synthetic hidden-tab state
+  paused and then resumed rotation. Emulated reduced motion started paused with no animation,
+  and an explicit Play advanced. Desktop captures (all six slides at a measured 1203 CSS px)
+  showed constant geometry and no horizontal overflow.
+- **Viewport limitation and narrow finding:** The integrated browser did not reliably honour
+  `setViewportSize`. Requested 1920 and 390 widths later measured 1203 and 319 CSS px. Each file
+  is named by the `innerWidth` measured at capture. At 319 px the reel remains half width per
+  UI-007: the frame is 144 × 81 px, the captions 128.6 × 258.4 px, the controls wrap to 88 px and
+  the reel is 453.3 px tall. The pre-existing 16 px page overflow remains. Text is readable but
+  the column is narrow; widening the reel would change the Home composition and needs an owner
+  decision. Repeat the 1920 × 1080 and 390 × 844 visual checks in a browser that exposes those
+  CSS viewports.
+- **Saved evidence and provenance:** `local-private/test-results/ui-005e/` contains
+  `reel-css1203-slide2…6.png`, `reel-css1920-slide1.png`, `intro-css1203.png`,
+  `reel-css390-slide1.png`, `intro-css390.png` and `reel-css319-slide6.png`. The screenshots were
+  written to disk only; the reel images and captures were not sent to the model. They await owner
+  review.
+- **Decision and rollback:** The change remains uncommitted for owner review. To roll back, run
+  `git checkout main -- frontend/src/components/home/ArchitecturalReel.tsx
+  frontend/src/components/home/ArchitecturalReel.test.tsx frontend/src/index.css`, then remove
+  the UI-005E entries from this file, [UI_SPEC.md](./UI_SPEC.md) (§30 and the §26 note) and the
+  root changelog. Do not mark T-7 or M3 complete.
