@@ -40,8 +40,7 @@ LLM mode and a key-configured boolean; it does not expose the key.
   upload a valid IDS or add an available registered native requirement. The model does not turn
   unconfirmed narrative text into a check by itself.
 
-See the [requirements documentation](./docs/REQUIREMENTS.md) and
-[architecture](./docs/ARCHITECTURE.md) for the distinction between implemented behaviour and
+See the [architecture](./docs/ARCHITECTURE.md) for the distinction between implemented behaviour and
 planned workflow.
 
 ## Common problems

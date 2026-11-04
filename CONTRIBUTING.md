@@ -1,8 +1,7 @@
 # Contributing to BIM Intelligence
 
 BIM Intelligence is an AI-native architectural BIM review application. Its current implementation
-is pre-alpha and incomplete; read the [README](./README.md) and
-[implementation plan](./docs/IMPLEMENTATION_PLAN.md) before choosing work. This guide complements
+is pre-alpha and incomplete; read the [README](./README.md) before choosing work. This guide complements
 the repository-wide [engineering rules](./AGENTS.md); it does not replace them.
 
 ## Development environment
@@ -53,10 +52,10 @@ configuration. See the [README setup and testing instructions](./README.md#local
 | `frontend/`                               | React and TypeScript application                                   |
 | `tests/unit/`, `tests/scenario/`          | Unit and end-to-end fixture tests                                  |
 | `tests/evaluation/`, `datasets/`          | Opt-in evaluation code and synthetic/permitted data                |
-| `docs/`                                   | Requirements, architecture, decisions, risks and delivery evidence |
+| `docs/`                                   | Technical architecture and decision records                         |
 
 The [technical architecture](./docs/ARCHITECTURE.md) describes component boundaries and the
-[requirements](./docs/REQUIREMENTS.md) define the intended acceptance criteria.
+[decision records](./docs/DECISIONS.md) explain the main design choices.
 
 ## Engineering and review expectations
 
@@ -101,7 +100,7 @@ npm run build
 
 The default test suites do not make live model API calls. Evaluation runs are separate from tests
 and produce measurements rather than pass/fail claims; see
-[`docs/EVALUATION.md`](./docs/EVALUATION.md). Live tests require explicit project-owner approval.
+[`datasets/README.md`](./datasets/README.md). Live tests require explicit project-owner approval.
 
 ## IFC, IDS and test data
 
@@ -115,8 +114,8 @@ The implemented upload path accepts `.ifc` models and `.ids`, `.md` or `.txt` re
 IDS 1.0 specifications are validated and imported as confirmed requirements. Markdown and text
 documents are stored as untrusted source material; they do not automatically become executable
 requirements. PDF ingestion and parts of the planned requirement workflow remain unimplemented.
-The [README development-status table](./README.md#development-status) and
-[implementation plan](./docs/IMPLEMENTATION_PLAN.md) describe the verified scope.
+The [README status and limitations](./README.md#status-and-limitations) describe the verified
+scope.
 
 ## Schema and generated contract changes
 

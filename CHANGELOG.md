@@ -70,7 +70,7 @@ Significant implementation, architectural and delivery-framework changes are rec
   reduced-motion behaviour. The integrated browser did not reliably honour requested viewports,
   so the 1920 × 1080 and 390 px targets remain unverified. No dependency, backend or paid call
   changed or occurred; owner review is pending and T-7/M3 remain in progress. See
-  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#ui-005e--automatic-architectural-reel-and-product-led-captions).
+  UI_CHANGELOG.md.
 
 ### UI-008 / T-7 / M3 — Guided AI review with an objective dock (3 November 2026)
 
@@ -83,7 +83,7 @@ Significant implementation, architectural and delivery-framework changes are rec
   explicit continuation and persisted fallback/mode display. The browser could not expose a true
   1920 × 1080 CSS viewport, so that visual target remains unverified. No paid/live request or
   publication action occurred; owner review remains pending and T-7/M3 remain in progress. See
-  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#ui-008--guided-ai-review-with-an-objective-dock) for
+  UI_CHANGELOG.md for
   exact commands, evidence, limitations and rollback.
 
 ### AI-007 / T-5.1 / M2 — Explicit AI review policy and provenance (3 November 2026)
@@ -110,7 +110,7 @@ Significant implementation, architectural and delivery-framework changes are rec
 - Frontend lint, formatting, type checks, 128 tests and the build pass; existing dependency/chunk
   warnings remain. Synthetic desktop and narrow browser checks cover layout and carousel
   interactions. The existing 320 px horizontal overflow remains; local screenshots await owner
-  visual review. See [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#ui-007--project-home-introduction-and-right-aligned-reel)
+  visual review. See UI_CHANGELOG.md
   for evidence and rollback. T-7 and M3 remain in progress.
 
 ### UI-006B / T-7 / M3 — Human-readable building storeys (2 November 2026)
@@ -123,7 +123,7 @@ Significant implementation, architectural and delivery-framework changes are rec
   existing dependency/chunk warnings remain. Local synthetic browser checks cover desktop,
   390 px and 360 px layouts, details and protected viewer interactions. The mock is not an
   end-to-end backend review; the owner accepted the desktop comparison and mobile after capture. See
-  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#ui-006b--human-readable-building-storeys) for
+  UI_CHANGELOG.md for
   evidence and rollback. T-7 and M3 remain in progress.
 
 ### UI-005D / T-7 / M3 — Architectural reel and research graphics (2 November 2026)
@@ -133,7 +133,7 @@ Significant implementation, architectural and delivery-framework changes are rec
   118 tests and the production build pass; existing dependency/chunk warnings remain. Local
   synthetic browser checks cover 1920 × 1080, 1440 × 900 and 390 × 844. Image pixels were not
   inspected by the model; owner visual review and research-claim verification remain open.
-  See [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#ui-005d--architectural-image-reel-and-research-statistics)
+  See UI_CHANGELOG.md
   for evidence and limitations. T-7 and M3 remain in progress.
 - At the owner's request, centre the reel at half its original width with proportional image
   height; retain accessible controls and responsive reflow without changing other page sections.
@@ -146,7 +146,7 @@ Significant implementation, architectural and delivery-framework changes are rec
 - Frontend lint, formatting, typecheck, generated-types check, 112 tests and production build
   pass; existing viewer-dependency and chunk-size build warnings remain. Isolated synthetic
   browser checks cover 1920 × 1080, 1440 × 900, 1024 × 768 and 390 × 844. See
-  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#ui-005c--project-home-core-product-features) for
+  UI_CHANGELOG.md for
   measurements, regression evidence and limitations. Owner review is pending; T-7 and M3 remain
   in progress.
 
@@ -161,7 +161,7 @@ Significant implementation, architectural and delivery-framework changes are rec
 - Frontend lint, format, typecheck, 111 tests (one new) and the production build pass. Verified
   in headless Edge at 1920 × 1080, 1440 × 900, 1024 × 768 and 390 × 844: 4/4/2/1 columns, equal
   card heights per row, no horizontal overflow. See
-  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#ui-005b--project-home-review-workflow-cards). Branch
+  UI_CHANGELOG.md. Branch
   `feature/ui-005b-home-workflows`, uncommitted, pending owner review; T-7 and M3 remain in
   progress.
 
@@ -175,7 +175,7 @@ Significant implementation, architectural and delivery-framework changes are rec
   at 1920 × 1080, 1440 × 900 and 390 × 844 with no horizontal overflow or failed asset request.
   At 390 px the embedded tagline is too small to read comfortably; a narrow-screen variant would
   need separate owner approval. See
-  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#ui-005a--project-home-architectural-banner). Branch
+  UI_CHANGELOG.md. Branch
   `feature/ui-005a-home-hero`, uncommitted, pending owner review; T-7 and M3 remain in progress.
 
 ### FINAL-UI-001 / T-5, T-7 / M3 — Meta-assisted review interface and Project Home completion (2 November 2026)
@@ -193,8 +193,8 @@ Significant implementation, architectural and delivery-framework changes are rec
   implemented because it needs files outside the approved paths; the page says so.
 - Frontend tests grow from 91 to 109; lint, format, typecheck, generated-types check and build
   pass; focused backend API/scenario tests pass (46). Browser verification with `LLM_MODE=off`
-  is recorded in [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#final-ui-001--meta-assisted-review-integration-project-home-completion)
-  and [EVALUATION.md](./docs/EVALUATION.md#final-ui-001-frontend-integration-verification--2-november-2026).
+  is recorded in UI_CHANGELOG.md
+  and EVALUATION.md.
   Branch `FINAL-UI-001`, submitted for owner review as a pull request; T-5, T-7 and M3
   remain in progress.
 
@@ -210,9 +210,9 @@ Significant implementation, architectural and delivery-framework changes are rec
   live model calls. The latest hosted main CI run failed before jobs started.
 - Reconcile the current documentation, synthetic-fixture attribution and a 180-second proposed
   storyboard without claiming a completed recording, public repository, live BIM workflow or
-  integrated clash feature. See [EVALUATION.md](./docs/EVALUATION.md#release-001-offline-verification--1-november-2026),
-  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#release-001--synthetic-baseline-verification) and
-  [DEMO_PLAN.md](./docs/DEMO_PLAN.md). T-7/M3 and T-8 remain in progress; the authoritative
+  integrated clash feature. See EVALUATION.md,
+  UI_CHANGELOG.md and
+  DEMO_PLAN.md. T-7/M3 and T-8 remain in progress; the authoritative
   milestone table lists M4 as not started, despite older changelog wording.
 
 ### FED-001 / W5 — Two-model federation and clash feasibility experiment (feasibility only)
@@ -256,7 +256,7 @@ Significant implementation, architectural and delivery-framework changes are rec
 - Add typed frontend API functions `startObjectiveReview` and `explainFinding` with Vitest
   coverage, including rejection of missing, empty, unknown and non-string template fallback
   reasons. No UI component or viewer file changes. Record the frontend integration contract in
-  [UI_SPEC.md](./docs/UI_SPEC.md#t-5-meta-assisted-review--frontend-integration-contract).
+  UI_SPEC.md.
 - Add a shared offline SDK stub (`tests/support/llm_stub.py`), API tests for explanation provenance
   and fallbacks, and a guard that the default configuration opens no non-loopback connection.
 - Fix a test-harness defect that made the named live smoke test unreachable: the autouse
@@ -273,7 +273,7 @@ Significant implementation, architectural and delivery-framework changes are rec
   1 November 2026: `muse-spark-1.3`, `success`, exact `{"status":"T5_SMOKE_OK"}` response,
   42 input / 0 cached / 293 output tokens, one ledger request, USD 0.00129775 calculated charge
   against a USD 0.002395 reservation. Configured prices have not been checked against Meta's;
-  this is not independently verified provider billing. See [EVALUATION §8](./docs/EVALUATION.md#t-5-live-structured-output-smoke-1-november-2026).
+  this is not independently verified provider billing. See EVALUATION §8.
 - Record R-API-06: the short smoke reply consumed 58.6% of the 500-token output cap, so structured
   explanation headroom needs separately approved verification. No cap or budget was increased.
   Correct current README live-status claims without treating the smoke as live BIM-workflow
@@ -290,7 +290,7 @@ Significant implementation, architectural and delivery-framework changes are rec
 - Expose observable model-download, geometry-preparation, ready and failed states. Keep desktop
   evidence/findings panels independently scrollable and preserve the narrow single-column layout.
 - Record live browser verification at 1920×1080, 1440×900, 1216×735 and 390×844, plus the complete
-  frontend validation set and private ignored screenshot evidence in [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md).
+  frontend validation set and private ignored screenshot evidence in UI_CHANGELOG.md.
 - The browser's two IDS findings and the deterministic scenario's additional native finding use
   different configured check sets; no backend review behaviour, API/schema, fixture or dependency
   changed. T-3 remains verified, T-7/M3 remain in progress. The original evidence predates PR #25;
@@ -298,7 +298,7 @@ Significant implementation, architectural and delivery-framework changes are rec
 - Reconcile the existing implementation onto `main` at `a13857c` without changing the merged T-5
   API or FED-001 harness. Correct short-desktop-height scrolling and allow application selection
   to clear while the viewer is preparing or has failed. Fresh integration evidence is recorded in
-  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md#ui-004a-main-integration-verification--1-november-2026).
+  UI_CHANGELOG.md.
 - FR-VIS-08 and FR-VIS-11 have recorded acceptance evidence. FR-VIS-09 remains in progress:
   the viewer uses a single issue style and its behaviour across finding severities is not yet
   verified. Integration into `main` remains subject to review and merge.
@@ -367,7 +367,7 @@ Significant implementation, architectural and delivery-framework changes are rec
   selection coordination, app routing, source hygiene). A live browser walkthrough on the synthetic
   fixture (create → upload IFC/IDS → render → orbit/pan/zoom → run review → finding ↔ element →
   return home) and 1920×1080 / 1440×900 / 390×844 captures are recorded in
-  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md). Backend, viewer (`IfcViewer.ts`, `ViewerCanvas.tsx`),
+  UI_CHANGELOG.md. Backend, viewer (`IfcViewer.ts`, `ViewerCanvas.tsx`),
   generated types, schemas, fixtures, dependencies and CI are unchanged. Viewer camera/visibility
   controls, model tree, AI explanation panel and session catalogue are deferred to UI-004. Owner
   review and merge remain pending; see [PR #18](https://github.com/natnew/BIM-Intelligence/pull/18).
@@ -385,7 +385,7 @@ Significant implementation, architectural and delivery-framework changes are rec
 - Update the UI specification, append the UI-002 Revision 2 iteration record and make a minimal
   T-7 scope note. All prototype output remains ignored under `local-private/ui-prototypes/ui-002/`;
   production code, backend, viewer, schemas, tests and dependencies are unchanged. Owner review is
-  pending; no commit, push or merge is authorised. See [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md).
+  pending; no commit, push or merge is authorised. See UI_CHANGELOG.md.
 
 ### T-7 / M3 — UI-002 Concept C v2 prototype
 
@@ -401,7 +401,7 @@ Significant implementation, architectural and delivery-framework changes are rec
 - Reference screenshots remain unprocessed under the prior synthetic-only decision; no
   image-derived influence is claimed. UI-002 is proposed pending owner review; UI-003 scope is a
   proposal only. No commit, push or merge is authorised. See
-  [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md).
+  UI_CHANGELOG.md.
 
 ### T-7 / M3 — UI-001 review-workspace concept study
 
@@ -418,7 +418,7 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ### T-7 — Constitution-driven autonomous UI design framework
 
-- Add [UI_CONSTITUTION.md](./docs/UI_CONSTITUTION.md) with binding BIM workflow, spatial context,
+- Add UI_CONSTITUTION.md with binding BIM workflow, spatial context,
   evidence integrity, accessibility, originality, approval and reversibility principles; no layout
   or visual direction is approved.
 - Add the [bim-ui-refinement skill](./.github/skills/bim-ui-refinement/SKILL.md) and restricted
@@ -435,7 +435,7 @@ Significant implementation, architectural and delivery-framework changes are rec
   preserve `.githooks/pre-commit` secret scanning. No application, viewer, API, generated contract,
   fixture, benchmark, dependency or CI changes; no external API calls, commit or push.
 - This establishes the design system only: no UI-001, redesign, measured design scores or
-  application/browser verification is claimed. See [UI_CHANGELOG.md](./docs/UI_CHANGELOG.md)
+  application/browser verification is claimed. See UI_CHANGELOG.md
   for boundaries, limitations and rollback.
 
 ### Private reference and test data governance
@@ -465,8 +465,8 @@ Significant implementation, architectural and delivery-framework changes are rec
 
 ### T-7 — Owner-directed UI design governance framework
 
-- Establish [`docs/UI_SPEC.md`](./docs/UI_SPEC.md) as the evolving UI specification, separating verified behaviour, provisional design principles, owner-approved decisions and open questions without prescribing a new visual style.
-- Add [`docs/UI_REFERENCES.md`](./docs/UI_REFERENCES.md) and [`docs/UI_CHANGELOG.md`](./docs/UI_CHANGELOG.md) for owner-supplied references, approval feedback and append-only iteration evidence. Third-party screenshots are to remain in private local storage unless redistribution rights are established.
+- Establish `docs/UI_SPEC.md` as the evolving UI specification, separating verified behaviour, provisional design principles, owner-approved decisions and open questions without prescribing a new visual style.
+- Add `docs/UI_REFERENCES.md` and `docs/UI_CHANGELOG.md` for owner-supplied references, approval feedback and append-only iteration evidence. Third-party screenshots are to remain in private local storage unless redistribution rights are established.
 - Add [`frontend/AGENTS.md`](./frontend/AGENTS.md) with mandatory owner-approval, scope, functional-regression, accessibility, testing, diff-review and no-commit/push/merge guardrails; link the frontend rules from the root [`AGENTS.md`](./AGENTS.md).
 - Document a repeatable visual verification, frontend regression and safe rollback process; use existing frontend commands and do not add browser automation dependencies.
 - Update the T-7 register and README documentation index. T-7 remains in progress; this framework introduces no visual redesign, no UI-001 scope, and no application behaviour changes.
@@ -477,7 +477,7 @@ Significant implementation, architectural and delivery-framework changes are rec
 - Reconcile the original D01–D14 count with the target of 15–20 positive P0 instances by adding D19; retain D15–D17 as unimplemented P1 exclusions and D18 plus six explicit cases as zero-finding controls.
 - Add one-to-one matching by rule id, immutable check id and exact GlobalId set; report duplicates, unmatched predictions, misses, undefined metrics, clean-control false positives and execution coverage separately.
 - Add an offline runner for LLM-disabled reviews, byte-identical persisted findings, IfcTester JSON agreement, SHA-256/version metadata and Fake/Replay safety-contract checks. No live Meta request or spend was made.
-- Record the 29 October 2026 local result in [docs/EVALUATION.md](./docs/EVALUATION.md): 15/15 TP, 0 FP, 0 FN; precision/recall/F1 1.000; seven clean controls with no false positives; deterministic findings; 14/14 IDS entity agreement; and 9/9 offline AI contract checks. This measures only the labelled synthetic benchmark, not live model performance or general BIM accuracy. Hosted CI evidence remains outstanding.
+- Record the 29 October 2026 local result in docs/EVALUATION.md: 15/15 TP, 0 FP, 0 FN; precision/recall/F1 1.000; seven clean controls with no false positives; deterministic findings; 14/14 IDS entity agreement; and 9/9 offline AI contract checks. This measures only the labelled synthetic benchmark, not live model performance or general BIM accuracy. Hosted CI evidence remains outstanding.
 
 ### T-5 — Meta Muse Spark Integration (offline implementation)
 
@@ -493,14 +493,14 @@ Significant implementation, architectural and delivery-framework changes are rec
 - Add the versioned native `classification.consistent_by_type` v1.0.0 rule as an explicitly confirmed, parameter-free built-in check, without duplicating IDS 1.0 property, naming or classification-presence checks.
 - Bound stable default-plan execution with `MAX_PLAN_CHECKS` and `MAX_TOOL_CALLS_PER_RUN`; record skipped and per-check error outcomes, continue after recoverable errors, and mark skipped, errored or not-applicable coverage as `partial`.
 - Add a one-click **Run standard review** action to the existing viewer workspace. It pins the run to the model summary ETag, loads the resulting run/findings through version-aware endpoints and displays per-check coverage.
-- Add native-rule, cap/error, API confirmation and LLM-off end-to-end scenario tests, including repeated findings output and model/GlobalId consistency. The task record in [`docs/IMPLEMENTATION_PLAN.md`](./docs/IMPLEMENTATION_PLAN.md#t-4--end-to-end-deterministic-review-workflow) records exact validation evidence; benchmark metrics remain outstanding under T-6.
+- Add native-rule, cap/error, API confirmation and LLM-off end-to-end scenario tests, including repeated findings output and model/GlobalId consistency. The task record in `docs/IMPLEMENTATION_PLAN.md` records exact validation evidence; benchmark metrics remain outstanding under T-6.
 
 ### T-3 — Interactive 3D BIM Viewer
 
 - Add an on-demand browser-side That Open Components 3.6 viewer for the minimal IFC fixture, with GlobalId-to-fragment resolution, viewer-to-element selection and deterministic finding highlights.
 - Connect existing model, review-run, findings and element APIs. Reject runs whose session or model hash does not match the active model; pin model-file and element requests to the summary ETag and recheck the active version after loading.
 - Serve the pinned `web-ifc` WASM files and Fragments worker locally. Add finding evidence, element identity and property details, and loading, empty and error states.
-- Verify actual browser rendering and both selection directions on the minimal fixture; mocked frontend API and component tests pass. See the [T-3 implementation record](./docs/IMPLEMENTATION_PLAN.md#t-3--interactive-3d-bim-viewer) for evidence and exact validation results.
+- Verify actual browser rendering and both selection directions on the minimal fixture; mocked frontend API and component tests pass. See the T-3 implementation record for evidence and exact validation results.
 - Correct the `web-ifc` licence disclosure: version 0.0.77 is MPL-2.0 and is documented as an exception to the repository's permissive-or-LGPL dependency preference; owner review remains required before public distribution.
 
 ### Delivery Framework Reconciliation — M0–M4 and T-0–T-8
@@ -509,9 +509,9 @@ Significant implementation, architectural and delivery-framework changes are rec
 - Add the task framework for more actionable engineering delivery: T-0 Schemas and Minimal IFC Fixture; T-1 IFC Ingestion, Model Indexing and Session Persistence; T-1.1 Model Publication Consistency; T-2 Deterministic IDS Validation; T-3 Interactive 3D BIM Viewer; T-4 End-to-End Deterministic Review Workflow; T-5 Meta Muse Spark Integration; T-6 Benchmark and Evaluation; T-7 Reporting, Interface Refinement and Demonstration Readiness; and T-8 Final Hardening, Documentation and Submission.
 - T-1.1 is a corrective subtask introduced after review of T-1. It addresses consistency when replacing a model: versioned model artefacts are prepared and validated before the active session pointer changes, with locking, recovery and version-bound reads.
 - Use milestones and tasks together because milestones describe capabilities achieved, while tasks describe engineering work. Tasks contribute to multiple milestones; neither the presence of task labels nor one task's completion establishes a milestone.
-- The authoritative schedule, mapping, exit criteria, status and evidence register is [`docs/IMPLEMENTATION_PLAN.md`](./docs/IMPLEMENTATION_PLAN.md).
+- The authoritative schedule, mapping, exit criteria, status and evidence register is `docs/IMPLEMENTATION_PLAN.md`.
 - Mapping: M0 — T-0, T-1, T-1.1, with T-3 viewer and T-5 Meta API capability spikes; M1 — T-2, T-4, T-6; M2 — T-4, T-5; M3 — T-3, T-4, T-6, T-7; M4 — T-8, supported by prior completed work. See the implementation plan for deliverables, dependencies and measurable exit criteria.
-- Future substantive work must update the task and milestone evidence/status in [`docs/IMPLEMENTATION_PLAN.md`](./docs/IMPLEMENTATION_PLAN.md) and record the significant change here. Documentation reconciliation is not evidence that engineering functionality is complete.
+- Future substantive work must update the task and milestone evidence/status in `docs/IMPLEMENTATION_PLAN.md` and record the significant change here. Documentation reconciliation is not evidence that engineering functionality is complete.
 
 ### Verified implementation history
 

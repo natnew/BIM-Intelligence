@@ -28,11 +28,11 @@ enforces the agent's tool restrictions. Never silently fall back to an unrestric
 ## Progressive context
 
 1. First read [root rules](../../../AGENTS.md), [frontend rules](../../../frontend/AGENTS.md),
-   [constitution](../../../docs/UI_CONSTITUTION.md), UI_SPEC §§2, 12, 13 and 15, and the T-7/M3
-   task mapping in [the plan](../../../docs/IMPLEMENTATION_PLAN.md).
-2. Read only the workflow-relevant sections of [UI_SPEC](../../../docs/UI_SPEC.md), the reference
-   handling rules in [UI_REFERENCES](../../../docs/UI_REFERENCES.md) and the applicable approved
-   entry in [UI_CHANGELOG](../../../docs/UI_CHANGELOG.md). Follow only relevant requirement/ADR
+   constitution, UI_SPEC §§2, 12, 13 and 15, and the T-7/M3
+   task mapping in the plan.
+2. Read only the workflow-relevant sections of UI_SPEC, the reference
+   handling rules in UI_REFERENCES and the applicable approved
+   entry in UI_CHANGELOG. Follow only relevant requirement/ADR
    links; do not load the entire repository.
 3. Trace the relevant component props/state and viewer/API interfaces before proposing changes.
    For review triage, start with `ModelWorkspace`, `ViewerCanvas`, `IfcViewer` and `api/bim.ts`.

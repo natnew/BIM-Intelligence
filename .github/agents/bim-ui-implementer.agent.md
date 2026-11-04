@@ -14,7 +14,7 @@ Implement one owner-authorised T-7 / M3 checkpoint, not a general redesign.
 ## Approval gate
 
 Read [root rules](../../AGENTS.md), [frontend rules](../../frontend/AGENTS.md),
-[UI constitution](../../docs/UI_CONSTITUTION.md) and
+UI constitution and
 [refinement skill](../skills/bim-ui-refinement/SKILL.md), then only relevant specification,
 iteration, requirement/ADR, component and test context.
 

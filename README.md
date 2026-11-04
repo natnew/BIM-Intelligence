@@ -312,8 +312,7 @@ release-approved. Current boundaries:
 - Distribution and asset-rights checks remain open; see
   [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
 
-Delivery status is tracked in the [implementation plan](./docs/IMPLEMENTATION_PLAN.md) and
-[changelog](./CHANGELOG.md); risks are in [docs/RISKS.md](./docs/RISKS.md).
+Release history is recorded in the [changelog](./CHANGELOG.md).
 
 ## Roadmap
 
@@ -385,7 +384,7 @@ Windows.
 | `frontend/` | Review interface (Vite, React, TypeScript) |
 | `tests/` | Unit, scenario and evaluation tests, with small IFC/IDS fixtures |
 | `datasets/` | Synthetic and permitted IFC test models and requirement artefacts |
-| `docs/` | Architecture, decisions, requirements, evaluation and delivery records |
+| `docs/` | Technical architecture and architectural decision records |
 
 Contributors, human or AI, must follow [AGENTS.md](./AGENTS.md); frontend changes also follow
 [frontend/AGENTS.md](./frontend/AGENTS.md).
@@ -396,12 +395,6 @@ Contributors, human or AI, must follow [AGENTS.md](./AGENTS.md); frontend change
 |---|---|
 | [Architecture](./docs/ARCHITECTURE.md) | Full technical design, components and API |
 | [Technical decisions](./docs/DECISIONS.md) | Architectural decision records and open questions |
-| [Requirements](./docs/REQUIREMENTS.md) | Functional and non-functional requirements with traceability ids |
-| [Evaluation](./docs/EVALUATION.md) | Benchmark design, results, reproduction and limitations |
-| [Demo plan](./docs/DEMO_PLAN.md) | Demonstration storyline and fallbacks |
-| [Risks and limitations](./docs/RISKS.md) | Risk register and unresolved mitigations |
-| [Implementation plan](./docs/IMPLEMENTATION_PLAN.md) | Milestones, task register and delivery status |
-| [UI specification](./docs/UI_SPEC.md) | Interface specification and protected behaviour |
 | [Third-party notices](./THIRD_PARTY_NOTICES.md) | Dependency and asset inventory, with open distribution obligations |
 | [Licence](./LICENSE) | MIT licence for project code |
 

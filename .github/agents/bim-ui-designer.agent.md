@@ -15,7 +15,7 @@ Operate only at the owner-authorised design checkpoint for T-7 / M3.
 ## Authority and progressive loading
 
 Read [root rules](../../AGENTS.md), [frontend rules](../../frontend/AGENTS.md),
-[UI constitution](../../docs/UI_CONSTITUTION.md) and
+UI constitution and
 [refinement skill](../skills/bim-ui-refinement/SKILL.md). Then load only the relevant UI_SPEC,
 reference permissions, task mapping, requirements/ADRs and component/viewer interfaces.
 Identify existing BIM interactions before proposing alternatives.
