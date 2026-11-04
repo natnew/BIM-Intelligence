@@ -7,10 +7,12 @@ authors:
   - name: Natasha
 repository-code: "https://github.com/natnew/BIM-Intelligence"
 license: MIT
+version: "0.1.0"
+date-released: "2026-11-04"
 keywords:
   - Building Information Modelling
   - Building Information Modeling
   - IFC
   - Information Delivery Specification
   - BIM validation
-  - Agentic AI
+  - AI-assisted model review
