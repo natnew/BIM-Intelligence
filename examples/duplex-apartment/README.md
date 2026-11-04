@@ -24,7 +24,7 @@ Model contents, source URLs, licences and redistribution rights, file hashes, IF
 application compatibility are **Pending verification**. These filenames and intended uses do not
 establish that every input is present or suitable for publication.
 
-See the [example library guide](../README.md#storage-and-licensing) before using or publishing files.
+See the [example library guide](../README.md#sources-and-licences) before using or publishing files.
 
 # Dataset Duplex Apartment
 

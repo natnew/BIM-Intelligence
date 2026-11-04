@@ -48,7 +48,7 @@ or open question before implementing it.
 
 ## 3. Directory conventions
 
-See [ARCHITECTURE.md Appendix A](./docs/ARCHITECTURE.md#appendix-a--recommended-repository-structure).
+See [ARCHITECTURE.md Appendix A](./docs/ARCHITECTURE.md#appendix-a--repository-structure).
 
 - Create a directory only when adding its first real file. No placeholder folders.
 - `backend/bim_intelligence/<package>/` holds one package per component. Respect the import
