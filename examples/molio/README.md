@@ -23,7 +23,7 @@ Model contents, source URLs, licences and redistribution rights, file hashes, IF
 application compatibility are **Pending verification**. The intended exploration does not establish
 that referenced URIs are valid or that the IFC is suitable for publication.
 
-See the [example library guide](../README.md#storage-and-licensing) before using or publishing files.
+See the [example library guide](../README.md#sources-and-licences) before using or publishing files.
 
 An applicable IDS must be prepared separately for project-specific IDS validation.
 
@@ -32,5 +32,5 @@ An applicable IDS must be prepared separately for project-specific IDS validatio
 **Availability, source URLs, licences and redistribution rights, file hashes, IFC versions and
 application compatibility:** **Pending verification.**
 
-See the [library guide](../README.md#storage-and-licensing) for input locations and licensing.
+See the [library guide](../README.md#sources-and-licences) for input locations and licensing.
 

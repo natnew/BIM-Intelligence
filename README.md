@@ -219,7 +219,7 @@ the objective, a model summary and requirement metadata; an explanation can also
 element properties and finding evidence. The IFC file itself is not sent. The application reserves
 against a two-call review cap, USD 0.10 per call and per review, and a USD 5 project ledger. These
 are application safeguards, not provider-enforced billing limits
-([ADR-020](./docs/DECISIONS.md#adr-020-t-5-meta-client-spend-ledger-and-human-gates)). All
+([ADR-020](./docs/DECISIONS.md#adr-020-meta-client-spend-ledger-and-live-mode-safeguards)). All
 variables are documented in [`.env.example`](./.env.example).
 
 <details>
@@ -290,7 +290,7 @@ understands a review. Its contribution is deliberately bounded to two verified c
 | pytest · Vitest | Backend and frontend test suites |
 
 Verified versions and sources:
-[ARCHITECTURE Appendix B](./docs/ARCHITECTURE.md#appendix-b--verified-technology-facts-26-october-2026-viewer-packages-checked-29-october-2026).
+[ARCHITECTURE Appendix B](./docs/ARCHITECTURE.md#appendix-b--verified-technology-facts).
 
 
 ## Status and limitations

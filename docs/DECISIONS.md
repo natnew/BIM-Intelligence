@@ -1,8 +1,9 @@
 # Architectural Decisions
 
-**Status:** v0.4, 29 October 2026. Decisions are numbered and immutable once adopted; superseding decisions reference the original.
-
-Each record states the decision, the alternatives considered, the trade-offs, the evidence relied upon, and anything still unresolved. Evidence URLs were verified on 26 October 2026 unless stated otherwise.
+This file records the main architectural decisions behind BIM Intelligence. Each record states the
+decision, the alternatives considered, the trade-offs and the evidence it relies on, and lists
+anything still unresolved. Decisions are numbered and are not edited once adopted; a later record
+supersedes an earlier one and says so.
 
 | ADR | Title | Status |
 |---|---|---|
@@ -10,45 +11,50 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 | [ADR-002](#adr-002-meta-model-api-via-the-openai-python-sdk) | Meta Model API via the OpenAI Python SDK | Adopted |
 | [ADR-003](#adr-003-single-orchestrator-with-typed-tool-registry) | Single orchestrator with typed tool registry | Adopted |
 | [ADR-004](#adr-004-ifcopenshell--ifctester-for-model-access-and-ids-validation) | IfcOpenShell + IfcTester for model access and IDS validation | Adopted |
-| [ADR-005](#adr-005-python-312-pinned) | Python 3.12 pinned | Adopted |
+| [ADR-005](#adr-005-python-310312-supported-developed-on-312) | Python 3.10–3.12 supported, developed on 3.12 | Adopted |
 | [ADR-006](#adr-006-file-system-session-store-no-database) | File-system session store, no database | Adopted; layout refined by ADR-017 |
-| [ADR-007](#adr-007-browser-side-geometry-with-that-open-components) | Browser-side geometry with That Open Components | Adopted; API verified in T-3 |
+| [ADR-007](#adr-007-browser-side-geometry-with-that-open-components) | Browser-side geometry with That Open Components | Adopted |
 | [ADR-008](#adr-008-human-confirmation-of-extracted-requirements) | Human confirmation of extracted requirements | Adopted |
 | [ADR-009](#adr-009-deterministic-grounding-check-on-every-explanation) | Deterministic grounding check on every explanation | Adopted |
 | [ADR-010](#adr-010-standard-mode-model-ids-only) | Standard-mode model ids only | Adopted |
-| [ADR-011](#adr-011-synthetic-benchmark-with-defect-injection) | Synthetic benchmark with defect injection | Proposed, approval needed |
-| [ADR-012](#adr-012-chat-completions-protocol-first) | Chat Completions protocol first | Adopted, revisit |
-| [ADR-013](#adr-013-fastapi-background-tasks-and-sse-no-task-queue) | FastAPI background tasks and SSE, no task queue | Adopted |
+| [ADR-011](#adr-011-synthetic-benchmark-with-defect-injection) | Synthetic benchmark with defect injection | Adopted |
+| [ADR-012](#adr-012-chat-completions-protocol-first) | Chat Completions protocol first | Adopted |
+| [ADR-013](#adr-013-synchronous-in-process-review-runs-no-task-queue) | Synchronous in-process review runs, no task queue | Adopted |
 | [ADR-014](#adr-014-frontend-types-generated-from-pydantic-json-schema) | Frontend types generated from Pydantic JSON Schema | Adopted |
 | [ADR-015](#adr-015-contract-model-immutable-checkspec-content-addressed-finding-per-check-checkresult) | Contract model: immutable `CheckSpec`, content-addressed `Finding`, per-check `CheckResult` | Adopted |
 | [ADR-016](#adr-016-ingestion-contract-staged-upload-content-hash-etag-and-identifier-handling) | Ingestion contract: staged upload, content-hash ETag and identifier handling | Adopted; §1 superseded by ADR-017 |
 | [ADR-017](#adr-017-content-addressed-model-versions-with-single-pointer-publication) | Content-addressed model versions with single-pointer publication | Adopted |
 | [ADR-018](#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock) | IDS import establishes confirmed requirements; checks are hydrated per run; reviews run under the session lock | Adopted |
-| [ADR-019](#adr-019--t-4-native-rule-scope-and-bounded-deterministic-execution) | T-4 native rule scope and bounded deterministic execution | Adopted |
-| [ADR-020](#adr-020-t-5-meta-client-spend-ledger-and-human-gates) | T-5 Meta client, spend ledger and human gates | Adopted |
-| [ADR-021](#adr-021-bounded-model-federation-is-separate-from-a-session) | Bounded model federation is separate from a session | Adopted; implementation conditional on feasibility |
-| [ADR-022](#adr-022-deterministic-geometric-coordination-results) | Deterministic geometric coordination results | Adopted; implementation conditional on feasibility |
-| [ADR-023](#adr-023-ui-004-viewer-integrity-and-visual-continuity) | UI-004 viewer integrity and visual continuity | Adopted |
+| [ADR-019](#adr-019-native-rule-scope-and-bounded-deterministic-execution) | Native rule scope and bounded deterministic execution | Adopted |
+| [ADR-020](#adr-020-meta-client-spend-ledger-and-live-mode-safeguards) | Meta client, spend ledger and Live-mode safeguards | Adopted |
+| [ADR-021](#adr-021-bounded-model-federation-is-separate-from-a-session) | Bounded model federation is separate from a session | Adopted; not implemented |
+| [ADR-022](#adr-022-deterministic-geometric-coordination-results) | Deterministic geometric coordination results | Adopted; not implemented |
+| [ADR-023](#adr-023-viewer-integrity-and-visual-continuity) | Viewer integrity and visual continuity | Adopted |
 | [ADR-024](#adr-024-muse-spark-remains-an-optional-grounded-interpretation-provider) | Muse Spark remains an optional, grounded interpretation provider | Adopted |
-| [ADR-025](#adr-025-hackathon-release-gate-and-demonstration-fallback) | Hackathon release gate and demonstration fallback | Adopted |
+| [ADR-025](#adr-025-show-only-verified-capabilities) | Show only verified capabilities | Adopted |
 | [ADR-026](#adr-026-explicit-ai-review-policy-and-run-provenance) | Explicit AI review policy and run provenance | Adopted |
-| [ADR-027](#adr-027-fix-002-muse-spark-structured-review-planning) | FIX-002 Muse Spark structured review planning | Adopted |
-| [ADR-028](#adr-028-fix-003-muse-spark-grounded-explanation-allowance-and-token-limit-labelling) | FIX-003 Muse Spark grounded explanation allowance and token-limit labelling | Proposed; awaiting owner acceptance of the FIX-003 implementation |
-| [ADR-029](#adr-029-live-structured-output-evidence-and-retained-validation) | Live structured-output evidence and retained validation | Proposed; evidence reconciliation for owner review |
+| [ADR-027](#adr-027-structured-review-planning-request) | Structured review-planning request | Adopted |
+| [ADR-028](#adr-028-explanation-completion-allowance-and-token-limit-labelling) | Explanation completion allowance and token-limit labelling | Adopted |
+| [ADR-029](#adr-029-live-structured-output-evidence-and-retained-validation) | Live structured-output evidence and retained validation | Adopted |
 
 ---
 
 ## ADR-001 Findings are deterministic; the LLM never asserts model facts
 
-**Decision.** A `Finding` may only be created by IfcTester (IDS) or a native Python rule. The `Finding.method` enumeration has no `llm` member. The LLM plans, proposes requirements, and explains; its outputs are validated by schema and, for explanations, by a grounding check against evidence.
+**Decision.** A `Finding` may only be created by IfcTester (IDS) or a registered native Python rule.
+The `Finding.method` enumeration has no `llm` member. The language model plans, proposes
+requirements and explains; its outputs are validated by schema and, for explanations, by a
+grounding check against the evidence.
 
 **Alternatives.**
-1. LLM inspects model data directly and reports defects — fastest to prototype; violates C-01/C-02 and makes precision unmeasurable.
-2. LLM proposes findings that a deterministic step then verifies — adds a round-trip per finding; verification would re-implement the rules anyway.
+1. The model inspects model data directly and reports defects: fastest to prototype, but findings
+   would be unverifiable and precision unmeasurable.
+2. The model proposes findings that a deterministic step then verifies: adds a round trip per
+   finding, and the verification would re-implement the rules anyway.
 
-**Trade-offs.** Coverage is bounded by the rule library; novel defect types cannot be "noticed" by the model. This is accepted: the brief requires measurable, verifiable findings, and the rule library can grow.
-
-**Evidence.** Brief §2 (C-01, C-02), §5 ("design against hallucinated model facts"), §10.
+**Trade-offs.** Coverage is bounded by the rule library; the model cannot "notice" a defect type
+with no rule. This is accepted: findings must be measurable and verifiable, and the rule library
+can grow.
 
 **Unresolved.** None.
 
@@ -56,775 +62,911 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 
 ## ADR-002 Meta Model API via the OpenAI Python SDK
 
-**Decision.** Call Meta Muse models through the OpenAI Python SDK configured with `base_url="https://api.meta.ai/v1"` and `api_key=MODEL_API_KEY`. Wrap it behind an `LLMClient` protocol with Fake, Recording and Replay implementations.
+**Decision.** Call Meta Muse models through the OpenAI Python SDK configured with
+`base_url="https://api.meta.ai/v1"` and `api_key=MODEL_API_KEY`, behind an `LLMClient` protocol with
+Fake, Recording and Replay implementations.
 
 **Alternatives.**
-1. Raw `httpx` client — more code, no benefit; the API is OpenAI-compatible.
-2. LangChain / LlamaIndex / an agent framework — heavier dependency, obscures the tool loop we need to control tightly (NFR-06), and complicates cost accounting.
-3. Muse Code SDK — TypeScript-only, aimed at driving the Muse Code CLI, not inference.
+1. A raw `httpx` client: more code and no benefit, since the API is OpenAI-compatible.
+2. LangChain, LlamaIndex or another agent framework: a heavier dependency that obscures the tool
+   loop we need to control tightly and complicates cost accounting.
+3. The Muse Code SDK: TypeScript-only and aimed at driving the Muse Code CLI, not inference.
 
-**Trade-offs.** Dependence on the OpenAI SDK's compatibility with Meta's implementation of `response_format` and tool calling; mitigated by the protocol abstraction and a Day-1 smoke test.
+**Trade-offs.** Depends on the OpenAI SDK remaining compatible with Meta's implementation of
+`response_format`; mitigated by the protocol abstraction and an opt-in live smoke test.
 
-**Evidence.** dev.meta.ai/docs/quickstart (recommends `pip install openai`), /docs/protocols, /docs/structured-output, /docs/tool-calling; `openai` on PyPI requires Python ≥ 3.10.
+**Evidence.** Meta's [quickstart](https://dev.meta.ai/docs/quickstart) recommends the `openai`
+package; see also its protocol and structured-output documentation. The `openai` package requires
+Python 3.10 or later.
 
-**Unresolved.** Hackathon-specific credits or endpoints (none found publicly). Whether strict JSON-schema mode supports every Pydantic construct we use (test on Day 1).
+**Unresolved.** Whether Meta accepts every JSON Schema construct generated from our Pydantic models
+across all request types (see ADR-029).
 
 ---
 
 ## ADR-003 Single orchestrator with typed tool registry
 
-**Decision.** Implement one orchestrator that (a) asks the model for a `ReviewPlan` via structured output, (b) filters the plan against the registry and confirmed requirements, (c) executes tools deterministically with a hard iteration cap, and (d) invokes the explainer. Requirement extraction and explanation are separate structured-output calls, not tools in the loop.
+**Decision.** One orchestrator (a) asks the model for a `ReviewPlan` through structured output,
+(b) filters the plan against the registry and the confirmed requirements, (c) executes checks
+deterministically under a hard cap and (d) invokes the explainer on request. Requirement extraction
+and explanation are separate structured-output calls, not tools in a loop.
 
 **Alternatives.**
-1. Six cooperating LLM agents mirroring the brief's logical responsibilities — more calls, more failure modes, inter-agent protocol to design and debug; no capability gained because four of the six responsibilities are deterministic.
-2. Fully deterministic pipeline with no planner — robust and cheap but fails FR-REQ-06 (interpreting natural-language objectives) and removes the AI-native differentiator.
-3. Free-running tool-calling agent without a plan step — harder to cap, explain and evaluate; plan-then-execute gives an inspectable artefact.
+1. Several cooperating LLM agents: more calls, more failure modes and an inter-agent protocol to
+   design and debug, with no capability gained because most of the responsibilities are
+   deterministic.
+2. A fully deterministic pipeline with no planner: robust and cheap, but cannot interpret a
+   plain-language review objective.
+3. A free-running tool-calling agent without a plan step: harder to cap, explain and evaluate;
+   plan-then-execute leaves an inspectable artefact.
 
-**Trade-offs.** Plan-then-execute is less adaptive than an open loop; the model cannot react to intermediate results except through the single corrective re-prompt on tool errors. Accepted for the MVP; an iterative refinement step is a P2 proposal.
+**Trade-offs.** Plan-then-execute is less adaptive than an open loop: the model cannot react to
+intermediate results. Accepted; an iterative refinement step is possible later.
 
-**Evidence.** Brief §5 ("favour the smallest effective orchestration architecture"); NFR-05, NFR-06.
-
-**Unresolved.** Whether the planner adds measurable value over the default plan for the benchmark objectives — to be evaluated.
+**Unresolved.** Whether the planner adds measurable value over the default plan across a range of
+objectives (OQ-04).
 
 ---
 
 ## ADR-004 IfcOpenShell + IfcTester for model access and IDS validation
 
-**Decision.** Use `ifcopenshell` 0.9.x for all IFC access and `ifctester` 0.9.x as the IDS 1.0 engine. Native rules supplement IDS for checks IDS cannot express.
+**Decision.** Use `ifcopenshell` 0.9.x for all IFC access and `ifctester` 0.9.x as the IDS 1.0
+engine. Native rules supplement IDS for checks IDS cannot express.
 
 **Alternatives.**
-1. Write a custom IDS validator — duplicates a maintained reference implementation.
-2. `web-ifc` on the backend via Node — would split the backend across runtimes.
-3. Commercial checker APIs — not open, not permitted by the hackathon spirit of the brief.
+1. A custom IDS validator: duplicates a maintained reference implementation.
+2. `web-ifc` on the backend through Node: would split the backend across two runtimes.
+3. Commercial checker APIs: not open source.
 
-**Trade-offs.** LGPL-3.0-or-later licence (dynamic use from Python is unproblematic for MIT project code). Geometry support is strongest for IFC2X3 and IFC4; IFC4X3 geometry is partial.
+**Trade-offs.** IfcOpenShell is LGPL-3.0-or-later, which is compatible with MIT project code when
+used as an installed package. Geometry support is strongest for IFC2X3 and IFC4; IFC4X3 geometry is
+partial.
 
-**Evidence.** pypi.org/project/ifcopenshell (0.9.0.post1, LGPL), docs.ifcopenshell.org/ifctester.html (IDS API and reporters), github.com/buildingSMART/IDS (schema 1.0.0).
+**Evidence.** [IfcOpenShell on PyPI](https://pypi.org/project/ifcopenshell/) (0.9.0.post1, LGPL),
+the [IfcTester documentation](https://docs.ifcopenshell.org/ifctester.html) and the
+[buildingSMART IDS repository](https://github.com/buildingSMART/IDS) (schema 1.0.0). IfcTester's
+PyPI classifier is LGPLv3+.
 
-**Unresolved.** `ifctester` licence classifier not shown on PyPI; assumed to follow IfcOpenShell (LGPL) — verify in source before publishing the licence table.
+**Unresolved.** None.
 
 ---
 
-## ADR-005 Python 3.12 pinned
+## ADR-005 Python 3.10–3.12 supported, developed on 3.12
 
-**Decision.** `requires-python = ">=3.10,<3.13"`; development and CI on 3.12.
+**Decision.** `requires-python = ">=3.10,<3.13"`; development and CI use Python 3.12.
 
-**Alternatives.** Python 3.13+ — no IfcOpenShell wheels on PyPI; source build requires OpenCASCADE toolchain.
+**Alternatives.** Python 3.13 or later: IfcOpenShell publishes no wheels for it, and a source build
+needs the OpenCASCADE toolchain.
 
-**Trade-offs.** Lose newer language features; negligible for this project.
+**Trade-offs.** Newer language features are unavailable; negligible for this project.
 
-**Evidence.** pypi.org/simple/ifcopenshell lists cp310–cp312 wheels only (checked 26 Oct 2026) despite `requires_python <3.16` metadata.
+**Evidence.** The IfcOpenShell wheel index lists cp310–cp312 wheels only, despite broader
+`requires_python` metadata.
 
 ---
 
 ## ADR-006 File-system session store, no database
 
-**Status note (28 October 2026).** The on-disk layout of the model artefacts is refined by [ADR-017](#adr-017-content-addressed-model-versions-with-single-pointer-publication): model bytes, index and summary live together under `models/{sha256}/` rather than directly in the session directory. The decision not to use a database stands.
-
-**Decision.** Each session is a directory under `data/sessions/{uuid}/` containing the original IFC, documents, `model_index.json`, `requirements.json`, `runs/{runId}/findings.json`, explanations, report and run log. Writes are atomic (write-to-temp then rename).
+**Decision.** Each session is a directory under `data/sessions/{uuid}/` holding its model versions,
+documents, `requirements.json`, review runs and explanations. Writes are atomic (write to a
+temporary file, then rename). [ADR-017](#adr-017-content-addressed-model-versions-with-single-pointer-publication)
+refines the model layout: model bytes, index and summary live together under `models/{sha256}/`.
 
 **Alternatives.**
-1. SQLite — easy upgrade path; adds schema migrations and query code without a current need.
-2. Postgres/Redis — infrastructure the brief explicitly discourages (§9).
+1. SQLite: an easy upgrade path, but adds migrations and query code without a current need.
+2. Postgres or Redis: infrastructure out of proportion to a single-user local application.
 
-**Trade-offs.** No concurrent multi-user access, no querying across sessions. Acceptable for a single-user hackathon demo. The `SessionStore` interface is the seam for SQLite later.
-
-**Evidence.** Brief §9 ("avoid unnecessary … databases and infrastructure").
+**Trade-offs.** No concurrent multi-user access and no querying across sessions; acceptable for a
+single-user local application. The `SessionStore` interface is the seam for a database later.
 
 ---
 
 ## ADR-007 Browser-side geometry with That Open Components
 
-**Decision.** The frontend loads the IFC with `@thatopen/components` `IfcLoader` (web-ifc worker → Fragments) and highlights by GlobalId. The backend performs no geometry processing in the MVP.
+**Decision.** The frontend loads the IFC with `@thatopen/components` `IfcLoader` (web-ifc worker →
+Fragments) and highlights elements by GlobalId. The backend does no geometry processing.
 
 **Alternatives.**
-1. Backend tessellation with `ifcopenshell.geom` → glTF → Three.js — second pipeline, slow for large models, loses IFC semantics in the viewer.
-2. Plain Three.js + web-ifc without That Open Components — more code for selection, culling and UI.
-3. xeokit — strong viewer but AGPL/commercial licensing; That Open Components is MIT.
+1. Backend tessellation with `ifcopenshell.geom` → glTF → Three.js: a second pipeline, slow for
+   large models, and it loses IFC semantics in the viewer.
+2. Plain Three.js and web-ifc without That Open Components: more code for selection, culling and
+   UI.
+3. xeokit: a strong viewer, but AGPL or commercial licensing; That Open Components is MIT.
 
-**Trade-offs.** The IFC is parsed twice (backend for semantics, browser for geometry). The join relies on GlobalId being present in both; IFC guarantees it. The 3.x Fragments pipeline and exact `Highlighter` API are a known uncertainty.
+**Trade-offs.** The IFC is parsed twice: on the backend for semantics and in the browser for
+geometry. The join relies on GlobalId, which IFC requires on every rooted entity.
 
-**Evidence.** registry.npmjs.org (`@thatopen/components` 3.6.0, MIT, peer `three >= 0.182.0`, `web-ifc >= 0.0.77`); thatopen.github.io/engine_components lists `core/IfcLoader`, `core/FragmentsManager` and `front/Highlighter`.
+**Evidence.** `@thatopen/components` 3.6.0 (MIT; peers `three >= 0.182.0`, `web-ifc >= 0.0.77`).
+Browser checks on the minimal fixture exercised `getLocalIdsByGuids`, `getGuidsByLocalIds` and
+`Highlighter.highlightByID`: selecting a finding highlights its wall, and clicking the wall selects
+the matching finding.
 
-**Implementation evidence (T-3, 29 October 2026).** On the minimal IFC, browser verification exercised `getLocalIdsByGuids`, `getGuidsByLocalIds` and `Highlighter.highlightByID`; selecting a finding highlighted its wall, and clicking that wall resolved its GlobalId and selected the matching finding. See the T-3 implementation record.
+**Licence note.** `web-ifc` 0.0.77 is MPL-2.0, not MIT. It is installed unchanged because the viewer
+stack requires it; this is a documented exception to the project's permissive-or-LGPL dependency
+preference. See [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) for redistribution obligations.
 
-**Licence note.** `web-ifc` 0.0.77 is MPL-2.0, not MIT. It is installed unchanged because it is required by the selected viewer stack; this is a documented exception to the repository's permissive-or-LGPL dependency preference. Owner review of distribution obligations remains required before public distribution.
-
-**Out of scope.** Whether the `IDSSpecifications` component could run IDS in-browser as a cross-check remains a P2 curiosity, not planned work.
+**Out of scope.** Running IDS in the browser with the `IDSSpecifications` component as a
+cross-check.
 
 ---
 
 ## ADR-008 Human confirmation of extracted requirements
 
-**Decision.** Requirements extracted from a BEP start as `proposed`. Only `confirmed` (or user-`edited`) requirements are executable. Uploaded IDS files are treated as confirmed because they are already machine-readable project artefacts.
+**Decision.** Requirements extracted from narrative documents start as `proposed`. Only `confirmed`
+requirements are executable. Uploaded IDS files are treated as confirmed because they are already
+machine-readable project specifications.
 
-**Alternatives.** Auto-confirm above a confidence threshold — the model's confidence is uncalibrated and a false requirement would generate false findings that look verified.
+**Alternatives.** Auto-confirm above a confidence threshold: the model's confidence is
+uncalibrated, and a false requirement would generate false findings that look verified.
 
-**Trade-offs.** One extra UI step; strongly aligned with the professional workflow and C-02.
-
-**Evidence.** Brief §2, §5 ("uncontrolled tool execution"); ISO 19650 practice places requirement definition under human information-management control.
+**Trade-offs.** One extra step for the user, in line with ISO 19650 practice, which places
+requirement definition under human information-management control.
 
 ---
 
 ## ADR-009 Deterministic grounding check on every explanation
 
-**Decision.** Explanations are structured outputs that must list the GlobalIds and properties they cite. A deterministic checker verifies all citations against the evidence bundle. Failures regenerate once, then fall back to a template.
+**Decision.** Explanations are structured outputs that must list the GlobalIds and properties they
+cite. A deterministic checker verifies every citation against the evidence. A failure falls back to
+a clearly labelled deterministic template.
 
-**Alternatives.** LLM-as-judge for faithfulness — costs a second call, is itself fallible, and is unnecessary when evidence is structured.
+**Alternatives.** An LLM judge for faithfulness: costs a second call, is itself fallible, and is
+unnecessary when the evidence is structured.
 
-**Trade-offs.** Explanations are constrained to cite only bundled evidence; broader architectural advice must be phrased generically. Numeric matching is heuristic (tolerant string match) and may produce false rejections; those are logged and fall back safely.
-
-**Evidence.** Brief §2 (C-02), §5; repository instruction set ("prefer deterministic checks for invariants").
+**Trade-offs.** Explanations can cite only the supplied evidence, so broader advice must be phrased
+generically. Matching values is heuristic and may reject a valid explanation; rejections fall back
+safely.
 
 ---
 
 ## ADR-010 Standard-mode model ids only
 
-**Decision.** Configuration rejects model ids ending in `-contributor` unless `ALLOW_CONTRIBUTOR_MODELS=true`. Default model `muse-spark-1.3`.
+**Decision.** Configuration rejects model ids ending in `-contributor` unless
+`ALLOW_CONTRIBUTOR_MODELS=true`. The default model is `muse-spark-1.3`.
 
-**Alternatives.** Contributor mode — roughly 12× cheaper input tokens, but grants Meta permission to train on submitted content, which may include confidential project documents and model data.
+**Alternatives.** Contributor mode: much cheaper input tokens, but it permits Meta to train on the
+submitted content, which may include confidential project documents and model data.
 
-**Trade-offs.** Higher cost per run; acceptable given the token budget (NFR-05).
+**Trade-offs.** A higher cost per request, kept small by the spend controls in ADR-020.
 
-**Evidence.** dev.meta.ai/docs/models and /docs/pricing-rate-limits (Standard mode: content not used for training; Contributor mode: opt-in training).
+**Evidence.** Meta's [models](https://dev.meta.ai/docs/models) and
+[pricing](https://dev.meta.ai/docs/pricing-rate-limits) documentation: Standard-mode content is not
+used for training; Contributor mode opts in to training.
 
 ---
 
 ## ADR-011 Synthetic benchmark with defect injection
 
-**Decision (proposed).** Generate a small, clean architectural IFC programmatically with `ifcopenshell.api` (storeys, walls, doors, windows, slabs, spaces, type objects, psets, classification), then inject 15–20 labelled defects by script to produce `benchmark.ifc` and `ground_truth.json`. Optionally run the same injector against an openly licensed sample IFC as a second dataset.
+**Decision.** Generate a small, clean architectural IFC programmatically with `ifcopenshell.api`
+(storeys, walls, doors, windows, slabs, spaces, type objects, property sets and classification),
+then inject labelled defects by script to produce a defective model and its ground truth. The
+benchmark lives in `tests/evaluation/` and is regenerated on demand.
 
 **Alternatives.**
-1. Hand-edit a public sample IFC — licence and redistribution must be verified per file; manual edits are error-prone and hard to reproduce.
-2. Use a real project model — confidentiality; cannot be committed.
+1. Hand-edit a public sample IFC: licence and redistribution must be checked per file, and manual
+   edits are error-prone and hard to reproduce.
+2. Use a real project model: confidential, and cannot be committed.
 
-**Trade-offs.** A synthetic model is simpler than a real one and may under-represent messy real-world data; the injector makes ground truth exact and the benchmark reproducible and redistributable under the repository licence.
+**Trade-offs.** A synthetic model is simpler than a real one and under-represents messy real-world
+data. In return, the ground truth is exact and the benchmark is reproducible and redistributable
+under the project licence.
 
-**Evidence.** Brief §6 (15–20 labelled defects, clean reference cases, ≥ 90 % precision/recall); `ifcopenshell.api` authoring documented at docs.ifcopenshell.org.
+**Evidence.** The benchmark has 15 labelled defects in three rule families and seven clean
+controls; the deterministic validator scores 1.000 precision and recall on it. See
+[datasets/README.md](../datasets/README.md).
 
-**Unresolved.** **Requires owner approval** (OPEN-04). Candidate open sample sources to licence-check if a second dataset is wanted: buildingSMART Sample-Test-Files repository; IfcOpenShell test files.
+**Unresolved.** Whether to add a second dataset based on an openly licensed public model (OQ-03).
+Candidates include the buildingSMART sample test files and the IfcOpenShell test files.
 
 ---
 
 ## ADR-012 Chat Completions protocol first
 
-**Decision.** Use `POST /v1/chat/completions` for planner, extractor and explainer calls.
+**Decision.** Use `POST /v1/chat/completions` for planning, extraction and explanation calls.
 
-**Alternatives.** Responses API (recommended by Meta, supports cross-turn reasoning replay); Messages API (Anthropic-compatible).
+**Alternatives.** The Responses API, which Meta recommends and which supports cross-turn reasoning
+replay; the Anthropic-compatible Messages API.
 
-**Trade-offs.** Chat Completions is the most broadly compatible with the OpenAI SDK's structured-output helpers (`beta.chat.completions.parse` with Pydantic). Responses may offer better multi-step behaviour; revisit after the MVP if planning quality is the bottleneck.
+**Trade-offs.** Chat Completions is the most broadly compatible with the OpenAI SDK's
+structured-output support. Responses may behave better for multi-step work; revisit if planning
+quality becomes the bottleneck.
 
-**Evidence.** dev.meta.ai/docs/protocols, /docs/protocols/chat-completions, /docs/structured-output.
+**Evidence.** Meta's [protocol documentation](https://dev.meta.ai/docs/protocols).
 
 ---
 
-## ADR-013 FastAPI background tasks and SSE, no task queue
+## ADR-013 Synchronous in-process review runs, no task queue
 
-**Decision.** Review runs execute as in-process background tasks; progress streams via Server-Sent Events.
+**Decision.** A review runs synchronously inside the request that starts it, under the session lock
+(ADR-018 §4), and returns the completed run. There is no task queue and no progress stream.
 
-**Alternatives.** Celery/RQ with Redis — infrastructure the brief discourages; WebSockets — bidirectional capability not needed.
+**Alternatives.**
+1. Celery or RQ with Redis: infrastructure out of proportion to a local application.
+2. FastAPI background tasks with Server-Sent Events: the original design, deferred because runs on
+   the supported model sizes complete in seconds.
+3. WebSockets: bidirectional communication is not needed.
 
-**Trade-offs.** A crash mid-run loses in-memory progress (persisted artefacts survive). Long IFC indexing could block the event loop; mitigation is a `ProcessPoolExecutor` if measured.
-
-**Evidence.** Brief §9; FastAPI 0.162 documentation for `BackgroundTasks` and `StreamingResponse`.
+**Trade-offs.** A long run blocks the request and holds the session lock, so uploads to that session
+wait for it. Background execution with a progress stream is the planned remedy for large models.
 
 ---
 
 ## ADR-014 Frontend types generated from Pydantic JSON Schema
 
-**Decision.** Export JSON Schema from `schemas/` with `model_json_schema()` and generate TypeScript types during the frontend build (`json-schema-to-typescript`). Generated files are committed so the frontend builds without Python.
+**Decision.** Export JSON Schema from `schemas/` with `model_json_schema()` and generate TypeScript
+types with `json-schema-to-typescript`. Both generated files are committed and checked, so the
+frontend builds without Python:
 
-**Alternatives.** Hand-written TS interfaces — drift risk; OpenAPI client generation — heavier, and FastAPI's OpenAPI already embeds the same schemas, so either route is acceptable.
+- `python scripts/export_schemas.py` writes `frontend/src/api/generated/bim_intelligence.schema.json`;
+  a test asserts it is current.
+- `npm run types:generate` writes `types.ts` from it, and `npm run types:check` fails CI when it is
+  stale.
 
-**Trade-offs.** One generation step to maintain; guarantees identical `Finding`/`Requirement`/`Explanation` shapes on both sides (C-07).
+**Alternatives.** Hand-written TypeScript interfaces (they drift); OpenAPI client generation
+(heavier; FastAPI's OpenAPI embeds the same schemas, so either route works).
 
-**Evidence.** docs.pydantic.dev/latest/concepts/json_schema (`model_json_schema()`).
+**Trade-offs.** One generation step to maintain, in exchange for identical `Finding`,
+`Requirement` and `Explanation` shapes on both sides.
 
-**Implementation note (27 October 2026, ADR-015).** Generated files are committed and checked, not produced "during build": `python scripts/export_schemas.py` writes `frontend/src/api/generated/bim_intelligence.schema.json` (a pytest asserts it is current); `npm run types:generate` writes `types.ts` from it with `json-schema-to-typescript`, and `npm run types:check` fails CI when stale. The frontend build therefore never requires Python.
+**Evidence.** The Pydantic [JSON Schema documentation](https://docs.pydantic.dev/latest/concepts/json_schema/).
 
 ---
 
 ## ADR-015 Contract model: immutable `CheckSpec`, content-addressed `Finding`, per-check `CheckResult`
 
-**Status.** Adopted 27 October 2026 as the owner-approved technical direction for the vertical slice. Implemented in `backend/bim_intelligence/schemas/`.
+**Decision.** Implemented in `backend/bim_intelligence/schemas/`.
 
-**Decision.**
+1. **`CheckSpec` is immutable and content-addressed.** `CheckSpec.id = sha1(kind | rule_id |
+   rule_version | payload)[:16]`, where the payload is the serialised IDS `<specification>` for
+   `kind="ids"` or the canonical JSON of `params` for `kind="native"`. A `ReviewPlan` item carries
+   only `{check_id, reason}`; the orchestrator resolves the id to the confirmed `CheckSpec` on the
+   server. No code path accepts model-supplied parameters, so a plan can choose which confirmed
+   checks run but can never weaken what a check asserts.
+2. **A `Requirement` is executable only at its confirmed revision.** `status="confirmed"` requires
+   `confirmed_revision == revision`; an edit increments `revision`, and an `edited` requirement is
+   not executable until it is confirmed again. A requirement with `origin="document"` must carry a
+   verbatim `source` quote.
+3. **`Finding` identity and order are canonical.** `Finding.id = sha1(check_id | rule_version |
+   facet_index | sorted element keys)[:16]`, where an element key is its GlobalId, or
+   `#express_id` when there is none. Elements are stored in key order; `findings.json` uses sorted
+   keys, with findings ordered by `(check_id, facet_index, first element key, id)`. `Finding` has
+   **no** `created_at` and **no** `run_id`: both would break byte-identical output across runs, and
+   the run already lists its findings through `CheckResult.finding_ids`. `method` is `ids` or
+   `native` only (ADR-001).
+4. **Execution status is separate from defects.** `CheckResult {check_id, requirement_id, status ∈
+   passed | failed | error | skipped | not_applicable, applicable_count, finding_ids[],
+   diagnostics[]}`: `failed` if and only if `finding_ids` is non-empty, `error` requires a
+   diagnostic, and `not_applicable` requires zero applicable elements. `ReviewRun` is the only
+   record with timestamps. An IfcTester exception, a cap being reached or a specification with no
+   applicable entities is a `CheckResult` status, never a finding.
+5. **`ElementRef.global_id` is nullable; `express_id` is always present.** GlobalId remains the
+   viewer join key (ADR-007); `express_id` is diagnostic and the fallback identity for entities that
+   are not `IfcRoot`.
+6. **Contract models forbid unknown fields** and are exported in serialisation mode, so every field
+   is required in the TypeScript types and an unexpected key (such as `params` on a plan item) is a
+   validation error, not a silent drop.
 
-1. **`CheckSpec` is immutable and content-addressed.** `CheckSpec.id = sha1(kind | rule_id | rule_version | payload)[:16]`, where the payload is the serialised IDS `<specification>` for `kind="ids"` or the canonical JSON of `params` for `kind="native"`. A `ReviewPlan` item carries only `{check_id, reason}`; the orchestrator resolves the id to the confirmed `CheckSpec` server-side. No code path accepts model-supplied parameters, so a plan can select which confirmed checks run but can never weaken what a check asserts.
-2. **A `Requirement` is executable only at its confirmed revision.** `status="confirmed"` requires `confirmed_revision == revision`; an edit bumps `revision`, and `edited` is never executable until the user re-confirms. A requirement with `origin="document"` must carry a verbatim `source` quote.
-3. **`Finding` identity and order are canonical.** `Finding.id = sha1(check_id | rule_version | facet_index | sorted element keys)[:16]`, where an element key is its GlobalId or `#express_id` when none exists. `elements` are stored in key order; `findings.json` is serialised with sorted keys, findings ordered by `(check_id, facet_index, first element key, id)`. `Finding` has **no** `created_at` and **no** `run_id`: both would break the byte-identity NFR-01 demands, and the run already lists its findings through `CheckResult.finding_ids`. `method` remains `ids | native` only (ADR-001).
-4. **Execution status is separate from defects.** `CheckResult {check_id, requirement_id, status ∈ passed | failed | error | skipped | not_applicable, applicable_count, finding_ids[], diagnostics[]}`; `failed` ⇔ `finding_ids` non-empty, `error` requires a diagnostic, `not_applicable` requires zero applicable elements. `ReviewRun {id, session_id, status ∈ queued | running | completed | partial | failed | interrupted, plan, plan_source ∈ llm | default, check_results[], input_manifest, created_at, finished_at}` is the only record that carries timestamps. An IfcTester exception, a cap hit or a required specification with no applicable entities is a `CheckResult` status, never a finding; this supersedes the `check_error` finding category in [ARCHITECTURE.md §14](./ARCHITECTURE.md).
-5. **`ElementRef.global_id` is nullable; `express_id` is always present.** GlobalId remains the viewer join key (ADR-007); `express_id` is diagnostic and the fallback identity for non-`IfcRoot` entities.
-6. **Contract models forbid unknown fields** and are exported in serialisation mode, so every field is required in the TypeScript types and an unexpected key (such as `params` on a plan item or `created_at` on a finding) is a validation error, not a silent drop.
+**Alternatives.** UUID finding ids with timestamps (not reproducible); modelling errors and zero
+applicability as finding categories (pollutes precision and lets skipped checks read as
+compliance); letting plans pass `params` (a schema-valid plan could check weaker conditions than
+the user confirmed).
 
-**Alternatives.** UUID finding ids with timestamps (not reproducible; NFR-01 untestable); modelling errors and zero applicability as finding categories (pollutes precision and lets skipped checks read as compliance); letting plans pass `params` (schema-valid plans could check weaker conditions than the user confirmed).
+**Trade-offs.** Identity is bound to `rule_version`, so a rule change renames every finding it
+produced; this is intended, since the finding's meaning changed. Content-addressed ids are scoped
+to a session's inputs, not globally unique. `CheckSpec.params` is typed as JSON, which is acceptable
+because a `CheckSpec` is never sent to the model.
 
-**Trade-offs.** Identity is bound to `rule_version`, so a rule change renames every finding it produced — intended, since the finding's meaning changed. Content-addressed ids are not globally unique across models; they are scoped to a session's inputs. `CheckSpec.params` is typed as JSON, which is acceptable because `CheckSpec` is never sent to the model.
-
-**Evidence.** `tests/unit/schemas/` (identity, ordering, invariants, drift); `ifctester` 0.9.0 verified locally: `Specification.failed_entities` is a `set`, `applicable_entities` an ordered list, and each `requirement.failures` entry is a `dict` `{"element": entity, "reason": str}`; `Facet.to_string(clause_type, specification, requirement)` renders the `expected` text (closes Q-03 of the review).
-
-**Unresolved.** Whether the two native rules that overlap IDS facets are retained (review Q-06); how `ids_specification` is re-hydrated into an `ifctester` object in the runner (slice step 7).
+**Evidence.** `tests/unit/schemas/` (identity, ordering, invariants and schema drift). With
+`ifctester` 0.9.0, `Specification.failed_entities` is a set, `applicable_entities` an ordered list,
+and each `requirement.failures` entry is `{"element": entity, "reason": str}`;
+`Facet.to_string(clause_type, specification, requirement)` renders the expected text.
 
 ---
 
 ## ADR-016 Ingestion contract: staged upload, content-hash ETag and identifier handling
 
-**Status.** Adopted 28 October 2026 with the T-1 implementation (`store/`, `bim/`, `api/`). Records assumptions the earlier documents did not cover; the owner may revise any point before T-2 builds on it. **§1 is superseded by [ADR-017](#adr-017-content-addressed-model-versions-with-single-pointer-publication)** (T-1.1), which replaces the four-step publication with a single-pointer transaction; §2–§6 stand.
+**Status.** §1 is superseded by
+[ADR-017](#adr-017-content-addressed-model-versions-with-single-pointer-publication), which replaces
+the multi-step publication with a single-pointer transaction. §2–§6 stand.
 
 **Decision.**
 
-1. **Uploads are staged, validated, then published.** `SessionStore.stage_model()` writes the upload to a temporary file inside the session directory while hashing it and enforcing `MAX_IFC_MB`. The staged bytes are parsed and indexed in place; only after indexing succeeds is the file renamed to `model.ifc` and the index and summary written. A malformed or oversized upload therefore never replaces a previously indexed model (ARCHITECTURE §14), and the stored bytes are the client's bytes (C-04, FR-ING-03).
-2. **The model hash is the cache key.** `GET /sessions/{sid}/model/file` serves the stored bytes with `ETag` equal to the quoted SHA-256 and honours `If-None-Match` with 304 (C-07). `Session.model_hash` and `ModelSummary.model_hash` carry the same value, so viewer, validator and `InputManifest` always refer to the same bytes.
-3. **Identifiers are validated at the boundary, not trusted.** Session ids must be lower-case UUID4 and artefact names come from a fixed allow-list before any path is formed; a malformed session id or GlobalId is 400, an unknown one 404. Client filenames are used only for the extension check.
-4. **Malformed GlobalIds do not abort ingestion.** An `IfcRoot` whose `GlobalId` fails the 22-character check is indexed with `ElementRef.global_id = None` and listed in `ModelIndex.malformed_global_ids`; this extends ADR-015 §5 (nullable `global_id`) from non-`IfcRoot` entities to invalid ids. Duplicate GlobalIds keep every record (`duplicate_global_ids`), `by_global_id()` raises, and the API returns 409. Both are inputs to the P1 `identity.unique_global_id` rule (FR-VAL-06) rather than findings in themselves (ADR-001).
-5. **Problem types are project-scoped URIs.** `ProblemDetail.type` is `https://github.com/natnew/BIM-Intelligence/problems/<slug>`, mirroring the schema bundle's `$id`; it identifies the problem class for clients without implying a resolvable document.
-6. **Property provenance is reproduced, not reinvented.** `ElementRecord.psets` reproduces `ifcopenshell.util.element.get_psets()`'s merge (type first, instance overrides, property by property) and flags each value `inherited` when it comes from the type object; the tests assert equality with IfcOpenShell for every indexed entity.
+1. **Uploads are staged, validated, then published.** `SessionStore.stage_model()` writes the
+   upload to a temporary file inside the session directory while hashing it and enforcing
+   `MAX_IFC_MB`. The staged bytes are parsed and indexed in place, and published only after indexing
+   succeeds. A malformed or oversized upload therefore never replaces a previously indexed model,
+   and the stored bytes are exactly the client's bytes.
+2. **The model hash is the cache key.** `GET /sessions/{sid}/model/file` serves the stored bytes
+   with an `ETag` equal to the quoted SHA-256 and answers `If-None-Match` with 304.
+   `Session.model_hash` and `ModelSummary.model_hash` carry the same value, so the viewer, the
+   validator and the run's input manifest always refer to the same bytes.
+3. **Identifiers are validated at the boundary.** Session ids must be lower-case UUID4s, and
+   artefact names come from a fixed allow-list before any path is formed. A malformed session id or
+   GlobalId is a 400 and an unknown one a 404. Client file names are used only for the extension
+   check.
+4. **Malformed GlobalIds do not abort ingestion.** An `IfcRoot` whose `GlobalId` fails the
+   22-character check is indexed with `ElementRef.global_id = None` and listed in
+   `ModelIndex.malformed_global_ids`. Duplicate GlobalIds keep every record
+   (`duplicate_global_ids`), `by_global_id()` raises, and the API returns 409. Both are inputs to a
+   future identity rule, not findings in themselves (ADR-001).
+5. **Problem types are project-scoped URIs.** `ProblemDetail.type` is
+   `https://github.com/natnew/BIM-Intelligence/problems/<slug>`, mirroring the schema bundle's
+   `$id`. It identifies the problem class for clients without implying a resolvable document.
+6. **Property provenance is reproduced, not reinvented.** `ElementRecord.psets` reproduces
+   `ifcopenshell.util.element.get_psets()`'s merge (type first, instance overrides, property by
+   property) and flags a value `inherited` when it comes from the type object; tests assert
+   equality with IfcOpenShell for every indexed entity.
 
-**Alternatives.** Writing `model.ifc` directly and deleting it on failure (a window in which a session has no model, and a re-upload failure destroys the old one); treating a malformed GlobalId as a 422 (rejects real-world files the validator should be able to report on); `about:blank` problem types (no client-side discrimination).
+**Alternatives.** Writing `model.ifc` directly and deleting it on failure (a window in which a
+session has no model, and a failed re-upload destroys the old one); treating a malformed GlobalId as
+a 422 (rejects real-world files the validator should report on); `about:blank` problem types (no
+client-side discrimination).
 
-**Trade-offs.** FastAPI's `UploadFile` spools the whole request body before the handler runs, so the byte cap is enforced after receipt rather than during it; acceptable for a localhost MVP, revisit if `ALLOW_REMOTE` is used. `GET /elements/{globalId}` re-reads `model_index.json` per request; an in-process cache keyed by `model_hash` is the obvious optimisation once the orchestrator needs the index in memory anyway. Index, summary and session record are three separate atomic writes, not one transaction.
+**Trade-offs.** FastAPI's `UploadFile` spools the whole request body before the handler runs, so the
+size cap is enforced after receipt rather than during it; acceptable for a local application, to
+revisit if remote binding is used.
 
-**Evidence.** `tests/unit/store/`, `tests/unit/bim/`, `tests/unit/api/` (171 tests, 28 October 2026): fixture SHA-256 equals the stored hash and the `ETag`; AC-01, AC-02, AC-03, AC-04 and AC-11 of the Bakeoff review are covered; a `curl` round trip against `uvicorn` reproduced the test results.
+**Evidence.** `tests/unit/store/`, `tests/unit/bim/` and `tests/unit/api/`: the fixture's SHA-256
+equals the stored hash and the `ETag`.
 
-**Unresolved.** Materials and storey elevations are not indexed (FR-ING-02 partial, FR-VAL-05); `409` on model re-upload during an active run (AC-12) awaits the run lifecycle in T-3; whether IFC4X3 should remain accepted once a benchmark exists for it (FR-ING-05 is P3).
+**Unresolved.** Materials and storey elevations are not indexed; whether IFC4X3 should stay accepted
+before a benchmark covers it.
 
 ---
 
 ## ADR-017 Content-addressed model versions with single-pointer publication
 
-**Status.** Adopted 28 October 2026 (T-1.1, hardening review of the T-1 ingestion slice). Supersedes ADR-016 §1 and refines the ADR-006 layout. Implemented in `store/session_store.py`, `store/locking.py`, `bim/ingest.py`, `api/versioning.py`, `api/model.py`, `api/elements.py`, `api/main.py`.
+**Status.** Supersedes ADR-016 §1 and refines the ADR-006 layout. Implemented in
+`store/session_store.py`, `store/locking.py`, `bim/ingest.py`, `api/versioning.py`, `api/model.py`,
+`api/elements.py` and `api/main.py`.
 
-**Context.** The T-1 sequence published an upload in four independent steps — rename `model.ifc`, write `model_index.json`, write `model_summary.json`, update `session.json` — each atomic on its own but not as a set. A failure after the first step left a session whose bytes, index, summary and hash described different models, permanently; a reader between steps saw the same; two concurrent uploads could interleave the steps and finish in a mixed state; and `GET /model/file` read the hash before opening a file that could have been replaced in between. ADR-016 recorded the gap ("three separate atomic writes, not one transaction"). The invariant this record establishes: *a client can never observe a committed session whose IFC file, indexed elements, summary and model hash refer to different model versions.*
+**Context.** Publishing an upload as four independent writes (model file, index, summary, session
+record) is atomic per file but not as a set. A failure part-way, a concurrent reader or two
+concurrent uploads could leave or observe a session whose bytes, index, summary and hash describe
+different models. The invariant this record establishes: *a client can never observe a committed
+session whose IFC file, indexed elements, summary and model hash refer to different model
+versions.*
 
 **Decision.**
 
-1. **A model version is an immutable, content-addressed directory.** `models/{sha256}/` holds `model.ifc`, `model_index.json` and `model_summary.json`, all built from exactly those bytes. The directory is assembled in a private `models/.staging-{hex}/`, validated (every artefact present, the model file's size equals the bytes written, the summary parses and its `model_hash` equals the upload's SHA-256), fsynced and moved into place with **one rename**. A version directory therefore exists complete or not at all and is never modified afterwards. Re-uploading bytes already present as a complete version discards the staging directory and reuses the existing version; a damaged copy is replaced.
-2. **Activation is one atomic write.** `Session.model_hash` is the pointer to the active version; `SessionStore.set_model()` refuses a hash whose directory is incomplete and publishes the pointer with the existing atomic replace of `session.json`. Publication is therefore a two-step transaction (commit directory, swap pointer); a crash between the steps leaves a complete but inactive version, which is harmless and prunable.
-3. **Readers resolve the version once.** `SessionStore.active_model()` returns a `ModelVersion`; bytes, index and summary are read only through it, so a single request cannot mix versions. Every model read (`/model/summary`, `/model/file`, `/elements/{globalId}`) carries `ETag` = the quoted SHA-256 of the version it was answered from, and the upload response carries the new version's. Clients may send `If-Match` to pin a sequence of reads to one version; a mismatch is **412 `model-version-mismatch`** naming the active hash. `If-None-Match` on the file keeps its 304 behaviour. `/model/file` streams from the version directory, so its ETag always describes its body.
-4. **Publication is serialised by a per-session advisory file lock** (`model.lock`; `fcntl.flock` on POSIX, `msvcrt.locking` on Windows — both conflict between threads of one process and between processes). The lock object is the capability required to stage, commit, activate, prune or discard staging, so none of those can be reached without it. Acquisition does not wait: a second upload while one is in progress is **409 `model-locked`**. Readers never take the lock. The same lock is the seam T-3 holds for the duration of a review run so that an upload mid-run is refused (AC-12), or, equivalently, a run may pin `input_manifest.model_hash` and read `store.model_version(sid, hash)`, which survives replacement.
-5. **Superseded versions are retained until pruned.** A re-upload makes a new version active and leaves the previous directory intact, so an in-flight download or a run pinned to the old hash keeps a consistent snapshot. `SessionStore.prune_model_versions(lock, keep=…)` removes complete versions other than the active and kept ones, best-effort per directory; nothing calls it automatically yet (see Trade-offs).
-6. **Abandoned staging is recovered, never served.** Staging directories are invisible to readers by construction. `ingest_model` discards any present once it holds the lock (with the lock held they can only be abandoned), and the application lifespan runs `sweep_all_staging()` at startup, skipping sessions whose lock is busy.
-7. **Windows sharing violations are retried, not surfaced.** `session.json` is the only file ever replaced in place; its write and its read retry a bounded number of times on `PermissionError`, which is how Windows reports a replace racing a concurrent open. All other files are written once into a directory nobody else reads.
+1. **A model version is an immutable, content-addressed directory.** `models/{sha256}/` holds
+   `model.ifc`, `model_index.json` and `model_summary.json`, all built from exactly those bytes. The
+   directory is assembled in a private `models/.staging-{hex}/`, validated (every artefact present,
+   the file size equals the bytes written, the summary's `model_hash` equals the upload's SHA-256),
+   fsynced and moved into place with **one rename**. A version directory therefore exists complete
+   or not at all and is never modified afterwards. Re-uploading bytes that already exist as a
+   complete version reuses it; a damaged copy is replaced.
+2. **Activation is one atomic write.** `Session.model_hash` points to the active version;
+   `SessionStore.set_model()` refuses a hash whose directory is incomplete and publishes the pointer
+   with an atomic replace of `session.json`. A crash between committing the directory and swapping
+   the pointer leaves a complete but inactive version, which is harmless.
+3. **Readers resolve the version once.** `SessionStore.active_model()` returns a `ModelVersion`, and
+   bytes, index and summary are read only through it, so a single request cannot mix versions.
+   Every model read (`/model/summary`, `/model/file`, `/elements/{globalId}`) carries an `ETag` of
+   the quoted SHA-256 of the version it was answered from. Clients may send `If-Match` to pin a
+   sequence of reads to one version; a mismatch is **412 `model-version-mismatch`**, naming the
+   active hash.
+4. **Publication is serialised by a per-session advisory file lock** (`model.lock`; `fcntl.flock`
+   on POSIX, `msvcrt.locking` on Windows, both of which conflict between threads and processes).
+   The lock object is the capability required to stage, commit, activate, prune or discard staging.
+   Acquisition does not wait: a second upload in progress is **409 `model-locked`**. Readers never
+   take the lock.
+5. **Superseded versions are retained until pruned.** A re-upload activates a new version and leaves
+   the previous directory intact, so an in-flight download or a run pinned to the old hash keeps a
+   consistent snapshot. `SessionStore.prune_model_versions(lock, keep=…)` removes other complete
+   versions; nothing calls it automatically yet.
+6. **Abandoned staging is recovered, never served.** Staging directories are invisible to readers.
+   `ingest_model` discards any it finds once it holds the lock, and application start-up sweeps
+   them, skipping sessions whose lock is busy.
+7. **Windows sharing violations are retried.** `session.json` is the only file replaced in place;
+   its write and read retry a bounded number of times on `PermissionError`, which is how Windows
+   reports a replace racing a concurrent open.
 
 **Alternatives.**
-- *Keep the flat layout and order the writes carefully.* No ordering of four independent files yields an atomic set; a crash after any step is a mixed state.
-- *A manifest file listing hash-suffixed flat files.* Equivalent to version directories with a worse pruning story.
-- *SQLite with a transaction.* Would resolve the atomicity but adds a database for a single pointer swap (ADR-006, C-08).
-- *Blocking lock (queue the second upload).* Friendlier for a single user but makes the response time of an upload depend on another and the tests timing-dependent; a non-blocking 409 is explicit and retryable.
-- *Prune superseded versions on publish.* Simplest for disk, but breaks any reader or run that resolved the old version; rejected until runs can declare what they pin.
-- *Expose `/models/{hash}/…` routes.* Clean version addressing, but a new API surface; `If-Match` is the HTTP-native way to pin and changes no contract.
+- *Keep the flat layout and order the writes carefully.* No ordering of four independent files
+  gives an atomic set.
+- *A manifest file listing hash-suffixed flat files.* Equivalent to version directories, with a
+  worse pruning story.
+- *SQLite with a transaction.* Solves atomicity, but adds a database for a single pointer swap
+  (ADR-006).
+- *A blocking lock that queues the second upload.* Makes one upload's response time depend on
+  another; a non-blocking 409 is explicit and retryable.
+- *Prune superseded versions on publish.* Breaks any reader or run that resolved the old version.
+- *`/models/{hash}/…` routes.* Clean addressing, but a new API surface; `If-Match` is the
+  HTTP-native way to pin.
 
 **Trade-offs.**
-- Disk usage grows by one version per distinct re-upload per session until `prune_model_versions` is called. Acceptable for a localhost MVP whose `data/` is disposable; the retention policy (prune on run completion, on session delete, or keep the last *n*) is for T-3 to decide once runs exist (R-PER-05).
-- Index and summary are not re-parsed as `ModelIndex`/`ModelSummary` at commit beyond the summary hash check: they were serialised moments earlier from validated objects via canonical JSON and fsynced, and `ingest_model` asserts `index.summary.model_hash` equals the staged hash before writing. A full re-parse would double the memory cost of large indexes for no additional guarantee.
-- Reusing an existing version for identical bytes means an index built by an older indexer is served again until `data/` is cleared; the index format is not versioned yet.
-- `If-Match` protects a client that asks for protection; a client that ignores ETags can still read version B after loading version A, which is inherent to a multi-request protocol.
-- The directory rename and pointer swap are durable on POSIX (directory fsync) and best-effort on Windows, which cannot fsync directories.
+- Disk use grows by one version per distinct re-upload per session until pruning; acceptable while
+  `data/` is disposable.
+- Reusing an existing version for identical bytes serves an index built by an older indexer until
+  `data/` is cleared; the index format is not versioned yet.
+- `If-Match` protects only clients that ask for it.
+- The directory rename and pointer swap are durable on POSIX (directory fsync) and best-effort on
+  Windows, which cannot fsync directories.
 
-**Evidence.** `tests/unit/store/test_session_store.py`, `tests/unit/store/test_locking.py`, `tests/unit/bim/test_ingest_publication.py`, `tests/unit/api/test_model_versioning.py` (51 new tests; `pytest` 334 passed, 28 October 2026, Windows/Python 3.12): failure injected before publication, while writing the index, while writing the summary, during the directory rename and during the pointer swap each leave the session byte-identical or with only a complete inactive version; two concurrent uploads yield one 201 and one 409 with no interleaving; three HTTP reader threads observe no mixed artefact across five replacements and four store-level reader threads across seven; a restart removes abandoned staging; upload response, session, summary, file ETag, body hash and element ETag all agree.
+**Evidence.** `tests/unit/store/test_session_store.py`, `tests/unit/store/test_locking.py`,
+`tests/unit/bim/test_ingest_publication.py` and `tests/unit/api/test_model_versioning.py`. Failures
+injected at each stage of publication leave the session unchanged or with only a complete inactive
+version; two concurrent uploads give one 201 and one 409; concurrent readers never observe a mixed
+artefact across repeated replacements; a restart removes abandoned staging.
 
-**Unresolved.** Retention policy for superseded versions (T-3); whether to version the index format so a stale reused version is rebuilt. ~~`session.json` is also the future home of `document_hashes`, whose writers must take the same lock or a sibling to avoid a lost update~~ — resolved by [ADR-018](#adr-018-ids-import-establishes-confirmed-requirements-checks-are-hydrated-per-run-reviews-run-under-the-session-lock) §4: every writer of `session.json` takes the model lock.
+**Unresolved.** A retention policy for superseded versions; whether to version the index format so
+that a stale reused version is rebuilt.
 
 ---
 
 ## ADR-018 IDS import establishes confirmed requirements; checks are hydrated per run; reviews run under the session lock
 
-**Status.** Adopted 29 October 2026 with the T-2 implementation (`validation/`, `requirements/`, `orchestration/`, `api/documents.py`, `api/requirements.py`, `api/reviews.py`, `api/findings.py`, store additions). Closes the ADR-015 "unresolved" item on re-hydrating `ids_specification` and the ADR-017 item on `document_hashes` writers. Records assumptions the earlier documents did not cover; the owner may revise any point before T-3 builds on it.
+**Status.** Implemented in `validation/`, `requirements/`, `orchestration/`, `api/documents.py`,
+`api/requirements.py`, `api/reviews.py` and `api/findings.py`.
 
-**Context.** T-2 is the first slice that produces a `Finding`. It had to decide how an uploaded IDS becomes executable checks without giving `requirements/` an IfcTester dependency (Bakeoff D-05), how a check is executed from the `CheckSpec` alone rather than from the document it came from (ADR-015 §1), how zero applicability, prohibited specifications, schema mismatches and engine exceptions are reported without inventing findings (ADR-015 §4, C-05), and how a run keeps one model version for its whole duration before the asynchronous run lifecycle exists (ADR-017 §4).
+**Context.** This decides how an uploaded IDS becomes executable checks without giving
+`requirements/` an IfcTester dependency; how a check runs from its `CheckSpec` alone rather than from
+the document it came from (ADR-015 §1); how zero applicability, prohibited specifications, schema
+mismatches and engine exceptions are reported without inventing findings (ADR-015 §4); and how a run
+keeps one model version for its whole duration (ADR-017 §4).
 
 **Decision.**
 
-1. **An imported IDS is a set of confirmed requirements.** `requirements.import_ids_document` creates one `Requirement` per `<specification>` with `origin="ids"`, `status="confirmed"`, `revision=confirmed_revision=1`, `confirmed_by="ids-import"`, and a `source` whose `document_id` is the document's SHA-256, `location` the element's position (`/ids/specifications/specification[n]`) and `quote` the verbatim `name` attribute; an unnamed specification has no `source`. ADR-008's human confirmation applies to requirements *interpreted* from narrative text; an IDS is the project's own machine-readable statement and needs no interpretation (FR-REQ-05). Requirement ids are sequential per session (`REQ-001`, …); re-uploading the same bytes returns the existing requirements (HTTP 200) rather than duplicating them. Only `.ids` is accepted by `POST /documents` in this slice.
-2. **The `CheckSpec` payload is the canonical specification element, and it is the only thing a run executes.** `validation.compile_ids` validates the document against IfcTester's bundled IDS 1.0 XSD and stores each `<specification>` in XML Canonical Form (C14N 2.0) with whitespace-only text removed; `rule_version = content_hash(payload)` and `rule_id = "ids:<identifier or name>"`, so identically-specified checks have the same id regardless of file formatting. `validation.hydrate_specification` rebuilds an `ifctester.ids.Specification` from the payload alone through the same XSD, after confirming the payload still hashes to `rule_version`; a mismatch is `CheckSpecIntegrityError`, which the runner reports as `CheckResult.status="error"`. There is no code path from a stored document, a plan or a client to the criteria of a confirmed check (C-02).
-3. **Each check runs in its own single-specification `Ids` through `Ids.validate`.** That is IfcTester's public entry point and the one that resets its property caches, so checks cannot leak state into each other and an exception in one is contained. Outcomes map as follows: `ifcVersion` does not list the model's schema → `skipped` (never run, never passed); required or optional specification with no applicable entity → `not_applicable`; prohibited specification → one `prohibited_entity` finding per matching entity, or `passed` when nothing matches; facet failures → `failed` with one finding per (facet, entity), `observed` = IfcTester's reason, `expected` = the facet's rendered requirement text, `category` = `<facet>_requirement`, `severity` = `error`; any exception → `error` with `"<Type>: <message>"` in `diagnostics`. Element references come from the Model Index of the same version so findings, element API and viewer agree.
-4. **A review holds the session's model lock from version resolution to publication.** `orchestration.run_review` takes the lock, resolves the active version once, refuses a pinned hash that is not active (412), builds the default plan (every executable requirement, once per `CheckSpec`, in requirement-id order), records the `InputManifest` (model hash, sorted IDS hashes, requirement revisions, rule versions), runs the checks and publishes `runs/{runId}/run.json` + `findings.json` with one rename. An upload, an IDS import or a second review in the meantime is 409 `model-locked`, and nothing can prune the version under the run. The same lock now guards every write to `session.json` (model activation and document registration), so the session record has exactly one writer. The run is synchronous; ADR-013 stands for when runs are long enough to need background execution and SSE.
-5. **Run status is derived, never asserted.** `completed` when every check executed; `partial` when any ended in `error`. A session without a model (404) or without an executable requirement (409 `no-executable-checks`) records no run, so an empty run cannot read as compliance.
-6. **The IDS XSD is loaded offline.** `ids.xsd` imports the W3C XML and XSD namespaces by URL; with xmlschema's defaults the first load attempts those URLs before using bundled copies. The compiler constructs `XMLSchema(ids.xsd, allow="local")` itself, which makes `xmlschema` a direct, pinned dependency (MIT) and removes the only outbound request the backend would otherwise have made (ARCHITECTURE §13). A test clears the schema cache and compiles under a socket guard.
+1. **An imported IDS is a set of confirmed requirements.** One `Requirement` is created per
+   `<specification>`, with `origin="ids"`, `status="confirmed"`, `revision = confirmed_revision = 1`,
+   `confirmed_by="ids-import"` and a `source` recording the document's SHA-256, the specification's
+   position and its verbatim `name`. ADR-008's human confirmation applies to requirements
+   *interpreted* from narrative text; an IDS is the project's own machine-readable statement.
+   Requirement ids are sequential per session (`REQ-001`, …), and re-uploading the same bytes
+   returns the existing requirements (HTTP 200) rather than duplicating them.
+2. **The `CheckSpec` payload is the canonical specification element, and it is the only thing a
+   run executes.** `validation.compile_ids` validates the document against IfcTester's bundled
+   IDS 1.0 XSD and stores each `<specification>` in XML Canonical Form (C14N 2.0) with
+   whitespace-only text removed; `rule_version = content_hash(payload)` and `rule_id =
+   "ids:<identifier or name>"`, so identically specified checks have the same id regardless of file
+   formatting. `validation.hydrate_specification` rebuilds an `ifctester.ids.Specification` from the
+   payload alone, after confirming it still hashes to `rule_version`; a mismatch is a
+   `CheckSpecIntegrityError`, reported as `CheckResult.status="error"`. There is no code path from a
+   stored document, a plan or a client to the criteria of a confirmed check.
+3. **Each check runs in its own single-specification `Ids` through `Ids.validate`.** That is
+   IfcTester's public entry point and the one that resets its property caches, so checks cannot leak
+   state into each other and an exception in one is contained. Outcomes:
+   - the specification's `ifcVersion` excludes the model's schema → `skipped`;
+   - a required or optional specification with no applicable entity → `not_applicable`;
+   - a prohibited specification → one `prohibited_entity` finding per matching entity, or `passed`;
+   - facet failures → `failed`, with one finding per (facet, entity): `observed` is IfcTester's
+     reason, `expected` the facet's rendered requirement, `category` `<facet>_requirement` and
+     `severity` `error`;
+   - any exception → `error`, with `"<Type>: <message>"` in `diagnostics`.
+
+   Element references come from the Model Index of the same version, so findings, the element API
+   and the viewer agree.
+4. **A review holds the session's model lock from version resolution to publication.**
+   `orchestration.run_review` takes the lock, resolves the active version once, refuses a pinned
+   hash that is not active (412), builds the plan, records the `InputManifest` (model hash, sorted
+   IDS hashes, requirement revisions and rule versions), runs the checks and publishes
+   `runs/{runId}/run.json` and `findings.json` with one rename. An upload, an IDS import or a second
+   review in the meantime is 409 `model-locked`, and nothing can prune the version under the run.
+   The same lock guards every write to `session.json`, so the session record has one writer.
+5. **Run status is derived, never asserted.** A session without a model (404) or without an
+   executable requirement (409 `no-executable-checks`) records no run, so an empty run cannot read as
+   compliance. Status rules for caps and coverage are refined in ADR-019.
+6. **The IDS XSD is loaded offline.** `ids.xsd` imports the W3C XML and XSD namespaces by URL. The
+   compiler constructs `XMLSchema(ids.xsd, allow="local")` itself, which makes `xmlschema` a direct
+   dependency (MIT) and removes the only outbound request the backend would otherwise make. A test
+   compiles under a socket guard.
 
 **Alternatives.**
-- *Keep the whole IDS executable and run `Ids.validate` once per document.* Simpler, but a check would then be defined by a file rather than by its `CheckSpec`, errors in one specification would abort the others, and a plan could not select checks individually.
-- *Store the raw `<specification>` text.* Formatting changes would rename every finding; C14N with whitespace stripping keeps identity semantic without altering values.
-- *Treat zero applicability of a required specification as `failed` (IfcTester's own status).* IfcTester marks the specification failed; a finding needs an element, and "nothing to check" is a coverage fact, not a defect (ADR-015 §4).
-- *Run specifications whose `ifcVersion` excludes the model anyway (IfcTester's default).* The IDS author scoped the rule; executing it against another schema can produce confident nonsense in either direction.
-- *Pin the run by hash without the lock and rely on retained versions.* Also offered by ADR-017 §4; rejected for now because pruning policy does not exist yet and the lock additionally gives 409 on a concurrent run (AC-12) at no cost.
-- *A category per IfcTester reason string.* Would be more descriptive but couples the contract to prose in a non-semver library; the facet type is stable and the reason is preserved verbatim in `observed`.
+- *Run `Ids.validate` once per document.* Simpler, but a check would be defined by a file rather than
+  its `CheckSpec`, an error in one specification would abort the others, and a plan could not select
+  checks individually.
+- *Store the raw `<specification>` text.* Formatting changes would rename every finding; C14N keeps
+  identity semantic.
+- *Treat zero applicability of a required specification as `failed`* (IfcTester's own status). A
+  finding needs an element; "nothing to check" is a coverage fact, not a defect.
+- *Run specifications whose `ifcVersion` excludes the model anyway.* The IDS author scoped the rule;
+  running it against another schema can give confident nonsense.
+- *A finding category per IfcTester reason string.* Couples the contract to library prose; the
+  facet type is stable and the reason is kept verbatim in `observed`.
 
 **Trade-offs.**
-- Requirement ids are per-session and sequential, so `findings.json` is byte-identical across sessions only when documents are imported in the same order; within a session it is byte-identical across runs (NFR-01 as tested).
-- `rule_versions` in the manifest is keyed by `rule_id`; two specifications sharing a name but differing in content collapse to one key there, while `requirement_revisions` and `ids_hashes` still identify the inputs exactly.
-- Holding the lock for a synchronous run blocks uploads for its duration — seconds on the fixture; the background-task design is the remedy for large models.
-- `severity` is `error` for every IDS finding; IDS 1.0 has no severity concept and inventing one from cardinality would be speculative.
-- IfcTester 0.9.0 recognises only lower-case `true`/`false` for boolean `simpleValue`s; `TRUE` happens to work (`bool("TRUE")`) and `FALSE` does not. Authors of IDS files for this system should write booleans in lower case; the fixture is unaffected because it only tests `TRUE`.
+- Requirement ids are per session and sequential, so `findings.json` is byte-identical across
+  sessions only when documents are imported in the same order; within a session it is
+  byte-identical across runs.
+- `rule_versions` in the manifest is keyed by `rule_id`, so two specifications that share a name but
+  differ in content collapse to one key there; `requirement_revisions` and `ids_hashes` still
+  identify the inputs exactly.
+- A synchronous run holds the lock for its duration (ADR-013).
+- `severity` is `error` for every IDS finding; IDS 1.0 has no severity concept.
+- IfcTester 0.9.0 recognises only lower-case `true`/`false` for boolean `simpleValue`s, so IDS files
+  for this system should write booleans in lower case.
 
-**Evidence.** `tests/unit/validation/` (32), `tests/unit/requirements/` (9), `tests/unit/orchestration/` (19), `tests/unit/store/test_session_store_runs.py` (14), `tests/unit/api/test_documents.py`, `test_reviews.py`, `test_cors.py` (31), `tests/unit/schemas/test_document_import.py` (2); `pytest` 461 passed, `ruff`, `mypy --strict` on `schemas/`, `validation/`, `orchestration/` clean, 29 October 2026, Windows/Python 3.12.12, ifcopenshell 0.9.0.post1, ifctester 0.9.0, xmlschema 4.3.2. On the committed fixture: two confirmed requirements, two `failed` check results, exactly two findings (W-002 `0QWMtUzsnUUONCUGc8Sqsa` for the FireRating specification, W-003 `2qvnbd6oPPKR1ac5HegGTJ` for the classification specification), W-003 outside the first specification's two applicable entities, findings equal to `ifctester.reporter.Json` element for element, three consecutive HTTP runs with identical `findings.json` SHA-256, model version directory byte-identical before and after, an upload attempted from inside a run refused with 409, and no socket opened during compile, hydrate or run.
+**Evidence.** `tests/unit/validation/`, `tests/unit/requirements/`, `tests/unit/orchestration/`,
+`tests/unit/store/test_session_store_runs.py`, `tests/unit/api/test_documents.py` and
+`tests/unit/api/test_reviews.py`. On the committed fixture, two confirmed requirements give two
+`failed` results and exactly two findings (W-002 `0QWMtUzsnUUONCUGc8Sqsa` for the fire-rating
+specification and W-003 `2qvnbd6oPPKR1ac5HegGTJ` for the classification specification). The findings
+match `ifctester.reporter.Json` element for element, repeated runs give identical `findings.json`,
+the model version is unchanged afterwards, an upload attempted during a run is refused with 409,
+and no socket is opened during compile, hydrate or run.
 
-**Unresolved.** When the review becomes asynchronous (T-3), whether the lock is held for the run or replaced by hash pinning plus a retention rule; whether `POST /documents` should accept a batch; how a later `PATCH /requirements/{rid}` edit of an IDS-origin requirement re-compiles its payload (the current contract makes it `edited`, non-executable, until re-confirmed).
-
-## ADR-019 — T-4 native rule scope and bounded deterministic execution
-
-**Status:** Adopted 29 October 2026 with the T-4 implementation.
-
-**Context.** T-2 already executes IDS 1.0 checks as confirmed, immutable `CheckSpec`s. T-4 must add the minimum P0 native capability without creating duplicate checks for requirements IDS already expresses, and must ensure execution limits or recoverable failures cannot be reported as full coverage.
-
-**Decision.** This ADR supersedes ADR-018's earlier all-checks-execute plan description and its run-status condition where execution caps and `not_applicable` coverage are concerned; model locking, input manifests and atomic publication remain unchanged.
-
-1. Ship only `classification.consistent_by_type` v1.0.0 as a native P0 rule. It compares effective `(system, identification-or-name)` classification references on a classified type and each occurrence, emits a deterministic finding for a mismatch, and reports `not_applicable` when no classified type occurrence exists. Its immutable `CheckSpec` is parameter-free; invalid parameters, rule ids or versions are execution errors.
-2. Keep IDS 1.0 as the implementation for required-property checks, expressible naming patterns, classification presence and classification-system checks. Do not register native duplicates for those checks. Do not implement P1/P2 rules in T-4.
-3. Make the native rule an explicit built-in confirmed requirement through the classification-consistency endpoint. Repeated confirmation is idempotent; the model-version lock protects requirement persistence from an active review.
-4. Build the default plan from confirmed executable requirements, deduplicate by immutable check id and preserve requirement order. Apply `MAX_PLAN_CHECKS` and `MAX_TOOL_CALLS_PER_RUN`; report unexecuted checks as `skipped`, continue after a per-check `error`, and mark any run with `error`, `skipped` or `not_applicable` results `partial`.
-
-**Alternatives.** Implement overlapping native property/classification-presence/naming rules; rejected because IDS 1.0 already expresses them and duplicate execution would create conflicting or repeated findings. Automatically add the native rule to every session; rejected because this is an additional confirmed check and should be explicitly selected. Stop the review after a check error or cap; rejected because later checks should still execute and every omitted check should remain visible in coverage.
-
-**Trade-offs.** The current native registry contains one rule, not a general-purpose plugin system. Its parameter-free contract avoids exposing unverified configuration that could weaken a confirmed requirement. A `partial` run is intentionally conservative: `not_applicable` is not a defect, but it does not demonstrate coverage. Benchmark precision/recall and clean-control results are not available until T-6.
-
-**Evidence.** Native rule positive, mismatch, applicability and invalid-spec tests; explicit confirmation API tests; bounded-plan/error tests; and the LLM-off fixture scenario in `tests/unit/validation/test_native_rules.py`, `tests/unit/api/test_native_requirements.py`, `tests/unit/orchestration/test_review_runner.py` and `tests/scenario/test_deterministic_review.py`. Exact commands and results are recorded in T-4.
+**Unresolved.** Whether `POST /documents` should accept a batch; how an edit to an IDS-origin
+requirement recompiles its payload (today the edit makes it `edited` and non-executable until it is
+confirmed again).
 
 ---
 
-## ADR-020 T-5 Meta client, spend ledger and human gates
+## ADR-019 Native rule scope and bounded deterministic execution
 
-**Status: Adopted.**
+**Status.** Supersedes ADR-018's all-checks plan description and its run-status rule where execution
+caps and `not_applicable` coverage are concerned; model locking, input manifests and atomic
+publication are unchanged.
 
-**Decision.** Keep the T-5 integration behind the existing process boundary and OpenAI SDK. `LLMClient.complete` returns a Pydantic-validated response and typed usage. `LiveClient` alone can perform network requests; Fake, Recording and Replay are offline-capable, and Replay/Off never fall back to Live. The default mode is `off`. Live requires a configured `MODEL_API_KEY`, Standard-mode model id and the additional `ALLOW_LIVE_LLM=true` opt-in. The endpoint is restricted to `https://api.meta.ai/v1`; retries default to zero.
+**Decision.**
 
-Before each live call, reserve application budget using configured per-million token rates, estimated input and the full output cap. Persist reservations, usage, actual calculated costs and outcomes in a lock-protected JSON ledger under `DATA_DIR/llm/`. Unknown usage is charged at the reserved amount; unreadable ledger state or unavailable locks disable Live. Defaults are 8,000 estimated input tokens, 500 output tokens, two live calls per review, USD 0.10 per call and per review, and USD 5.00 cumulative project allowance. These are local application safeguards, not provider-enforced account caps or guarantees against external spending.
+1. Ship one native rule, `classification.consistent_by_type` v1.0.0. It compares the effective
+   `(system, identification-or-name)` classification references of a classified type and each of
+   its occurrences, emits a deterministic finding for each mismatch, and reports `not_applicable`
+   when no classified type occurrence exists. Its `CheckSpec` has no parameters; invalid
+   parameters, rule ids or versions are execution errors.
+2. Keep IDS 1.0 as the implementation for required properties, expressible naming patterns,
+   classification presence and classification-system checks, and register no native duplicates.
+3. Add the native rule only as an explicit, built-in confirmed requirement through
+   `POST /sessions/{sid}/requirements/native/classification-consistency`. Repeated confirmation is
+   idempotent, and the model lock protects it from an active review.
+4. Build the default plan from the confirmed executable requirements, deduplicated by check id in
+   requirement order. Apply `MAX_PLAN_CHECKS` and `MAX_TOOL_CALLS_PER_RUN`; report unexecuted
+   checks as `skipped`, continue after a per-check `error`, and mark any run with an `error`,
+   `skipped` or `not_applicable` result as `partial`.
 
-**Requirement workflow.** Narrative Markdown/TXT candidates preserve a source hash, paragraph id and verbatim quote; the quote, paragraph, hash and candidate identity are checked again on confirmation. The model may only map a candidate to an already confirmed immutable `CheckSpec`. Human confirmation is mandatory. T-5 does not generate or compile new IDS criteria.
+**Alternatives.** Overlapping native property, classification-presence or naming rules (rejected:
+IDS already expresses them, and duplicates would repeat findings). Adding the native rule to every
+session automatically (rejected: it is an additional check and should be chosen). Stopping the
+review after an error or cap (rejected: later checks should still run, and every omitted check
+should stay visible in coverage).
 
-**Explanation workflow.** An AI explanation is a separate response contract, grounded against the deterministic finding, matching requirement revision and model index. Every citation binds finding, GlobalId, requirement, rule, expected and observed values. Multi-element findings and any grounding failure use a deterministic template. Explanation output never enters `findings.json`.
+**Trade-offs.** The native registry holds one rule, not a plugin system. Its parameter-free contract
+avoids configuration that could weaken a confirmed requirement. A `partial` run is deliberately
+conservative: `not_applicable` is not a defect, but it does not demonstrate coverage.
 
-**Alternatives.** Provider-side billing alerts were rejected as hard limits because they are not reliable spending caps. Automatically enabling Live when a key is present was rejected because it creates an implicit cost path. Persisting prompts in recordings was rejected because it retains private project text unnecessarily. Letting the model create CheckSpecs was rejected because free-form output could invent validation semantics.
-
-**Trade-offs and remaining risks.** A byte-based input estimate plus message overhead is conservative for ordinary UTF-8 prompts but is not provider tokenisation. Provider usage is reconciled after a request; if returned usage exceeds the reservation, the actual amount is recorded and further requests are blocked, but the provider may already have billed more than the reservation. Deleting the local ledger or spending outside this application is outside the safeguard. Meta endpoint, model access and structured-output compatibility have not been verified by a live call; each live test requires explicit owner approval.
-
-**Evidence.** Offline tests cover Fake/Replay, schema validation, quote verification, plan filtering, grounding fallback, API routes, timeout/error sanitisation, reservation persistence and concurrent accounting. Muse Spark Standard price defaults are configurable and sourced from [Meta's published pricing](https://dev.meta.ai/docs/pricing-rate-limits). The exact smoke-test plan and offline validation results are recorded in T-5; no API usage has been measured.
+**Evidence.** `tests/unit/validation/test_native_rules.py`,
+`tests/unit/api/test_native_requirements.py`, `tests/unit/orchestration/test_review_runner.py` and
+`tests/scenario/test_deterministic_review.py`.
 
 ---
 
-## Resolved questions
+## ADR-020 Meta client, spend ledger and Live-mode safeguards
 
-| ID | Question | Resolution |
-|---|---|---|
-| OQ-01 | Exact That Open Components 3.6 API for GlobalId lookup and highlighting | Resolved in T-3 by browser verification of GlobalId lookup and `Highlighter.highlightByID`; see [ADR-007](#adr-007-browser-side-geometry-with-that-open-components) and the T-3 evidence. |
+**Decision.** Keep the Meta integration behind the `llm/` package boundary and the OpenAI SDK.
+`LLMClient.complete` returns a Pydantic-validated response and typed usage. `LiveClient` alone can
+make network requests; Fake, Recording and Replay work offline, and Replay and Off never fall back
+to Live. The default mode is `off`. Live requires `MODEL_API_KEY`, a Standard-mode model id and
+`ALLOW_LIVE_LLM=true`. The endpoint is restricted to `https://api.meta.ai/v1`, and retries default
+to zero.
 
-## Open questions register
+Before each live call, the application reserves budget using the configured per-million-token
+prices, the estimated input and the full output allowance. Reservations, usage, calculated costs
+and outcomes are persisted in a lock-protected JSON ledger under `DATA_DIR/llm/`. Unknown usage is
+charged at the reserved amount, and an unreadable ledger or unavailable lock disables Live. The
+defaults are 8,000 estimated input tokens per call, two live calls per review, USD 0.10 per call
+and per review, and a USD 5.00 cumulative allowance. These are local application safeguards, not
+provider-enforced limits.
 
-| ID | Question | Related | Needed by |
-|---|---|---|---|
-| OQ-02 | Does Meta consistently accept the FIX-002 non-strict JSON Schema across objectives? VERIFY-009 and VERIFY-010 each accepted one live synthetic plan; broader compatibility is not established. | ADR-002, ADR-012, ADR-027, ADR-029 | Further evaluation only with separate approval |
-| OQ-08 | How reliably does Muse Spark return a complete, schema-valid and grounded explanation within the FIX-003 2,000-token allowance? VERIFY-009 exhausted the former 500-token allowance; VERIFY-010 passed once with the new allowance. | ADR-009, ADR-027, ADR-028, ADR-029 | Further evaluation only with separate approval |
-| OQ-03 | Benchmark base model choice and licence | ADR-011 | Day 2 |
-| OQ-04 | Does the planner add measurable value over the default plan? | ADR-003 | Day 7 evaluation |
-| OQ-05 | `ifctester` licence string | ADR-004 | Before publishing licence table |
-| OQ-06 | Hackathon rules and submission constraints | — | Before demo recording |
-| OQ-07 | API spend authorisation and budget | ADR-002 | Before any live call |
+**Requirement workflow.** Narrative Markdown or text candidates keep a source hash, paragraph id and
+verbatim quote, all checked again on confirmation. The model may map a candidate only to an existing
+confirmed `CheckSpec`, and human confirmation is mandatory. The application does not generate new
+IDS criteria.
+
+**Explanation workflow.** An AI explanation is a separate response contract, grounded against the
+deterministic finding, the matching requirement revision and the model index. Every citation binds
+finding, GlobalId, requirement, rule, and expected and observed values. Multi-element findings and
+any grounding failure use the deterministic template. Explanation output never enters
+`findings.json`.
+
+**Alternatives.** Provider billing alerts as hard limits (rejected: they are not reliable caps).
+Enabling Live automatically when a key is present (rejected: an implicit cost path). Persisting
+prompts in recordings (rejected: retains project text unnecessarily). Letting the model create
+`CheckSpec`s (rejected: free-form output could invent validation semantics).
+
+**Trade-offs.** The byte-based input estimate is conservative for ordinary UTF-8 but is not the
+provider's tokenisation. Usage is reconciled after a request; if it exceeds the reservation, the
+actual amount is recorded and further requests are blocked, but the provider may already have
+billed it. Deleting the ledger, or spending outside the application, bypasses the safeguard.
+
+**Evidence.** Offline tests cover Fake and Replay, schema validation, quote verification, plan
+filtering, grounding fallback, API routes, error sanitisation, reservation persistence and
+concurrent accounting. Price defaults come from Meta's
+[published pricing](https://dev.meta.ai/docs/pricing-rate-limits) and are configurable.
 
 ---
 
 ## ADR-021 Bounded model federation is separate from a session
 
-**Status: Adopted 1 November 2026; implementation is conditional on a feasibility gate.**
+**Status.** Adopted as the design boundary for future multi-model coordination. Not implemented.
 
-**Decision.** Preserve the existing `Session` contract: one session has at most one active IFC
-model version. Do not overload a session or replace its uploaded IFC to represent another
-discipline. Only after a bounded feasibility check succeeds may the application add a separate
-`ModelSet`/coordination-set manifest referencing immutable IFC versions. The initial demonstration
-is exactly two model sources and one explicitly selected A/B pair.
+**Decision.** Keep the existing `Session` contract: a session has at most one active IFC model
+version. Do not overload a session, or replace its IFC, to represent another discipline. A future
+`ModelSet` manifest may reference immutable IFC versions from several sessions. A first version
+would support exactly two models and one selected pair.
 
-Each manifest member records a stable member identity, source session, immutable model SHA-256,
-explicit discipline label, source coordinate-frame description, and relative or absolute placement
-metadata. The set declares one common coordinate frame, including its units and the evidence used
-to validate placement. Unknown, unsupported, or ambiguous alignment is rejected; it is never
-assumed from model extents, filenames, or discipline names.
+Each member records a stable identity, its source session, the immutable model SHA-256, a
+discipline label, its coordinate frame and its placement. The set declares one common coordinate
+frame, with units and the evidence used to validate placement. Unknown or ambiguous alignment is
+rejected, never guessed from model extents, file names or discipline names.
 
-Every federated element reference is scoped by model-member identity and immutable model hash, then
-by `GlobalId` when available. A documented fallback is `(ifc_type, express_id)` within that model
-hash only. `GlobalId` alone is never a federation key. Model bytes remain read-only and existing
-per-file upload limits apply; the demo also has an explicit two-model and aggregate-size cap.
-Private or third-party source files require the provenance, rights, storage, and transmission
-approvals in `AGENTS.md`; local availability is not permission to inspect, transmit, or publish.
+Every federated element reference is scoped by member identity and model hash, then by GlobalId
+where available, with `(ifc_type, express_id)` as a fallback within one model hash. GlobalId alone
+is never a federation key. Model bytes stay read-only and per-file upload limits still apply.
 
-**Alternatives.** Expanding `Session` to contain several models would break its current contract
-and version guards. Replacing the active IFC would lose the first discipline's version identity.
-Guessing alignment from geometry would create plausible but unverified intersections.
+**Alternatives.** Expanding `Session` to hold several models would break its contract and version
+guards; replacing the active IFC would lose the first model's version identity; guessing alignment
+from geometry would produce plausible but unverified intersections.
 
-**Trade-offs.** A separate manifest and read-only references add a narrow coordination boundary.
-They do not provide general project management, model authoring, or enterprise federation. This
-decision does not approve an API schema or implementation before feasibility is demonstrated.
+**Trade-offs.** A separate manifest adds a narrow coordination boundary, not general project
+management, model authoring or enterprise federation.
 
-**Evidence.** `backend/bim_intelligence/schemas/sessions.py` defines one `model_hash` per
-`Session`; `backend/bim_intelligence/bim/ingest.py` atomically activates one immutable model
-version. No model-set contract is implemented.
+**Evidence.** `schemas/sessions.py` defines one `model_hash` per `Session`, and `bim/ingest.py`
+activates one immutable model version. No model-set contract exists. A synthetic test harness in
+`tests/feasibility/` exercises geometric intersection and alignment only.
 
-**Unresolved.** Whether the currently installed geometry stack can load and compare the selected
-IFC pair in a verified common frame within the deadline; whether the preferred external candidate
-has redistribution rights.
+**Unresolved.** Whether the installed geometry stack can load and compare a model pair in a verified
+common frame; a suitable openly licensed sample pair.
 
 ---
 
 ## ADR-022 Deterministic geometric coordination results
 
-**Status: Adopted 1 November 2026; implementation is conditional on ADR-021 and a successful
-feasibility gate.**
+**Status.** Adopted as the design boundary for future clash detection. Not implemented; depends on
+ADR-021.
 
-**Decision.** A coordination run may use only an installed, version-verified IfcOpenShell/IfcClash
-capability or another deterministic geometric capability whose provenance, API and behaviour have
-been verified before implementation. At the checked-out baseline, IfcOpenShell 0.9.0.post1 and
-IfcTester 0.9.0 are installed, but no `ifcclash` distribution or import is present. No package is
-to be installed speculatively; a dependency change requires a separately approved dependency and
-licence decision.
+**Decision.** A coordination run may use only an installed, version-verified geometric capability,
+such as IfcClash, whose provenance, API and behaviour have been checked first. IfcClash is not
+currently installed, and no package will be added without a dependency and licence review.
 
-The first run evaluates one declared A/B model pair only after both immutable hashes and their
-common coordinate frame have been validated. Each run records its run identity, both model hashes
-and member identities, algorithm and version, explicit distance tolerance and units, exclusions,
-placement assumptions, and tested IFC entity scope. There is no implicit tolerance or alignment
-default; missing or unsupported inputs produce a visible non-analysis/error state.
+A run evaluates one declared model pair only after both model hashes and their common frame have
+been validated. It records the run identity, both model hashes and member identities, the algorithm
+and version, an explicit distance tolerance and units, exclusions, placement assumptions and the
+tested IFC entity scope. There is no implicit tolerance or alignment; missing or unsupported inputs
+produce a visible error state.
 
-Keep three concepts separate: raw computed geometric intersections, deterministic groups of those
-intersections, and coordination issues assessed by a human. A geometric intersection is not
-automatically an actionable defect. Coordination output is not written as an information-quality
-`Finding`, does not change IDS/native criteria, and does not become an AI-authored model fact. AI
-must not create clash coordinates, intersections, counts, or issue states.
+Three concepts stay separate: raw geometric intersections, deterministic groups of them, and
+coordination issues assessed by a person. An intersection is not automatically a defect.
+Coordination output is never written as a `Finding`, never changes IDS or native criteria, and is
+never authored by AI: the model must not create clash coordinates, intersections, counts or issue
+states.
 
-The externally visible run state distinguishes `unavailable`, `not_analysed`, `zero_clashes`,
-`analysis_error`, and `results_available`. Counts are emitted only from a successfully completed
-run; a zero is never substituted for unavailable or failed analysis. Repeated inputs and settings
-must produce stable results within the verified algorithm's stated limits.
+The run state distinguishes `unavailable`, `not_analysed`, `zero_clashes`, `analysis_error` and
+`results_available`. Counts come only from a completed run, and zero is never substituted for an
+unavailable or failed analysis.
 
-**Alternatives.** Treat every intersection as a defect (misleading); use LLM-generated
-coordinates (unverifiable); or reuse `Finding` for clashes (conflates separate result semantics).
+**Alternatives.** Treating every intersection as a defect (misleading); model-generated coordinates
+(unverifiable); reusing `Finding` for clashes (conflates two result types).
 
-**Trade-offs.** This is a small geometric coordination demonstration, not enterprise clash
-management, issue assignment, lifecycle management, federation-wide search, or code compliance.
-The capability and entity scope remain unverified and therefore cannot be promised or recorded in
-a demonstration until tested.
+**Trade-offs.** A small, verifiable coordination capability, not enterprise clash management, issue
+assignment or code compliance.
 
-**Evidence.** The current repository contains deterministic IDS/native validation and a synthetic
-information-quality benchmark, but no clash implementation or clash results. The local Python
-environment does not contain IfcClash.
-
-**Unresolved.** Feasible engine and tested IFC entity scope; grouping rule; suitable tolerance and
-units; approved sample model and redistribution rights.
+**Unresolved.** The engine and tested entity scope; the grouping rule; a suitable tolerance; an
+openly licensed sample pair.
 
 ---
 
-## ADR-023 UI-004 viewer integrity and visual continuity
+## ADR-023 Viewer integrity and visual continuity
 
-**Status: Adopted 1 November 2026; implementation remains subject to the T-7 UI change-control
-process.**
+**Decision.** Keep one application shell, colour palette and typography across Project Home and the
+review workspace. Future features such as coordination are modes within this application, not a
+second product.
 
-**Decision.** Retain the current BIM Intelligence application shell, owner-approved architectural
-colour palette and typography, Project Home, and working single-IFC workflow. A bounded Clash
-Matrix and 3D Investigation, if the coordination gate passes, are modes within this application;
-they are not a second product or a redesign.
+Viewer and application selection state must stay coherent. Selection styling is neutral and visibly
+distinct from finding highlights. Inspecting evidence must not replace or unexpectedly reset the
+viewport. Camera controls are offered only where the installed viewer supports them and they pass
+regression tests; the application never shows inert controls. Model loading is described by
+observed states, without invented percentage progress.
 
-The viewer/application selection state must remain coherent. Selection styling is neutral and
-visibly distinct from deterministic issue severity/highlighting. Evidence inspection must not
-replace or unexpectedly reset the desktop viewport. Provide Fit All, Reset View and Focus
-Selection only where the installed viewer supports them and they pass regression tests; never
-display inert controls. Model loading is described by observed states, without invented percentage
-progress.
+**Alternatives.** A separate coordination application (duplicates the shell and fragments the review
+context); severity-coloured selection (conflates user focus with defect status); fabricated progress
+or unsupported controls (misrepresents behaviour).
 
-**Alternatives.** A separate coordination application would duplicate the shell and fragment
-review context. Severity-coloured selection would conflate user focus with verified defect status.
-Fabricated progress or unsupported camera controls would misrepresent behaviour.
+**Trade-offs.** Existing selection, finding identity, viewer lifecycle, version guards, read-only
+model handling, accessibility and palette take precedence over adding controls.
 
-**Trade-offs.** Camera recovery and coordinated multi-model selection may require a separately
-verified viewer API. Existing selection, finding identity, viewer lifecycle, version guards,
-read-only model handling, accessibility and palette take precedence over adding controls.
+**Evidence.** The viewer exposes orbit, pan, zoom, selection, and **Focus**, **Fit** and **Reset**
+controls. Browser checks on the synthetic fixture exercised these controls and two-way
+finding/element selection.
 
-**Evidence.** UI-003 is implemented on `main` and was verified in a browser walkthrough. The current viewer exposes orbit, pan, zoom and selection; fit/reset/focus
-controls are explicitly deferred.
-
-**Unresolved.** Which camera operations the installed viewer version safely exposes for a federated
-scene; final keyboard and accessibility acceptance for any new controls.
+**Unresolved.** Which camera operations the viewer can safely expose for a multi-model scene; a
+complete accessibility audit.
 
 ---
 
 ## ADR-024 Muse Spark remains an optional, grounded interpretation provider
 
-**Status: Adopted 1 November 2026.**
+**Decision.** Meta Muse Spark, through the existing Meta Model API client, is the provider for
+bounded review planning and grounded finding explanations. These reuse the planner, the explanation
+path, output validation, the grounding check, the spend ledger and the deterministic fallback. The
+interface shows the actual plan source (`ReviewRun.plan_source`), the actual explanation source, and
+whether the deterministic fallback was used.
 
-**Decision.** Retain Meta Muse Spark via the existing Meta Model API client as the intended provider
-for bounded objective planning and grounded finding explanations. Reuse the existing planner,
-explanation path, model-output validation, grounding check, budget ledger, and deterministic
-fallback. The first user-facing integration may expose a bounded review objective and/or a
-grounded explanation; it must show the actual `ReviewRun.plan_source`, the actual explanation
-`source`, and whether the deterministic fallback was used.
+Deterministic findings stay separate from AI interpretation. The model cannot create or edit a
+`Finding`, coordinates, results or check criteria. `LLM_MODE=off` remains the default, and Live use
+requires backend credentials configured by the operator.
 
-Verified model evidence and deterministic `Finding` records remain separate from AI interpretation.
-The model cannot create or edit a `Finding`, coordinates, results, or approved check criteria.
-`LLM_MODE=off` remains the default. Live API verification or inference requires explicit owner
-approval for that session and secured backend credentials; no live call is authorised by this ADR
-or by the current documentation task.
+**Alternatives.** Presenting a default or offline plan as a live AI result, presenting a template as
+AI, or letting AI change validation semantics would all misstate provenance and break the finding
+contract.
 
-**Alternatives.** Claiming a live AI result from a default/offline plan, presenting a deterministic
-template as AI, or allowing AI to change validation semantics would misstate provenance and breach
-the finding contract.
+**Trade-offs.** The deterministic review stays fully usable when the provider is unavailable.
 
-**Trade-offs.** Offline deterministic review remains demonstrable when the provider is unavailable.
-It is not a substitute for proving live API compatibility or a user-facing Meta-assisted workflow.
-
-**Evidence.** ADR-020 and the T-5 register record offline Fake/Replay tests, default-off behaviour,
-grounded explanations and spend safeguards. The frontend currently shows a fixed note that the AI
-explanation is not connected; live API compatibility remains unverified.
-
-**Unresolved.** Live endpoint compatibility, owner-approved credentials/spend, and the final
-user-facing integration.
+**Evidence.** The review workspace offers **Run AI Review** with a review objective, an explicit
+**Continue without AI** path and on-request explanations, each labelled with its source.
 
 ---
 
-## ADR-025 Hackathon release gate and demonstration fallback
+## ADR-025 Show only verified capabilities
 
-**Status: Adopted 1 November 2026.**
+**Decision.** Public material, including the README and any demonstration, shows only capabilities
+that are implemented and verified. Planned features, such as multi-model federation and clash
+detection (ADR-021, ADR-022), are described as planned and never presented as working. A
+demonstration of the deterministic review without AI is labelled as such, never as Meta-assisted.
 
-**Decision.** The internal completion target is 3 November 2026; the hackathon submission date
-remains 4 November 2026. A functioning three-minute video is mandatory for the delivery plan.
-Federation and clash detection are an optional, conditional demonstration, with a no-later-than
-2 November 2026 12:00 UTC go/no-go cutoff. Include coordination only if every technical, evidence,
-rights, privacy, regression and recording condition passes.
+**Alternatives.** Presenting planned features as working, or stretching scope at the expense of the
+verified workflow, would undermine trust in the results the application does produce.
 
-If that gate fails, do not show or narrate unverified coordination. Keep the primary demonstration
-on the working deterministic IDS/native review, with the Meta-assisted path included only if its
-frontend integration and the required owner-authorised live/replay evidence are real and labelled
-accurately. If the Meta gate also fails, disclose that limitation; do not imply that the
-deterministic-only recording is Meta-assisted or that hackathon eligibility is established.
-Unverified features are omitted from the recording. Check public-repository and third-party asset
-rights before submission.
-
-**Alternatives.** Stretch coordination regardless of evidence, or represent a planned feature as
-working, would jeopardise a credible submission. Removing the verified deterministic workflow to
-make time for optional scope is rejected.
-
-**Trade-offs.** The plan protects the known working workflow and allows the coordination branch to
-stop without blocking it. Official rules and eligibility remain subject to owner verification.
-
-**Evidence.** The main branch contains the single-model review workflow, offline-tested T-5
-components and recorded T-6 synthetic benchmark results. It does not contain a clash engine,
-browser AI integration or a complete release demonstration.
-
-**Unresolved.** The official event rules/eligibility and owner approval for any live Meta call,
-external model use, recording, and final submission.
+**Trade-offs.** Some planned capabilities are visible only in the roadmap and the decision records.
 
 ---
 
 ## ADR-026 Explicit AI review policy and run provenance
 
-**Status: Adopted 3 November 2026.**
+**Context.** Once the review API accepts a plain-language objective, silently running the
+deterministic default after an unavailable or rejected AI plan would misrepresent whether the
+requested review was performed. A persisted run also needs to record whether planning used Live,
+Replay or Off, without inferring it from the current configuration, and user-selected checks must
+stay bound to the exact requirement revision they were selected from.
 
-**Context.** ADR-024 keeps Muse optional and Off by default. Once the review API accepts a plain-
-language objective, silently running the deterministic default after an unavailable or rejected AI
-plan can misrepresent whether the user's requested review was performed. A persisted run also needs
-to distinguish Live, Replay and Off planning without inferring the mode from current configuration.
-User-selected checks must remain bound to the exact confirmed requirement revision from which they
-were selected.
+**Decision.**
 
-**Decision.** Preserve ADR-024's development defaults and optional-provider architecture, while
-making objective intent explicit:
+- An objective requires an accepted AI plan unless the request sets `ai_required=false`.
+- `continue_without_ai=true` is an explicit choice to skip planning and run the deterministic plan.
+  Strict planning failures return typed errors and publish neither a run nor findings. Unsupported
+  scope is never replaced with a broader default plan.
+- Optional AI failures may use the deterministic plan, with the failure reason recorded in the run.
+  Explicit continuation is recorded separately from an attempted-but-rejected plan.
+- Selected checks are identified by `check_id`, `requirement_id` and `requirement_revision`; stale,
+  unconfirmed or mismatched selections are rejected before execution, and both planning and
+  continuation are restricted to that scope.
+- Each run records whether planning was requested, whether a provider request was attempted, the
+  client mode and model, the planning outcome, any fallback reason, and the selected and executed
+  check ids. Older runs without this record remain readable and are not given retrospective
+  provenance.
+- `BIMI_ENVIRONMENT=production` is a configuration profile that requires the Standard-mode
+  `muse-spark-1.3` Live configuration and rejects Contributor mode. Development remains Off by
+  default.
 
-- An objective requires an accepted AI plan unless the request explicitly sets `ai_required=false`.
-- `continue_without_ai=true` is a distinct, explicit choice to skip planning and run the
-  deterministic plan. Strict planning failures return typed errors and publish neither a run nor
-  findings. Unsupported scope is never replaced with a broader default plan.
-- Optional AI failures may use the deterministic plan, with the failure reason persisted in run
-  provenance. Explicit continuation is recorded separately from an attempted-but-rejected plan.
-- Optional selected checks are identified by `check_id`, `requirement_id` and
-  `requirement_revision`; stale, unconfirmed or mismatched selections are rejected before
-  execution. Both planning and deterministic continuation are restricted to that scope.
-- Each new run records whether planning was requested, whether a provider request was attempted,
-  the actual client mode and model when available, the planning outcome, fallback reason, selected
-  check ids and executed check ids. Historical runs without this field remain readable and are not
-  assigned retrospective provenance. Strict failures return equivalent safe metadata in a typed
-  problem response.
-- `BIMI_ENVIRONMENT=production` is an explicit configuration profile requiring the approved
-  Standard-mode `muse-spark-1.3` Live configuration and rejecting contributor mode. Development
-  remains Off by default.
+The production profile is not a deployment or security claim: the application has no
+authentication and must not be exposed to an untrusted network.
 
-This configuration profile is not a public-deployment approval or security claim. The application
-still lacks authentication; a production profile must not be interpreted as permission to expose
-project data publicly.
+**Alternatives.** Implicit deterministic fallback for every objective; inferring provenance from the
+current mode; pinning a selection to a check id alone. Each loses user intent, historical accuracy
+or revision-level traceability.
 
-**Alternatives.** Keep implicit deterministic fallback for every objective; infer provenance from
-the current global mode; or pin selection only to a check id. Each loses user intent, historical
-truthfulness or revision-level traceability.
+**Trade-offs.** A strict objective request now fails visibly when AI is unavailable; the interface
+offers **Continue without AI** as the explicit alternative.
 
-**Trade-offs.** Strict objective requests can now fail visibly when AI is unavailable. The API
-supports explicit deterministic continuation, but the existing UI does not yet expose a dedicated
-continuation control. The caller must handle the typed error or send the explicit continuation
-field; UI work remains outside this task's approved file scope.
+**Evidence.** Offline tests cover strict failure without run publication, budget refusal before a
+provider request, rejected plan metadata, selected-check revision validation, Replay provenance and
+compatibility with older runs.
 
-**Evidence.** T-5.1 offline tests cover strict failure without run publication, budget refusal before
-a provider request, rejected Live plan metadata, selected-check revision validation, Replay
-provenance retrieval and historical-run compatibility. These tests use stubs and make no live Meta
-request.
-
-**Unresolved.** User-approved Live planner evidence, UI exposure of explicit continuation, and
-authentication and access controls before any public deployment.
+**Unresolved.** Authentication and access control before any shared deployment.
 
 ---
 
-## ADR-027 FIX-002 Muse Spark structured review planning
+## ADR-027 Structured review-planning request
 
-**Status: Adopted 3 November 2026 under explicit owner approval for FIX-002.**
+**Context.** Early planning requests at a 500-token completion allowance returned usage but no
+visible content: the allowance was used up before any output, so JSON parsing and validation were
+never reached. The failure was not a schema error. Reasoning-token exhaustion is the likely cause.
 
-**Context.** The owner-reported FIX-001 investigation found five Muse Spark 1.3 planning requests
-with usage but no visible completion; each consumed the full 500-token output allowance. The
-ledger recorded `missing_output`, and JSON parsing, Pydantic validation and plan-registry checks
-were not reached. The observed failure was therefore not a schema failure. Reasoning-token
-exhaustion is the leading explanation, but remains unconfirmed because the original requests did
-not capture finish reason or reasoning-token usage. The private evidence remains in its owner-
-managed location and was not inspected or copied for this change.
+**Decision.** Give review planning its own completion allowance of 2,000 tokens
+(`LLM_MAX_PLANNING_OUTPUT_TOKENS`) and send `reasoning_effort="low"`; other workflows keep the
+500-token default. Use Chat Completions `max_completion_tokens`, which Meta documents as supported
+(`max_tokens` is a deprecated alias). Meta documents `low` reasoning effort for Muse Spark and does
+not support `"none"`. Request a JSON Schema response format derived from the Pydantic response
+model, with the plan's `checks` field required; omit the optional `strict` flag and keep validating
+locally, including confirmed-check, duplicate, scope and cap rules. The prompt is the versioned
+`planner.v2.md`.
 
-**Decision.** Give objective review planning a separate maximum completion allowance of 2,000
-tokens and send `reasoning_effort="low"`; retain the 500-token ceiling for other workflows. Use
-Chat Completions `max_completion_tokens`, which Meta documents as supported while retaining
-`max_tokens` only as a deprecated alias. Meta documents `low` reasoning effort and explicitly
-states that `"none"` is unsupported for Muse Spark. Request a JSON Schema response format derived
-from the Pydantic response model, with the plan's `checks` field required; omit the optional
-`strict` flag and continue to validate locally, including confirmed-check, duplicate, scope and
-execution-cap rules. Use the versioned `planner.v2.md` contract.
+The ledger records only safe response metadata: model id, response id, finish reason, completion
+tokens, reasoning tokens when present, whether visible content was returned, and the outcome. It
+never keeps prompts, response text, refusal text or credentials. Truncation and an exhausted
+completion allowance are `token_limit`; `invalid_output` is reserved for content that is present
+but fails JSON or Pydantic validation. Missing output below the limit, refusals and content-filter
+outcomes are separate ledger outcomes.
 
-Record only safe response metadata in the budget ledger: actual model id, response id, finish
-reason, total completion tokens (`output_tokens`), reasoning tokens when present, visible-content
-presence and outcome. Do not retain prompts, response text, refusal text or credentials. Treat
-truncation and completion-limit exhaustion as `token_limit`; reserve `invalid_output` for content
-that is present but fails JSON/Pydantic validation. Missing output below the limit, refusals and
-content-filter outcomes are distinct ledger outcomes with sanitised exceptions.
+Monetary limits are unchanged. At Standard rates of USD 1.25 per million input tokens and USD 4.25
+per million output tokens, the uncached worst-case reservation for 8,000 input and 2,000 completion
+tokens is USD 0.01850, within the USD 0.10 per-call limit.
 
-Keep application budgets unchanged: 8,000 estimated input tokens; USD 0.10 per call and per
-review; two calls per review; and USD 5.00 project allowance. At Standard rates of USD 1.25/M
-input and USD 4.25/M output, the uncached 8,000/2,000 worst-case reservation is USD 0.01850,
-within the existing per-call ceiling. Reservations still occur before the provider request and
-the ledger remains fail-closed.
+**Alternatives.** Raising the shared 500-token cap (rejected: it would also change extraction and
+explanation); disabling reasoning (not supported by Muse Spark); provider-side strict schema mode
+(not adopted without compatibility evidence); reclassifying missing content as invalid output
+(rejected: it would misreport the failure).
 
-**Alternatives.** Raising the shared 500-token cap would also change extraction and explanation
-workflows; rejected. Disabling reasoning would be rejected by Muse Spark. Enabling strict
-provider-side schema mode without compatibility evidence would be speculative; strict mode is
-omitted. Reclassifying missing content as schema-invalid would repeat the observed diagnostic
-error; rejected.
+**Trade-offs.** A larger maximum reservation per planning request, still well within the per-call
+and per-review limits.
 
-**Trade-offs.** The planning allowance increases the maximum reserved amount for a planning
-request, but remains below the unchanged USD 0.10 call/review budgets. The local stub verifies
-request construction and deterministic error classification only. Provider acceptance of this
-JSON Schema and live planning relevance remain unverified and require the separately approved
-VERIFY-009 live gate. No live request is authorised by this decision.
+**Evidence.** Offline `LiveClient` transport tests and Meta's
+[Chat Completions parameter reference](https://dev.meta.ai/docs/protocols/chat-completions).
 
-**Evidence.** FIX-001 owner-reported observations; offline LiveClient transport tests; Meta's
-[Chat Completions parameter reference](https://dev.meta.ai/docs/protocols/chat-completions);
-and the FIX-002 offline regression tests.
+---
 
-## ADR-028 FIX-003 Muse Spark grounded explanation allowance and token-limit labelling
+## ADR-028 Explanation completion allowance and token-limit labelling
 
-**Status: Proposed 3 November 2026; awaiting owner acceptance of the FIX-003 implementation.**
-
-**Context.** The owner-approved VERIFY-009 live session (candidate
-`b95dadbe2d0475aa3c107227a9d0af2cae2c2c47`) accepted a Muse Spark 1.3 review plan on the first
-request, but the single authorised explanation request returned `finish_reason=length` with 500
-completion tokens, of which 498 were reasoning tokens, and no visible content. The ledger recorded
-`token_limit`; explanation JSON validation and deterministic grounding were never reached. The
-application returned a correctly labelled deterministic template, but mapped the failure to
-`budget_limit`, and the inspector described it as an exhausted spend or call limit although no
-monetary or call limit had been reached. Explanation requests were also sent without the
-`reasoning_effort="low"` setting that FIX-002 adopted for planning.
+**Context.** A live explanation request at the 500-token allowance returned `finish_reason=length`,
+with 498 of its 500 completion tokens spent on reasoning and no visible content. The application
+correctly fell back to the deterministic template, but labelled the fallback `budget_limit`, and the
+interface described it as an exhausted spend limit although no monetary limit had been reached.
+Explanation requests were also sent without the low reasoning effort adopted for planning.
 
 **Decision.** Give finding explanations their own completion allowance,
-`LLM_MAX_EXPLANATION_OUTPUT_TOKENS` (default and ceiling 2,000), and send explanation requests at
-`reasoning_effort="low"`, matching the verified planning request shape. Other workflows keep the
-500-token default. Retain the existing JSON Schema response format, the `_ExplanationDraft`
-contract, local Pydantic validation and the deterministic `_verify_grounding` checks unchanged;
-the explanation prompt `explanation.v1.md` is unchanged because no evidence shows the prompt
-caused the failure.
+`LLM_MAX_EXPLANATION_OUTPUT_TOKENS` (default and ceiling 2,000), and send them at
+`reasoning_effort="low"`, matching the planning request. Other workflows keep the 500-token default.
+The explanation schema, the `_ExplanationDraft` contract, local validation, the grounding checks and
+the prompt `explanation.v1.md` are unchanged.
 
-Separate the explanation fallback vocabulary: `token_limit` is raised when the provider exhausts
-the completion allowance (`TokenLimitError`), and `budget_limit` is reserved for application
-spending or call limits (`BudgetLimitError`). The frontend states the token-limit case as "The AI
-explanation reached its completion-token limit. The verified finding remains available, and a
-deterministic explanation is shown instead." Neither case is described as a provider outage,
-schema error or insufficient financial budget.
+Separate the fallback reasons: `token_limit` when the provider exhausts the completion allowance
+(`TokenLimitError`), and `budget_limit` only for application spend or call limits
+(`BudgetLimitError`). The interface states the token-limit case as: "The AI explanation reached its
+completion-token limit. The verified finding remains available, and a deterministic explanation is
+shown instead."
 
-Keep every monetary limit unchanged. At configured Standard rates the uncached 8,000-input /
-2,000-completion explanation reservation is USD 0.01850, within the USD 0.10 per-call limit; a
-planning and an explanation reservation together are USD 0.03700, within the USD 0.10 per-review
-limit and the USD 5.00 project allowance. The two-call review cap and pre-request reservation
-remain in force, and the ledger's per-request output ceiling is the maximum of the three configured
-allowances so a reservation is never rejected for an allowance the client permits.
+Monetary limits are unchanged. A planning and an explanation reservation together come to
+USD 0.03700, within the USD 0.10 per-review limit. The ledger's per-request output ceiling is the
+largest of the three configured allowances, so a reservation is never rejected for an allowance the
+client permits.
 
-**Alternatives.** Raising the shared 500-token cap would also change extraction; rejected, as in
-ADR-027. Keeping `budget_limit` as a combined category would continue to misreport the observed
-failure to users; rejected. Reducing citation requirements so that shorter output passes would
-weaken ADR-009 grounding; rejected. Revising the prompt before measuring the effect of the
-allowance would add an unverified variable; deferred until evidence requires it.
+**Alternatives.** Raising the shared cap (rejected, as in ADR-027); keeping a combined
+`budget_limit` category (rejected: it misreports the failure); reducing citation requirements so
+shorter output passes (rejected: weakens ADR-009); revising the prompt before measuring the effect
+of the allowance (deferred).
 
-**Trade-offs.** A planning plus explanation review may now reserve up to USD 0.03700 instead of
-USD 0.030625, still within unchanged limits. Offline stub tests verify the request body,
-classification and labels only; whether Muse Spark completes a grounded explanation within 2,000
-tokens at low reasoning effort is OQ-08 and requires a separately approved live retest. No live
-request is authorised by this decision.
+**Trade-offs.** A slightly larger maximum reservation per review, within unchanged limits.
 
-**Evidence.** The sanitised VERIFY-009 live result; offline `LiveClient` stub-transport and API
-regression tests named for VERIFY-009 and FIX-003.
+**Evidence.** Offline `LiveClient` stub-transport and API regression tests reproduce the truncated
+response and check the request body, classification and labels.
 
-## Implementation outcomes — 1 November 2026
-
-These observations supplement, and do not change, the adopted decisions above.
-
-- **ADR-023:** UI-004A was merged into `main` in PR #28 at
-  `cf06328c874258efe8a49d0afa291d9aef278928`. The synthetic fixture browser checks exercised
-  Fit model, Reset view, Focus selected and bidirectional finding/element selection. Cross-severity
-  viewer styling and a complete accessibility audit remain open.
-- **ADR-024:** The owner reported one approved basic `muse-spark-1.3` structured-output smoke;
-  its original request recording and source commit were not provided. This does not verify a live
-  BIM planner or explanation. On the release baseline, an offline objective request produced the
-  deterministic default plan and an explanation request returned an `ai_disabled` deterministic
-  template; neither is an AI response. The browser objective and explanation controls remain
-  unimplemented.
-- **ADR-025:** The separate FED-001 harness produced synthetic geometric feasibility evidence,
-  but no coordination API, matrix or federated viewer is integrated. The repository is private,
-  the video and official submission fields have not been verified, and release remains no-go.
-  Further live calls, publication and submission still require their existing owner gates.
-
+---
 
 ## ADR-029 Live structured-output evidence and retained validation
 
-**Status:** Proposed 3 November 2026 for owner review. This evidence record does not amend the
-adopted text of ADR-027 or change ADR-028's proposed status.
+**Decision.** Keep the request shapes in ADR-027 and ADR-028 (non-strict JSON Schema,
+`max_completion_tokens`, 2,000-token allowances, low reasoning effort) together with all local
+validation: Pydantic schemas, confirmed-scope and cap checks for plans, and deterministic grounding
+for explanations, with distinct `token_limit` and `budget_limit` outcomes.
 
-**Context and confirmed cause.** Manual Evaluation Run 3 produced five planning responses with
-usage but no visible content at the former 500-token allowance. FIX-001 confirmed that JSON
-parsing and schema validation were never reached; the original failure was not demonstrated to
-be a schema defect. Reasoning-token exhaustion is a plausible hypothesis, not a confirmed cause:
-finish reasons and reasoning-token counts were not captured for those requests. In the later
-VERIFY-009 explanation request, the provider returned `finish_reason=length`, 500 completion
-tokens including 498 reasoning tokens, and no visible content. The completion allowance was
-exhausted before schema validation or grounding. That observed failure is distinct from a
-financial budget refusal.
+**Evidence.** In a live run against the synthetic fixture, Muse Spark 1.3 returned a valid plan
+(`finish_reason=stop`, 331 completion tokens including 288 reasoning tokens) that selected a
+confirmed check, and a schema-valid explanation that passed the grounding check (542 completion
+tokens including 330 reasoning tokens). The deterministic run and findings were unchanged after the
+explanation. Before the allowance change, the same explanation request had exhausted the 500-token
+allowance (ADR-028).
 
-**Decision proposed.** Retain ADR-027's planning correction: a non-strict JSON Schema request
-using `max_completion_tokens`, a 2,000-token allowance, low reasoning effort, `planner.v2.md`
-and local Pydantic/confirmed-scope/cap validation. Retain the merged FIX-003 explanation
-implementation, whose separate 2,000-token allowance and low reasoning effort are described in
-proposed ADR-028, while awaiting its owner decision. Keep the existing explanation schema,
-deterministic grounding and distinct `token_limit` and `budget_limit` outcomes.
+**Alternatives.** Reverting to 500 tokens would restore the observed failure; attributing the
+original missing output to a schema defect would contradict the evidence; raising monetary budgets,
+weakening citation checks or presenting a template as a live explanation would reduce safety or
+misrepresent the result.
 
-**Why and alternatives considered in this review.** Reverting to the 500-token planning limit
-would restore the observed headroom risk; assuming a malformed schema caused the original
-missing output would contradict the diagnostic evidence. Provider-side strict schema mode is
-not established by these observations. Increasing monetary budgets, weakening citation checks
-or treating a deterministic template as a live explanation would reduce safety or misrepresent
-the result. The selected bounded request and local validation preserve the existing architecture
-while giving the provider sufficient headroom in the recorded later case.
+**Trade-offs.** One successful scenario shows that the request shape and evidence contract work for
+that fixture and objective. It does not establish availability, behaviour on other models or
+objectives, or the correctness of every sentence of an explanation.
 
-**Validation and retained boundaries.** FIX-002 and FIX-003 were regression-tested offline.
-VERIFY-009 on `b95dadbe2d0475aa3c107227a9d0af2cae2c2c47` passed planning but failed its overall
-live rubric. VERIFY-010 on `588e6adf9ca71079eadc0e5b33422dc6605df743` subsequently passed
-planning and a schema-valid, grounded explanation on one synthetic IFC/IDS pair. That is
-acceptance evidence for this specific scenario, not general reliability, factual perfection or
-owner acceptance of ADR-028. Strict planning failures publish no run; only deterministic
-validation creates findings; explanation provenance and grounding remain mandatory; IFC and
-run artefacts remain unchanged. Live calls still require explicit session approval, applicable
-data rights and unchanged fail-closed application spend controls.
+**Unresolved.** OQ-02 and OQ-08.
 
-**Evidence:** FIX-002, VERIFY-009 and VERIFY-010; the
-T-5 task register; and ADR-027/028.
-No new live call is authorised by this record.
+---
+
+## Open questions
+
+| ID | Question | Related |
+|---|---|---|
+| OQ-02 | Does Meta consistently accept the non-strict JSON Schema planning request across objectives and models? One live synthetic scenario has passed. | ADR-002, ADR-012, ADR-027, ADR-029 |
+| OQ-03 | Should a second benchmark use an openly licensed public model, and which? | ADR-011 |
+| OQ-04 | Does the planner add measurable value over the default plan across objectives? | ADR-003 |
+| OQ-08 | How reliably does Muse Spark return a complete, grounded explanation within the 2,000-token allowance? | ADR-009, ADR-028, ADR-029 |
+
+Resolved: **OQ-01** (That Open Components 3.6 API for GlobalId lookup and highlighting; see
+ADR-007), **OQ-05** (IfcTester licence; see ADR-004).

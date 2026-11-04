@@ -1,135 +1,92 @@
-# BIM Intelligence — Example IFC Project
-This library describes three example-project collections for exploring IFC models and evaluating
+# Example projects
 
-This library describes intended example-project collections for exploring IFC models and evaluating
+These collections describe public sample projects for exploring IFC models in BIM Intelligence and
+trying information-quality checks on them. Architects can inspect geometry and elements; BIM
+managers and coordinators can check model information against requirements; developers can test
+ingestion, viewing and performance.
 
-BIM Intelligence. Architects can inspect geometry and elements; BIM Managers and BIM Coordinators
-can examine model information against project requirements; developers can assess ingestion, viewing
-and performance.
+The IFC models themselves are **not included**. The repository ignores `*.ifc` files outside the
+test fixtures and synthetic datasets, so download each model from its source and place it in the
+collection folder. There is no one-click example loader yet.
 
+## Collections
 
-The owner keeps local copies of the IFC models in each collection directory. Git ignores `*.ifc`
-files under `examples/`, so the models are not tracked or published with the repository. This is
-not an implemented example catalogue, and one-click example loading is not available.
+| Collection | Disciplines | Included in the repository | Draft IDS |
+|---|---|---|---|
+| [Duplex Apartment](./duplex-apartment/README.md) | Architectural, electrical, mechanical, plumbing; rooms and spaces | Description, two COBie spreadsheets and four discipline drawings | [`benchmark.ids`](./duplex-apartment/benchmark.ids) |
+| [Medical-Dental Clinic](./medical-dental-clinic/README.md) | Architectural, structural, HVAC, electrical, plumbing | Description | [`benchmark.ids`](./medical-dental-clinic/benchmark.ids) |
+| [Molio](./molio/README.md) | Information and classification reference example | Description and buildingSMART's [`Molio_Example.ids`](./molio/Molio_Example.ids) | [`benchmark.ids`](./molio/benchmark.ids) |
 
-Other file types, such as spreadsheets, images, PDFs and IDS files, are not covered by the IFC
-ignore rule and may be visible to Git. Keep private or rights-uncleared inputs in `local-private/`
-and check their status before publication.
+Each collection README lists the expected IFC file names. The disciplines come from those file
+names and the source descriptions; the model contents have not been checked file by file.
 
-## Project collections
+## Sources and licences
 
-| Collection | Disciplines suggested by filenames | Intended evaluation | Expected IFC inputs | Benchmark IDS |
-|---|---|---|---|---|
-| [Duplex Apartment](./duplex-apartment/README.md) | Architectural, electrical, mechanical/MEP and plumbing; rooms and spaces | Model and property inspection, IDS validation, future multidisciplinary coordination | `Duplex_A_20110907.ifc`, `Duplex_Electrical_20121207.ifc`, `Duplex_M_20111024_ROOMS_AND_SPACES.ifc`, `Duplex_MEP_20110907.ifc`, `Duplex_Plumbing_20121113.ifc` | [Draft](./duplex-apartment/benchmark.ids) |
-| [Medical Dental Clinic](./medical-dental-clinic/README.md) | Architectural, structural, HVAC, electrical and plumbing | Geometry, navigation, rendering, project-specific IDS validation, future multidisciplinary coordination | `Clinic_Architectural.ifc`, `Clinic_Electrical.ifc`, `Clinic_HVAC.ifc`, `Clinic_Plumbing.ifc`, `Clinic_Structural.ifc` | [Draft](./medical-dental-clinic/benchmark.ids) |
-| [Molio](./molio/README.md) | To be confirmed; information and reference example | Metadata, properties, references and IDS validation against an applicable specification | `Molio_with_URIs.ifc` | [Draft](./molio/benchmark.ids) |
+- **Duplex Apartment** and **Medical-Dental Clinic** are test files published by buildingSMART
+  International under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). They were
+  originally hosted by the US National Institute of Building Sciences. Credit them as
+  BSI (2020) "Duplex Apartment Test Files" or "Medical-Dental Test Files", buildingSMART
+  International.
+- **Molio:** `Molio_Example.ids` records buildingSMART as its copyright holder; the buildingSMART
+  [IDS repository](https://github.com/buildingSMART/IDS) is licensed
+  [CC BY-ND 4.0](https://creativecommons.org/licenses/by-nd/4.0/).
+- The `benchmark.ids` files were written for this project and are covered by the project's
+  [MIT License](../LICENSE).
 
-The disciplines are taken from the file names and collection notes, not from verified model
-contents. The Medical Dental Clinic README records a CC BY 4.0 licence statement and attribution
-requirement from its source. **Source URLs, licences and redistribution rights for every
-collection, file hashes, IFC versions, IDS applicability and application compatibility:**
-**Pending verification.**
+See [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) for the full attribution details. Check
+each source's current licence before redistributing a model.
 
-## Exploratory benchmark drafts
+## Draft benchmark IDS files
 
-Each collection contains a `benchmark.ids` with generic candidate checks based on the synthetic
-benchmark's IDS format. The Duplex and Clinic drafts propose checking names and GlobalIds for
-projects, storeys, spaces and a limited selection of building and services elements. The Molio
-draft proposes project and element identity checks and a classification-reference location check;
-the latter checks presence only, not whether a URI is valid or reachable.
+Each collection has a `benchmark.ids` with generic candidate checks in the same format as the
+synthetic benchmark:
 
-These are **draft examples, not verified or approved project requirements**. They were not derived
-from, or run against, the collection models. Their applicability, coverage and results remain
-unverified; no ground truth, accuracy or compliance claim is implied. Entity selectors cover only
-the listed IFC classes, not every possible class or subtype.
+- **Duplex Apartment and Medical-Dental Clinic:** names and GlobalIds for the project, storeys,
+  spaces and a selection of building and services elements.
+- **Molio:** project and element identity, and whether a classification reference is present (it
+  does not check that a URI is valid or reachable).
 
-The owner must review, edit and approve each specification before importing it: the application
-treats imported IDS specifications as confirmed. Each session contains one IFC, so checks for
-entities absent from that file can be reported as not applicable and the review can be partial.
+These are **drafts, not project requirements**. They have not been run against the collection
+models, and no accuracy or compliance result is claimed for them. Each specification covers only
+the IFC classes it lists.
 
-The collections currently contain descriptions only. They are not an implemented example
-catalogue, and one-click example loading is not available.
+The application treats every imported IDS specification as confirmed, so review and edit a draft
+before importing it. A session holds one IFC model, so checks for entity types that are absent from
+that model are reported as not applicable and the review is marked partial.
 
-## Project collections
+## Exploring a model and running a review
 
-| Collection | Expected disciplines | Intended evaluation |
-|---|---|---|
-| [Duplex Apartment](./duplex-apartment/README.md) | Architectural, electrical, mechanical/MEP and plumbing; rooms and spaces | Model and property inspection, IDS validation, and future multidisciplinary coordination |
-| [Medical Dental Clinic](./medical-dental-clinic/README.md) | Architectural | Geometry, navigation, rendering and project-specific IDS validation |
-| [Molio](./molio/README.md) | To be confirmed; information and reference example | Metadata, properties, references and applicable information-quality checks |
-| [Schependomlaan](./schependomlaan/README.md) | Architectural | Ingestion, viewer robustness, information inspection, performance and future coordination |
+An IFC file carries a BIM model's geometry and information. Exploring a model, by navigating it and
+inspecting elements and properties, does not run any checks. An Information Delivery Specification
+(IDS) expresses machine-readable information requirements; you need one, or the built-in
+classification-consistency rule, to run a review.
 
-These are intended inputs and uses, not verified descriptions of model contents.
-**Availability, source URLs, licences and redistribution rights, file hashes, IFC versions and
-application compatibility:** **Pending verification.**
+1. Download a model from its source and place it in the collection folder.
+2. Start the backend and frontend as described in the README [Quick start](../README.md#quick-start),
+   then open the application.
+3. On Project Home, choose **Create review session**, then **Choose IFC model** and upload the
+   `.ifc` file.
+4. To check the model against requirements, use **Add requirements document** to import a reviewed
+   `.ids` file. Skip this step if you only want to explore the model.
+5. Choose **Open review workspace**. Inspect the model and, if requirements are present, choose
+   **Run AI Review** (or **Continue without AI**) and inspect the findings and coverage.
 
+The application stores its own copy of the upload and never changes the original IFC. A model view,
+or an empty findings list, is not evidence that a model is complete or compliant.
 
-## Exploration and information-quality review
-
-An Industry Foundation Classes (IFC) file exchanges a BIM model and its available geometry and
-information. Exploring a model means navigating it and inspecting its elements and properties; this
-does not execute checks or establish compliance.
-
-A buildingSMART Information Delivery Specification (IDS) expresses machine-readable requirements
-for IFC information. An IDS is optional for visual exploration but is necessary to validate a
-model against project-specific IDS requirements. A deterministic review requires at least one
-confirmed executable requirement. Imported IDS specifications are treated as confirmed, so review
-their suitability before importing them; check the resulting coverage and any partial or error
-status.
-
-The current application has one active IFC model per session. Model federation and geometric clash
-detection are not integrated into the application; geometric clash detection requires a separate
-implemented coordination capability. The synthetic feasibility harness is not that capability.
-Uploaded IFC bytes remain unchanged: the application does not modify or re-save the source model
-during evaluation.
-
-## Storage and licensing
+## Storage
 
 | Location | Purpose |
 |---|---|
+| `examples/<collection>/` | Collection descriptions, draft IDS files, and your local, git-ignored copies of the example models |
+| `datasets/synthetic/` | Synthetic benchmark material, generated on demand |
+| `datasets/permitted/` | Openly licensed sample models cleared for redistribution (not used yet) |
+| `tests/fixtures/` | Small deterministic regression fixtures |
 
-| `examples/<collection>/` | Project descriptions, draft IDS inputs, future catalogue manifests and the owner's local, Git-ignored copies of the example IFC models |
+The [dataset policy](../datasets/README.md) does not allow committed files larger than about 5 MB.
+That is separate from the application's upload limits, which default to 200 MB for IFC models
+(`MAX_IFC_MB`) and 25 MB for documents (`MAX_DOC_MB`).
 
-| `examples/` | Project descriptions and future catalogue manifests, not model storage |
-
-| `local-private/bim-models/<collection>/` | Owner-managed IFC files for local evaluation, including private or not-yet-cleared inputs |
-| `local-private/bim-documents/<collection>/` | Associated private or not-yet-cleared IDS files and supporting documents |
-| `datasets/permitted/<collection>/` | Openly licensed sample IFC files and associated evaluation assets verified for redistribution |
-| `datasets/synthetic/` | Synthetic benchmark material, kept separate from these examples |
-| `tests/fixtures/` | Small deterministic regression fixtures, not a project library |
-
-Use the collection directory names shown above for `<collection>`. The owner can create the private
-or permitted input directories when adding actual files; they are not created by this library.
-Never commit real project models, private inputs or material derived from `hackathon-private/`.
-Git ignore rules are not access controls.
-
-Before publication, verify the authoritative source, licence, redistribution permission and
-required attribution for each IFC, IDS and supporting asset. Record the source URL and applicable
-licence text per file in `datasets/permitted/LICENCES.md`, creating it when permitted files are
-added. The [dataset policy](../datasets/README.md) prohibits committing files larger than
-approximately 5 MB. This is separate from the configurable application upload limits, which
-default to 200 MiB for IFC (`MAX_IFC_MB`) and 25 MiB for documents such as IDS (`MAX_DOC_MB`).
-Being within an upload limit does not grant permission to publish a file.
-
-Follow the [private-data and provenance rules](../AGENTS.md#private-data-handling-and-provenance).
-Local access or inspection does not authorise transmission to an LLM service: explicit owner
-approval and applicable data rights are required. Changes involving private-data handling also
-require the documented security and provenance review.
-
-## Open a model and import an IDS
-
-1. Once use is authorised, place an IFC and any separately prepared IDS in the appropriate
-   collection locations above. Verify the source and licence before considering redistribution.
-2. Start the backend and frontend using the [local setup](../README.md#local-setup), then open the
-   application in a browser.
-3. On Project Home, under **New review**, select **Create review session**. Use **Choose IFC model**
-   to upload one existing `.ifc` file.
-4. For project-specific IDS validation, use **Add requirements document** to import an applicable,
-   reviewed `.ids` file. This can also be done in the workspace. Skip this step for visual
-   exploration only.
-5. Select **Open review workspace**. Inspect the model; if executable requirements are present,
-   select **Run review** and inspect the findings and coverage.
-
-The application stores an uploaded copy under its configured data directory; it does not change the
-original IFC. A model view or an absence of findings is not, on its own, evidence of complete
-review coverage.
+Never commit real project models or private documents; keep them outside the repository. Only send
+model data to a provider if you have the right to share it. See the
+[private-data rules](../AGENTS.md#private-data-handling-and-provenance).
