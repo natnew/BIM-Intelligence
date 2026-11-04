@@ -1,18 +1,14 @@
 # Third-party notices
 
-**Dependency inventory:** 31 October 2026. **Asset and evidence reconciliation:** 3 November
-2026 on source baseline `588e6adf9ca71079eadc0e5b33422dc6605df743`; the dependency inventory
-was not re-audited for a specific distributable.
+Last reviewed: 4 November 2026.
 
 ## Purpose and scope
 
-This inventory records the project licence, declared dependencies, relevant resolved package
-metadata and third-party assets found in the repository. It distinguishes direct runtime packages,
-development tools, transitive dependencies and assets copied into frontend builds. It is an
-engineering inventory, not legal advice or a certification that every possible distribution
-complies with every licence.
+This file lists the project licence, the declared dependencies and their licences, and the
+images and example files included in the repository. It is an engineering inventory, not legal
+advice.
 
-Python versions below are observations from the local development environment, not pinned
+Python versions below are the versions resolved by a fresh install on the review date, not pinned
 resolutions: `pyproject.toml` specifies ranges and the repository has no Python lockfile. The
 frontend versions are resolved in [`frontend/package-lock.json`](./frontend/package-lock.json).
 Package metadata and licence identifiers are not substitutes for reviewing the applicable licence
@@ -27,60 +23,56 @@ replace or amend the root licence.
 ## Python dependencies
 
 Runtime and development requirements come from [`pyproject.toml`](./pyproject.toml). Versions in
-the tables are those observed in the local `.venv` on the review date; they may differ in another
-installation. Each package link is to its version-specific PyPI record.
+the tables were resolved by `pip install -e ".[dev]"` on Python 3.12 on the review date; another
+installation may resolve different versions within the declared ranges. Each package link is to its version-specific PyPI record.
 
 ### Direct runtime dependencies
 
-| Component                                                               |                   Declared range | Observed version | Licence metadata                             |
+| Component                                                               |                   Declared range | Resolved version | Licence metadata                             |
 | ----------------------------------------------------------------------- | -------------------------------: | ---------------: | -------------------------------------------- |
 | [FastAPI](https://pypi.org/project/fastapi/0.162.0/)                    |                   `>=0.115,<1.0` |        `0.162.0` | MIT                                          |
 | [Uvicorn](https://pypi.org/project/uvicorn/0.54.0/)                     | `>=0.30,<1.0` (`standard` extra) |         `0.54.0` | BSD-3-Clause                                 |
-| [Pydantic](https://pypi.org/project/pydantic/2.14.1/)                   |                     `>=2.7,<3.0` |         `2.14.1` | MIT                                          |
-| [pydantic-settings](https://pypi.org/project/pydantic-settings/2.16.1/) |                     `>=2.7,<3.0` |         `2.16.1` | MIT                                          |
-| [python-multipart](https://pypi.org/project/python-multipart/0.0.32/)   |                        `>=0.0.9` |         `0.0.32` | Apache-2.0                                   |
+| [Pydantic](https://pypi.org/project/pydantic/2.14.2/)                   |                     `>=2.7,<3.0` |         `2.14.2` | MIT                                          |
+| [pydantic-settings](https://pypi.org/project/pydantic-settings/2.16.2/) |                     `>=2.7,<3.0` |         `2.16.2` | MIT                                          |
+| [python-multipart](https://pypi.org/project/python-multipart/0.0.33/)   |                        `>=0.0.9` |         `0.0.33` | Apache-2.0                                   |
 | [IfcOpenShell](https://pypi.org/project/ifcopenshell/0.9.0.post1/)      |                  `>=0.8.0,<0.10` |    `0.9.0.post1` | LGPL-3.0-or-later                            |
 | [IfcTester](https://pypi.org/project/ifctester/0.9.0/)                  |                  `>=0.8.0,<0.10` |          `0.9.0` | LGPL-3.0-or-later (PyPI classifier: LGPLv3+) |
 | [xmlschema](https://pypi.org/project/xmlschema/4.3.2/)                  |                     `>=3.0,<5.0` |          `4.3.2` | MIT                                          |
 | [OpenAI Python SDK](https://pypi.org/project/openai/2.54.0/)            |                    `>=1.40,<3.0` |         `2.54.0` | Apache-2.0                                   |
-| [pypdf](https://pypi.org/project/pypdf/6.21.2/)                         |                     `>=4.2,<7.0` |         `6.21.2` | BSD-3-Clause                                 |
+| [pypdf](https://pypi.org/project/pypdf/6.21.4/)                         |                     `>=4.2,<7.0` |         `6.21.4` | BSD-3-Clause                                 |
 
 ### Direct development dependencies
 
-| Component                                                | Declared minimum | Observed version | Licence metadata |
+| Component                                                | Declared minimum | Resolved version | Licence metadata |
 | -------------------------------------------------------- | ---------------: | ---------------: | ---------------- |
-| [pytest](https://pypi.org/project/pytest/9.1.1/)         |          `>=8.2` |          `9.1.1` | MIT              |
+| [pytest](https://pypi.org/project/pytest/9.2.0/)         |          `>=8.2` |          `9.2.0` | MIT              |
 | [pytest-cov](https://pypi.org/project/pytest-cov/7.1.0/) |          `>=5.0` |          `7.1.0` | MIT              |
 | [httpx](https://pypi.org/project/httpx/0.28.1/)          |         `>=0.27` |         `0.28.1` | BSD-3-Clause     |
 | [ruff](https://pypi.org/project/ruff/0.17.3/)            |          `>=0.5` |         `0.17.3` | MIT              |
-| [mypy](https://pypi.org/project/mypy/2.4.0/)             |         `>=1.10` |          `2.4.0` | MIT              |
+| [mypy](https://pypi.org/project/mypy/2.4.1/)             |         `>=1.10` |          `2.4.1` | MIT              |
 
 ### Build-system requirements
 
-`setuptools>=69` and `wheel` are declared in the PEP 517 build-system requirements. Neither was
-installed in the inspected `.venv`, so their resolved versions and licence metadata are
-**UNVERIFIED**. A build may resolve them in an isolated environment; verify the actual build
-environment before redistributing its contents.
+`setuptools>=69` and `wheel` are declared as PEP 517 build-system requirements. They are resolved
+in an isolated build environment and are not part of the installed application.
 
 ### Python transitive dependencies and IFC-specific notes
 
-Python transitive versions are not locked. The current local dependency graph includes
+Python transitive versions are not locked. The dependency graph includes
 `bcf-client`, `odfpy`, `python-dateutil`, `numpy` and other packages pulled in by IfcTester and
 other direct dependencies. Do not treat this local resolution as the complete or fixed inventory
 for every supported installation.
 
-| Component or asset          | Observed metadata and relationship                                                                                                                                                             | Licence/source status                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Component or asset          | Relationship                                                                                                                                                             | Licence/source status                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `bcf-client` `0.9.0`        | Transitive runtime dependency of IfcTester.                                                                                                                                                    | **UNVERIFIED.** Its [PyPI 0.9.0 record](https://pypi.org/project/bcf-client/0.9.0/) has a GPLv3 classifier, while the [IfcOpenShell 0.9.0.post1 project description](https://pypi.org/project/ifcopenshell/0.9.0.post1/) lists the BCF library as LGPL-3.0-or-later. The PyPI record has no SPDX expression or licence file metadata. Resolve this upstream discrepancy and the applicable terms before redistributing an installed environment. |
-| `odfpy` `1.4.1`             | Transitive runtime dependency of IfcTester.                                                                                                                                                    | **UNVERIFIED.** Its installed metadata lists Apache, GPL and LGPL licence names without an SPDX expression or a clear selection. Verify the package's licence files and applicable grant before redistribution.                                                                                                                                                                                                                                  |
-| `python-dateutil` `3.0.0`   | Transitive runtime dependency of IfcTester.                                                                                                                                                    | **UNVERIFIED.** Installed metadata says `Dual License`; the exact licence choice was not established in this audit.                                                                                                                                                                                                                                                                                                                              |
-| IDS 1.0 XSD (`ids.xsd`)     | IfcTester loads this schema from its installed package; first-party code references it but does not copy it into the repository. The schema declares version `1.0.0`.                          | The [buildingSMART IDS repository licence](https://github.com/buildingSMART/IDS/blob/development/LICENSE) identifies CC BY-ND 4.0 and buildingSMART International Ltd. The exact upstream revision corresponding to IfcTester's bundled copy is **UNVERIFIED**. The project does not modify the schema.                                                                                                                                          |
-| IfcOpenShell wheel binaries | The inspected Windows wheel contains native DLLs, including Boost-named files. They are installed as part of the external IfcOpenShell dependency, not committed or copied by this repository. | The IfcOpenShell package declares LGPL-3.0-or-later. The licences and notices for every separately bundled native component in a redistributed wheel were not audited; verify them against the exact platform wheel before repackaging it.                                                                                                                                                                                                       |
+| `bcf-client` `0.9.0`        | Transitive runtime dependency of IfcTester.                                                                                                                                                    | **To be confirmed.** Its [PyPI 0.9.0 record](https://pypi.org/project/bcf-client/0.9.0/) has a GPLv3 classifier, while the [IfcOpenShell 0.9.0.post1 project description](https://pypi.org/project/ifcopenshell/0.9.0.post1/) lists the BCF library as LGPL-3.0-or-later. The PyPI record has no SPDX expression or licence file metadata. Resolve this upstream discrepancy before redistributing an installed environment. |
+| `odfpy` `1.4.1`             | Transitive runtime dependency of IfcTester.                                                                                                                                                    | **To be confirmed.** Its installed metadata lists Apache, GPL and LGPL licence names without an SPDX expression or a clear selection. Verify the package's licence files and applicable grant before redistribution.                                                                                                                                                                                                                                  |
+| `python-dateutil` `4.0.0`   | Transitive runtime dependency of IfcTester.                                                                                                                                                    | **To be confirmed.** Installed metadata says `Dual License`; the exact licence choice has not been established.                                                                                                                                                                                                                                                                                                                              |
+| IDS 1.0 XSD (`ids.xsd`)     | IfcTester loads this schema from its installed package; first-party code references it but does not copy it into the repository. The schema declares version `1.0.0`.                          | The [buildingSMART IDS repository licence](https://github.com/buildingSMART/IDS/blob/development/LICENSE) identifies CC BY-ND 4.0 and buildingSMART International Ltd. The exact upstream revision corresponding to IfcTester's bundled copy is not recorded. The project does not modify the schema.                                                                                                                                          |
+| IfcOpenShell wheel binaries | The Windows wheel contains native DLLs, including Boost-named files. They are installed as part of the external IfcOpenShell dependency, not committed or copied by this repository. | The IfcOpenShell package declares LGPL-3.0-or-later. The licences and notices for every separately bundled native component in a redistributed wheel have not been reviewed; verify them against the exact platform wheel before repackaging it.                                                                                                                                                                                                       |
 
-The current repository imports IfcOpenShell and IfcTester. `bcf-client` is installed transitively
-with IfcTester but no first-party BCF import was found. `ifcclash` is described as optional or
-future functionality in existing documentation, is not declared in `pyproject.toml`, and is not
-included as a current dependency in this inventory.
+The application imports IfcOpenShell and IfcTester. `bcf-client` is installed with IfcTester, but
+the application does not use it. `ifcclash` is not a dependency.
 
 ## Frontend dependencies
 
@@ -166,44 +158,73 @@ These are package metadata declarations rather than a legal review of the distri
   required grants and preserve the corresponding notices. The `bcf-client` licence conflict and
   `odfpy`/`python-dateutil` metadata must be resolved before redistributing a Python environment.
 
-## Assets and redistribution
+## Images and example files
 
-| Asset or component                                                                                       | Repository/build status                                                                                                                                                                                                                             | Attribution and verification                                                                                                                                                                                                                                                                                                                                                                          |
-| -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`assets/BIM-Intelligence Architectural Logo.png`](./assets/BIM-Intelligence%20Architectural%20Logo.png) | Tracked image.                                                                                                                                                                                                                                      | **UNVERIFIED:** the repository does not establish its creator, source or redistribution licence. Confirm ownership or permission before redistributing it.                                                                                                                                                                                                                                            |
-| [`assets/bim-intelligence-panel.png`](./assets/bim-intelligence-panel.png)                               | Tracked application-panel image.                                                                                                                                                                                                                    | **UNVERIFIED:** the repository does not record its creator, source or redistribution licence. Confirm the image and any content within it are rights-cleared before redistributing it.                                                                                                                                                                                                                |
-| [`frontend/public/favicon.svg`](./frontend/public/favicon.svg)                                           | Tracked SVG icon.                                                                                                                                                                                                                                   | **UNVERIFIED:** no author or licence notice is present. Confirm its provenance and redistribution rights.                                                                                                                                                                                                                                                                                             |
-| [`frontend/public/images/home/bim-intelligence-hero.webp`](./frontend/public/images/home/bim-intelligence-hero.webp) | Tracked Project Home banner, optimised from an owner-supplied image. | The owner confirmed public redistribution rights for the banner on 2 November 2026. This is an owner-reported permission, not an independent legal assessment. |
-| [`frontend/public/images/home/reel/`](./frontend/public/images/home/reel/) | Six tracked architectural scene images, including a labelled concept visualisation. | For UI-005D the owner identified the images as AI-generated and confirmed public redistribution and optimised-derivative rights. Do not present the concept as an application screenshot. |
-| [`docs/assets/research/`](./docs/assets/research/) | Two tracked, owner-supplied research graphics in the README. | The UI-005D review records the owner's redistribution and derivative permission. The graphics cite Autodesk, Springer Nature Link and RICS, but their numerical claims and underlying sources have not been independently checked; permission for the graphics is not verification of the statistics. |
-| [`examples/`](./examples/) | Tracked collection descriptions, draft IDS files, two spreadsheets and four images; no IFC models are tracked there. | **UNVERIFIED:** individual sources, licences, redistribution rights and applicability. Collection notes contain licence assertions that have not been independently verified. Review each tracked non-IFC asset and its contents before publication; do not infer rights from availability or a filename. |
-| [`tests/fixtures/minimal.ifc`](./tests/fixtures/minimal.ifc) and [`minimal.ids`](./tests/fixtures/minimal.ids) | Tracked, synthetic three-wall IFC4 and IDS fixtures generated by [`make_minimal_ifc.py`](./tests/fixtures/make_minimal_ifc.py); not an external project model. | Project-authored test inputs under the repository [MIT licence](./LICENSE). The fixture references the third-party Uniclass 2015 system and one code, not a redistributed classification catalogue; confirm any applicable attribution or terms before redistribution. No external example model is included or cleared by this entry. |
-| `web-ifc.wasm` and `web-ifc-mt.wasm`                                                                     | Not tracked. `frontend/scripts/copy-wasm-assets.mjs` copies both files from the locked `web-ifc` package into the ignored `frontend/public/web-ifc/` directory for development and builds; the frontend build can include them in `frontend/dist/`. | The source package is `web-ifc` `0.0.77`, which declares MPL-2.0 and ships `LICENSE.md` in its npm package. For any distribution of the generated frontend, include the applicable MPL licence text or an accessible licence URL and meet the source/notice obligations in [MPL-2.0 sections 3.1-3.2](https://www.mozilla.org/en-US/MPL/2.0/). The exact obligations depend on the distribution form. |
-| IfcOpenShell native wheel contents                                                                       | Installed by Python dependency resolution; not tracked or copied by this repository. The inspected Windows wheel contains native DLLs.                                                                                                              | The package declares LGPL-3.0-or-later; separate licences/notices for all bundled native components were not independently verified. Do not treat this repository's source inventory as a complete notice bundle for a repackaged wheel.                                                                                                                                                              |
+### Project images
 
-No third-party JavaScript, WebAssembly, font or native binary files are tracked in the repository.
-No external font or asset-hosting references were found in the frontend source examined for this
-audit. Built frontend output and copied web-ifc assets are ignored by Git and are not evidence that
-the project has published a distribution.
+The project author created all of the images below for BIM Intelligence: the artwork was
+AI-generated, the panel image is a screenshot of the application, and the research graphics were
+supplied by the author. The author holds the rights to publish them and releases them under the
+project's [MIT License](./LICENSE). The home-page reel includes a labelled concept visualisation;
+it is not a screenshot of the application.
+
+| Files | Use |
+| --- | --- |
+| [`assets/BIM-Intelligence Architectural Logo.png`](./assets/BIM-Intelligence%20Architectural%20Logo.png) | Project logo in the README |
+| [`assets/bim-intelligence-panel.png`](./assets/bim-intelligence-panel.png) | Screenshot of the application's Project Home in the README |
+| The other PNG files in [`assets/`](./assets/) | Source artwork for the README and home page |
+| [`frontend/public/favicon.svg`](./frontend/public/favicon.svg) | Browser tab icon |
+| [`frontend/public/images/home/bim-intelligence-hero.webp`](./frontend/public/images/home/bim-intelligence-hero.webp) | Project Home banner |
+| [`frontend/public/images/home/reel/`](./frontend/public/images/home/reel/) (six images) | Project Home image reel |
+| [`docs/assets/research/`](./docs/assets/research/) (two graphics) | Research summary graphics |
+
+The research graphics quote figures published by Autodesk, Springer Nature Link and RICS. The
+figures belong to their cited sources and have not been
+independently checked.
+
+### Example files
+
+| Files | Source and licence | Required credit |
+| --- | --- | --- |
+| [`examples/duplex-apartment/`](./examples/duplex-apartment/): two spreadsheets and four drawings | Duplex Apartment test files, published by buildingSMART International under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | BSI (2020) "Duplex Apartment Test Files," buildingSMART International. |
+| [`examples/molio/Molio_Example.ids`](./examples/molio/Molio_Example.ids) | IDS example whose header records buildingSMART as the copyright holder. The buildingSMART [IDS repository](https://github.com/buildingSMART/IDS) is licensed [CC BY-ND 4.0](https://creativecommons.org/licenses/by-nd/4.0/). | © buildingSMART International Ltd. |
+| The `benchmark.ids` files in [`examples/`](./examples/) | Draft IDS files written for this project; [MIT License](./LICENSE) | None |
+| [`tests/fixtures/minimal.ifc`](./tests/fixtures/minimal.ifc) and [`minimal.ids`](./tests/fixtures/minimal.ids) | Synthetic fixtures generated by [`make_minimal_ifc.py`](./tests/fixtures/make_minimal_ifc.py); [MIT License](./LICENSE). They reference one Uniclass 2015 code but do not include the classification. | None |
+
+The Duplex Apartment licence asks for the source repository URL in the credit. The files were
+originally hosted by the US National Institute of Building Sciences and later republished by
+buildingSMART; the current repository URL is still to be added.
+
+The Medical-Dental Clinic collection in [`examples/medical-dental-clinic/`](./examples/medical-dental-clinic/)
+contains only a description and a project-authored draft IDS. Its source models are credited as
+BSI (2020) "Medical-Dental Test Files," buildingSMART International (CC BY 4.0) and are not
+included in the repository.
+
+### Generated build files
+
+| Files | Notes |
+| --- | --- |
+| `web-ifc.wasm` and `web-ifc-mt.wasm` | Not tracked. [`copy-wasm-assets.mjs`](./frontend/scripts/copy-wasm-assets.mjs) copies them from the locked `web-ifc` `0.0.77` package (MPL-2.0) into the ignored `frontend/public/web-ifc/` directory, and a frontend build includes them. A distributed build must include the MPL-2.0 licence text or a link to it and meet [MPL-2.0 sections 3.1–3.2](https://www.mozilla.org/en-US/MPL/2.0/). |
+| IfcOpenShell native wheel contents | Installed as part of the IfcOpenShell package (LGPL-3.0-or-later); not tracked or copied by this repository. |
+
+No third-party JavaScript, WebAssembly, font or native binary files are tracked in the
+repository, and the frontend loads no external fonts or hosted assets.
 
 The IDS schema is a separate attribution consideration: the upstream buildingSMART IDS repository
 identifies buildingSMART International Ltd. and CC BY-ND 4.0. If the schema is ever copied or
 redistributed independently, preserve the required attribution and licence reference, do not
 distribute an adapted version under that grant, and first verify the exact provenance of the copy.
 
-## Verification limits and follow-up
+## Before redistributing a build
 
-- The Python project has no lockfile. Re-run a licence and notice inventory against the exact
-  dependency resolution and target platform used for each distributable.
-- The `bcf-client` licence conflict, `odfpy` grant, `python-dateutil` dual-licence choice, build
-  tool metadata, bundled IfcOpenShell native components, logo/panel/favicon provenance and
-  tracked example-asset rights remain **UNVERIFIED** as described above. The research graphics'
-  numerical claims and underlying source citations also need independent verification.
-- The npm lockfile records licence fields for all package records, but this audit did not unpack
-  and compare every transitive package's `LICENSE`/`NOTICE` file. Validate those files for a
-  concrete redistribution.
-- No full third-party licence texts are reproduced here. Follow the distribution-specific terms
-  above and include upstream licence texts or notices where required.
+- The Python project has no lockfile. Re-check licences and notices against the exact dependency
+  resolution and platform of any distributed build.
+- Resolve the `bcf-client` licence discrepancy and the `odfpy` and `python-dateutil` licence
+  choices before redistributing an installed Python environment.
+- The npm lockfile records a licence field for every package; compare the packages' own
+  `LICENSE` and `NOTICE` files for a specific redistribution.
+- Full third-party licence texts are not reproduced here. Include the upstream licence texts or
+  notices that each distribution form requires.
 
 Authoritative licence texts: [MIT](https://spdx.org/licenses/MIT.html),
 [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0),

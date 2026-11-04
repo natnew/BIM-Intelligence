@@ -1,95 +1,88 @@
 # Support and Troubleshooting
 
-BIM Intelligence is pre-alpha software under active development. Start with the
-[README](./README.md) for project status, setup, the intended workflow and links to the technical
-documentation.
+BIM Intelligence is an early prototype. Start with the [README](./README.md) for the product
+overview, setup and the example workflow.
 
 ## Development environment and startup
 
-The development range is Python 3.10–3.12 (develop on 3.12) and Node.js 20 or 22. From a clean
-checkout, install and start the backend from the repository root:
+You need Python 3.10–3.12 (3.12 recommended) and Node.js 20.19+ or 22.12+. From the repository
+root, install and start the backend:
 
-```powershell
+```bash
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+source .venv/bin/activate        # Windows PowerShell: .\.venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev]"
 uvicorn bim_intelligence.api.main:app --reload --app-dir backend --host 127.0.0.1 --port 8000
 ```
 
-On macOS or Linux, activate the environment with `source .venv/bin/activate`. In a second terminal,
-run the frontend:
+In a second terminal, start the frontend:
 
-```powershell
+```bash
 cd frontend
 npm ci
-npm run dev
+npm run dev                      # http://localhost:5173
 ```
 
-The API health check is <http://127.0.0.1:8000/api/v1/health>; interactive API documentation is
-<http://127.0.0.1:8000/api/v1/docs>. The health response includes service and library versions,
-LLM mode and a key-configured boolean; it does not expose the key.
+The health check is <http://127.0.0.1:8000/api/v1/health> and the interactive API documentation is
+<http://127.0.0.1:8000/api/v1/docs>. The health response shows service and library versions, the
+LLM mode and whether an API key is configured; it never shows the key.
 
-## Supported input and review behaviour
+## Supported inputs
 
-- Model uploads: `.ifc` only (IFC2X3, IFC4 and IFC4X3 parsing is described by the API).
-- Requirement uploads: `.ids` (IDS 1.0), `.md` or `.txt`.
-- PDF, RVT and NWD are not accepted by the implemented upload routes.
-- Valid IDS specifications become confirmed requirements. Markdown and text are stored as source
-  material and do not automatically create executable requirements.
-- A review needs confirmed executable requirements. A session with none cannot run a review;
-  upload a valid IDS or add an available registered native requirement. The model does not turn
-  unconfirmed narrative text into a check by itself.
+- **Models:** `.ifc` only (IFC2X3, IFC4 and IFC4X3).
+- **Requirements:** `.ids` (IDS 1.0), `.md` or `.txt`.
+- **Not accepted:** PDF, RVT and NWD.
+- Each valid IDS specification becomes a confirmed, executable requirement. Markdown and text are
+  stored as source documents and do not become checks automatically.
+- A review needs at least one confirmed requirement: upload a valid IDS, or add the built-in
+  classification-consistency rule.
 
-See the [architecture](./docs/ARCHITECTURE.md) for the distinction between implemented behaviour and
-planned workflow.
+See the [architecture](./docs/ARCHITECTURE.md) for how the components fit together.
 
 ## Common problems
 
 ### Installation fails
 
-- Use Python 3.10, 3.11 or 3.12; IfcOpenShell support is constrained by the repository's declared
-  Python range. Install backend dependencies from the repository root with
-  `python -m pip install -e ".[dev]"`.
-- Use Node.js 20 or 22 and install the locked frontend dependencies with `npm ci` from `frontend/`.
-- If a command is not found, confirm the Python virtual environment is active or that the terminal
-  is running from the expected directory.
+- Check your Python version. IfcOpenShell publishes wheels for Python 3.10–3.12 only, so 3.13 and
+  later will not install.
+- Install the backend from the repository root with `python -m pip install -e ".[dev]"`, and the
+  frontend with `npm ci` from `frontend/`.
+- If a command is not found, check that the virtual environment is active and that you are in the
+  right directory.
 
-### IFC upload or viewer fails
+### The IFC upload or viewer fails
 
-Confirm the file has an `.ifc` extension and is within the configured `MAX_IFC_MB` limit (200 MB by
-default). The backend validates and indexes the model; a rejected upload returns a structured API
-error. The browser viewer loads the same stored model version. Try the committed synthetic fixture
-to distinguish a project-specific input problem from a local setup issue. Do not attach confidential
-models to public issues.
+Check that the file has an `.ifc` extension and is within `MAX_IFC_MB` (200 MB by default). A
+rejected upload returns a structured error explaining why. To tell a file problem from a setup
+problem, try the synthetic fixture in
+[`tests/fixtures/minimal.ifc`](./tests/fixtures/minimal.ifc).
 
-### IDS is rejected or no checks are available
+### The IDS is rejected or no checks are available
 
 The importer accepts IDS 1.0 and reports malformed or schema-invalid files as validation errors.
-Check the file is a valid `.ids` document. A `.md` or `.txt` upload is retained as source material,
-not converted automatically into executable checks. If no confirmed check is present, upload a
-valid IDS or add an available registered native requirement before running a review.
+Markdown and text files are stored as source documents, not converted into checks. If no confirmed
+check exists, upload a valid IDS before running a review.
 
-### Model-version mismatch
+### "Model version mismatch"
 
-Review runs are pinned to the model hash. If a model is replaced after a run, the application
-rejects stale reads rather than combining data from different versions. Reopen or run a review
-against the active model version and select the corresponding run.
+Every review run is pinned to the model it ran against. If the model is replaced afterwards, the
+application refuses to mix data from the two versions. Run a new review against the current model,
+or open the run that matches it.
 
-### Meta Model API or offline mode
+### AI review is unavailable
 
-The default is `LLM_MODE=off`; deterministic IDS review does not require an API key. Live requests
-are optional and require explicit configuration of `MODEL_API_KEY`, `LLM_MODE=live` and
-`ALLOW_LIVE_LLM=true`. They may incur cost and must not be enabled without explicit project-owner
-approval. Keep credentials out of issues and logs. See [`.env.example`](./.env.example) and
-[AGENTS.md](./AGENTS.md#8-security-requirements).
+`LLM_MODE=off` is the default, and the deterministic review works without an API key: choose
+**Continue without AI**. To enable Muse Spark, set `LLM_MODE=live`, `ALLOW_LIVE_LLM=true`,
+`LLM_MODEL=muse-spark-1.3` and `MODEL_API_KEY` in the backend `.env`, then restart the backend.
+Live requests are billed by the provider. See [`.env.example`](./.env.example) for every setting.
 
 ## Reporting defects and requesting features
 
-Use [GitHub Issues](https://github.com/natnew/BIM-Intelligence/issues) for reproducible software
-defects and feature requests. Include the steps to reproduce, expected and observed behaviour,
-operating system, Python and Node versions, relevant command and test results, and a sanitised error
-message. Prefer a committed synthetic fixture or a minimal synthetic example.
+Use [GitHub Issues](https://github.com/natnew/BIM-Intelligence/issues). Include the steps to
+reproduce, the expected and observed behaviour, your operating system and Python and Node.js
+versions, and the relevant error message with any secrets removed. A reproduction with the
+committed synthetic fixture is the most helpful.
 
-Do not upload architectural models, project documents, extracted text, screenshots containing
-project information, API credentials or unredacted logs to public issues. For a suspected security
-vulnerability, follow [SECURITY.md](./SECURITY.md); do not publish exploit details.
+Do not attach real architectural models, project documents, screenshots of project information,
+API keys or unredacted logs to a public issue. To report a security vulnerability, follow
+[SECURITY.md](./SECURITY.md).
