@@ -17,20 +17,18 @@ This collection records an intended IFC input for information and reference expl
 - Information-quality checks against applicable, explicitly defined requirements.
 
 
-## Provenance and status
+## Source and licence
 
-Model contents, source URLs, licences and redistribution rights, file hashes, IFC versions and
-application compatibility are **Pending verification**. The intended exploration does not establish
-that referenced URIs are valid or that the IFC is suitable for publication.
+`Molio_Example.ids` records buildingSMART as its copyright holder; the buildingSMART
+[IDS repository](https://github.com/buildingSMART/IDS) is licensed
+[CC BY-ND 4.0](https://creativecommons.org/licenses/by-nd/4.0/). The `Molio_with_URIs.ifc` model
+is not included in this repository; check its source and licence before redistributing it. The
+exploration does not establish that the referenced URIs are valid.
 
 See the [example library guide](../README.md#sources-and-licences) before using or publishing files.
 
 An applicable IDS must be prepared separately for project-specific IDS validation.
 
-## Provenance and status
-
-**Availability, source URLs, licences and redistribution rights, file hashes, IFC versions and
-application compatibility:** **Pending verification.**
-
-See the [library guide](../README.md#sources-and-licences) for input locations and licensing.
+See the [example library guide](../README.md#exploring-a-model-and-running-a-review) for how to
+open a model and run a review.
 

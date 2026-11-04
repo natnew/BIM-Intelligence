@@ -213,8 +213,8 @@ demonstration requires all of the following in the ignored backend `.env`: `LLM_
 `MODEL_API_KEY`. Never place a key in a command, screenshot or tracked file. Restart the backend
 and confirm the displayed mode; the health check does not test provider availability.
 
-These switches are configuration, not authorisation: in this repository, each paid session needs
-explicit owner approval and must use synthetic or otherwise authorised inputs. Planning can send
+Live requests are billed by Meta, so enable Live mode only with your own API key and budget, and
+only send synthetic data or data you have the right to share with a third-party provider. Planning can send
 the objective, a model summary and requirement metadata; an explanation can also send selected
 element properties and finding evidence. The IFC file itself is not sent. The application reserves
 against a two-call review cap, USD 0.10 per call and per review, and a USD 5 project ledger. These
@@ -367,7 +367,7 @@ python scripts/secret_scan.py --staged        # staged changes; also run by .git
 python scripts/secret_scan.py --working-tree  # tracked and untracked non-ignored files
 python scripts/secret_scan.py                 # full Git history
 
-# Gated one-request live smoke test: run only with explicit owner approval for the session
+# Opt-in live smoke test: makes one billed Meta Model API request
 BIMI_LIVE_LLM=1 BIMI_LIVE_APPROVAL=T5-META-MUSE-SPARK-SMOKE pytest tests/live/test_meta_smoke.py -m live
 ```
 

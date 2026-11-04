@@ -18,11 +18,12 @@
 
 Federation and geometric clash detection are not implemented in the current application.
 
-## Provenance and status
+## Source and licence
 
-Model contents, source URLs, licences and redistribution rights, file hashes, IFC versions and
-application compatibility are **Pending verification**. These filenames and intended uses do not
-establish that every input is present or suitable for publication.
+The Medical-Dental Clinic test files are published by buildingSMART International under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Credit them as BSI (2020)
+"Medical-Dental Test Files," buildingSMART International. The IFC models are not included in this
+repository, and their contents have not been checked file by file.
 
 See the [example library guide](../README.md#sources-and-licences) before using or publishing files.
 
