@@ -6,11 +6,11 @@ direction, architecture, dependencies or visual design.
 
 ## Mandatory rules
 
-1. Read the root `AGENTS.md` and [`docs/UI_SPEC.md`](../docs/UI_SPEC.md) before editing.
+1. Read the root `AGENTS.md` and `docs/UI_SPEC.md` before editing.
 2. Reference a specific owner-authorised UI iteration ID in every visual change. Do not invent an
    iteration scope; stop if no applicable approved scope exists.
 3. Do not invent or assume owner-approved design decisions. Use `UI_SPEC.md` and
-   [`docs/UI_REFERENCES.md`](../docs/UI_REFERENCES.md) to distinguish verified behaviour, provisional
+   `docs/UI_REFERENCES.md` to distinguish verified behaviour, provisional
    principles, approved decisions and open questions.
 4. Change only the explicitly authorised UI scope. Do not bundle unrelated cleanup or redesign.
 5. Preserve existing API contracts, application state and validated behaviour.
@@ -62,7 +62,7 @@ A visually successful change that breaks functionality is a failed iteration.
 
 ## Change-control sequence
 
-The [UI constitution](../docs/UI_CONSTITUTION.md) is binding for design quality, conflict
+The UI constitution is binding for design quality, conflict
 resolution and bounded autonomy. Use the
 [bim-ui-refinement skill](../.github/skills/bim-ui-refinement/SKILL.md) for progressive context
 loading, reference inventory, three alternatives, comparative prototypes and the weighted rubric.
@@ -76,10 +76,10 @@ rendered isolated prototypes require separate output approval. Stop after the ag
 no unlimited revisions, unrestricted parallel agents, speculative dependencies or automatic next
 task. Time limits in prompts are advisory and require session supervision or supported external
 limits. Verify actual host discovery/tools; agent files are not a path sandbox. Optional Copilot
-guards in [UI_SPEC §16](../docs/UI_SPEC.md#16-optional-copilot-safeguards--proposal-only)
+guards in UI_SPEC §16
 are proposals only and must not disrupt the Git secret-scanning hook.
 
-Follow the owner-directed process in [`docs/UI_SPEC.md`](../docs/UI_SPEC.md): owner supplies a
+Follow the owner-directed process in `docs/UI_SPEC.md`: owner supplies a
 reference or objective; agent proposes a bounded scope and affected files; owner approves; agent
 implements only that scope on a separate branch from the latest approved baseline; agent runs
 checks and captures repeatable visual evidence; owner reviews and decides; approved work is recorded

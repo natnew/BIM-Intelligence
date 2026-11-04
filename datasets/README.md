@@ -36,6 +36,6 @@ templates must use synthetic or expressly redistributable data.
 T-6 generates a synthetic IFC4 reference model, defective model, IDS, injection manifest,
 independently checked ground truth, BEP and objective examples. Run
 `python -m tests.evaluation.run_eval` from the repository root to regenerate the inputs and execute
-the benchmark; see [docs/EVALUATION.md](../docs/EVALUATION.md) for the defect catalogue, measured
-results and hashes. The generator does not modify the minimal IFC/IDS fixtures. An optional second
+the benchmark. The runner writes the defect catalogue, measured results and hashes to
+`tests/evaluation/runs/latest/`. The generator does not modify the minimal IFC/IDS fixtures. An optional second
 dataset using a permitted public IFC remains unresolved under [ADR-011](../docs/DECISIONS.md#adr-011-synthetic-benchmark-with-defect-injection) and OQ-03.

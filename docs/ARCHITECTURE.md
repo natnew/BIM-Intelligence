@@ -10,16 +10,15 @@ enhancements; a single live synthetic acceptance is not evidence of general prov
 on-request explanations, browser-local recent sessions and single-model camera/selection controls.
 VERIFY-010 exercised a live plan and grounded explanation on one synthetic fixture; VERIFY-009
 failed at explanation generation. One-click sample loading and report export are not implemented.
-FED-001 is a synthetic test harness, not an integrated federation or clash feature. See
-[EVALUATION.md](./EVALUATION.md#8-results).
+FED-001 is a synthetic test harness, not an integrated federation or clash feature.
 
 Notation used in this document:
 
 - **DECISION** — an architectural decision adopted for the MVP (rationale in [DECISIONS.md](./DECISIONS.md)).
 - **PROPOSAL** — a design that requires experimental validation before it is adopted.
-- **ASSUMPTION** — an unverified premise; tracked in [REQUIREMENTS.md](./REQUIREMENTS.md) and [RISKS.md](./RISKS.md).
+- **ASSUMPTION** — an unverified premise that has not yet been confirmed.
 
-Requirement identifiers (`FR-…`, `NFR-…`, `C-…`) refer to [REQUIREMENTS.md](./REQUIREMENTS.md).
+Requirement identifiers (`FR-…`, `NFR-…`, `C-…`) are internal traceability labels.
 
 ---
 
@@ -90,7 +89,7 @@ unconfirmed requirement. Report and BCF export are planned.
 
 ## 3. Functional requirements
 
-Authoritative list: [REQUIREMENTS.md §3](./REQUIREMENTS.md#3-functional-requirements). Summary of the P0 set the architecture must satisfy:
+Summary of the P0 set the architecture must satisfy:
 
 | Group | P0 requirements |
 |---|---|
@@ -105,7 +104,7 @@ Authoritative list: [REQUIREMENTS.md §3](./REQUIREMENTS.md#3-functional-require
 
 ## 4. Non-functional requirements
 
-Authoritative list: [REQUIREMENTS.md §4](./REQUIREMENTS.md#4-non-functional-requirements). The architecturally significant ones:
+The architecturally significant ones:
 
 - **NFR-01 Determinism** drives the separation of the rule engine from any LLM path.
 - **NFR-03 Grounding** drives the evidence-bundle data model and the post-generation checker.
@@ -295,8 +294,7 @@ reservation when usage is unavailable and reconciles returned usage. Corrupt or 
 accounting fails closed. These are **application-level safeguards**, not provider billing caps.
 Safe aggregate status is available at `GET /api/v1/llm/budget`; prompts and credentials are not
 returned. At configured Standard rates, the uncached 8,000/2,000 reservation is USD 0.01850.
-See [ADR-020](./DECISIONS.md#adr-020-t-5-meta-client-spend-ledger-and-human-gates) and
-[EVALUATION §8](./EVALUATION.md#8-results).
+See [ADR-020](./DECISIONS.md#adr-020-t-5-meta-client-spend-ledger-and-human-gates).
 
 ---
 
@@ -582,7 +580,7 @@ The findings list highlights the finding's affected GlobalIds with a dedicated d
 
 Viewer-specific imports remain inside `frontend/src/viewer/`, and the viewer module is code-split and loaded when a review workspace opens. The Fragments worker is bundled from `@thatopen/fragments/worker?url`; `predev` and `prebuild` copy the pinned `web-ifc` WASM files into ignored `frontend/public/web-ifc/`, and the IFC loader is configured to read them from `/web-ifc/`. The IFC remains read-only. Fit, Reset, Focus and bidirectional finding/element selection are implemented; the Model Browser lists readable storeys rather than a complete element tree.
 
-**Verification evidence (29 October 2026).** The minimal fixture rendered in the browser; selecting its W-002 finding highlighted the corresponding wall and displayed GlobalId `0QWMtUzsnUUONCUGc8Sqsa`. Clicking the model selected W-001 and then W-002, populated element details, and restored the matching finding when the affected wall was clicked. Frontend API and selection coordination tests are recorded in the T-3 task entry in `docs/IMPLEMENTATION_PLAN.md`.
+**Verification evidence (29 October 2026).** The minimal fixture rendered in the browser; selecting its W-002 finding highlighted the corresponding wall and displayed GlobalId `0QWMtUzsnUUONCUGc8Sqsa`. Clicking the model selected W-001 and then W-002, populated element details, and restored the matching finding when the affected wall was clicked. Frontend API and selection coordination behaviour is covered by the frontend test suite.
 
 ---
 
@@ -656,7 +654,7 @@ All errors are structured (`ProblemDetail`) with `type = https://github.com/natn
 
 ## 16. Evaluation and testing architecture
 
-Full design: [EVALUATION.md](./EVALUATION.md). Architectural hooks:
+The benchmark is described in [datasets/README.md](../datasets/README.md). Architectural hooks:
 
 ```mermaid
 flowchart LR
@@ -692,7 +690,7 @@ only to their recorded sessions; they do not authorise another request.
 | Token caps | Input target ≤ 8,000 estimated tokens per request. Output ≤ 500 tokens by default; objective planning (`LLM_MAX_PLANNING_OUTPUT_TOKENS`) and finding explanations (`LLM_MAX_EXPLANATION_OUTPUT_TOKENS`) each allow ≤ 2,000 tokens at low reasoning effort. Input is estimated from UTF-8 bytes plus message overhead; exceeding the target is rejected before the request. |
 | Configured pricing | Muse Spark Standard defaults: $1.25/M uncached input, $0.15/M cached input and $4.25/M output. Recheck [Meta's published pricing](https://dev.meta.ai/docs/pricing-rate-limits) before enabling live mode. Values are configuration, not constants in the accounting engine. |
 | Worst-case request estimate | 8,000 uncached input tokens plus 500 output tokens = **$0.012125**; a 2,000-token planning or explanation request = **$0.01850**, and one of each within a review = **$0.03700**. Default per-call/per-review application limit is $0.10; cumulative project ledger is $5.00. Provider-reported usage is reconciled; if usage is missing, the reserved estimate is charged. |
-| Safeguard limitation | The ledger is an application control, not a provider-enforced account cap or billing guarantee. It cannot constrain spend made outside this application or after local runtime data is deliberately removed. Recorded live usage is scoped to the approved observations in [EVALUATION §8](./EVALUATION.md#8-results), not independently verified provider billing. |
+| Safeguard limitation | The ledger is an application control, not a provider-enforced account cap or billing guarantee. It cannot constrain spend made outside this application or after local runtime data is deliberately removed. Recorded live usage reflects application accounting, not independently verified provider billing. |
 
 ---
 
@@ -708,7 +706,7 @@ only to their recorded sessions; they do not authorise another request.
 
 ## 19. Technical risks and mitigations
 
-Full register: [RISKS.md](./RISKS.md). Top architectural risks:
+Top architectural risks:
 
 | Risk | Mitigation in the architecture |
 |---|---|
@@ -827,8 +825,7 @@ The Python project is defined once at the repository root with `package-dir = {"
 **Status (1 November 2026):** The existing single-model review flow remains the implemented
 baseline. The following two-model coordination path is an owner-approved, conditional proposal,
 not an implemented feature or a change to the current session contract. Its feasibility gate and
-delivery limits are recorded in [DECISIONS.md ADR-021–ADR-025](./DECISIONS.md) and the
-[48-hour plan](./FINAL_48_HOUR_PLAN.md).
+delivery limits are recorded in [DECISIONS.md ADR-021–ADR-025](./DECISIONS.md).
 
 ### 21.1 Preserve the existing single-model flow
 

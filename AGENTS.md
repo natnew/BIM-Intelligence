@@ -11,11 +11,11 @@ Current phase: **pre-alpha, implementation in progress.** The checked-in impleme
 This summary is descriptive; the engineering and approval rules below are binding. Before starting work, consult the task register and the relevant recorded evidence rather than treating this summary as a completion ledger.
 
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) — architecture baseline and marked implementation evidence
-- [docs/REQUIREMENTS.md](./docs/REQUIREMENTS.md) — what it must do (`FR-*`, `NFR-*`, `C-*` ids)
+- docs/REQUIREMENTS.md — what it must do (`FR-*`, `NFR-*`, `C-*` ids)
 - [docs/DECISIONS.md](./docs/DECISIONS.md) — why (`ADR-*`); open questions (`OQ-*`)
-- [docs/IMPLEMENTATION_PLAN.md](./docs/IMPLEMENTATION_PLAN.md) and [CHANGELOG.md](./CHANGELOG.md) — delivery mapping, status and implementation history
-- [docs/EVALUATION.md](./docs/EVALUATION.md) — evaluation scope, reproduction, recorded results and limitations
-- [docs/RISKS.md](./docs/RISKS.md) — risks and unresolved mitigations
+- docs/IMPLEMENTATION_PLAN.md and [CHANGELOG.md](./CHANGELOG.md) — delivery mapping, status and implementation history
+- docs/EVALUATION.md — evaluation scope, reproduction, recorded results and limitations
+- docs/RISKS.md — risks and unresolved mitigations
 
 When sources disagree, distinguish their authority:
 
@@ -50,13 +50,13 @@ See [ARCHITECTURE.md Appendix A](./docs/ARCHITECTURE.md#appendix-a--recommended-
 - `bim/` and `validation/` are the **only** packages that import `ifcopenshell` / `ifctester`.
 - Prompts live in `orchestration/prompts/` and `reporting/prompts/` as versioned files (`planner.v1.md`, `requirements.v1.md`, `explanation.v1.md`); the narrative extractor loads `orchestration/prompts/requirements.v1.md`. Never inline long prompts in code.
 - `tests/unit/` mirrors the backend package layout; `tests/scenario/` holds end-to-end tests; small hand-built IFC/IDS fixtures go in `tests/fixtures/`.
-- `tests/evaluation/` holds the opt-in metrics runner and evaluation regression tests, which may import the backend as a library. Its `test_*.py` files are collected by default `pytest`; the standalone runner is invoked separately. Generated benchmark inputs, results and response recordings remain in ignored paths. See [datasets/README.md](./datasets/README.md) and [EVALUATION §7](./docs/EVALUATION.md#7-reproduction) for provenance and reproduction.
+- `tests/evaluation/` holds the opt-in metrics runner and evaluation regression tests, which may import the backend as a library. Its `test_*.py` files are collected by default `pytest`; the standalone runner is invoked separately. Generated benchmark inputs, results and response recordings remain in ignored paths. See [datasets/README.md](./datasets/README.md) and EVALUATION §7 for provenance and reproduction.
 - `frontend/src/viewer/` is the only place that imports `@thatopen/*`, `web-ifc` or `three`.
 - For any frontend UI change, also read [`frontend/AGENTS.md`](./frontend/AGENTS.md) and
-  [`docs/UI_SPEC.md`](./docs/UI_SPEC.md) before editing. The owner-directed UI reference and
-  iteration records are [`docs/UI_REFERENCES.md`](./docs/UI_REFERENCES.md) and
-  [`docs/UI_CHANGELOG.md`](./docs/UI_CHANGELOG.md).
-- Apply the binding [`UI constitution`](./docs/UI_CONSTITUTION.md) and the bounded
+  `docs/UI_SPEC.md` before editing. The owner-directed UI reference and
+  iteration records are `docs/UI_REFERENCES.md` and
+  `docs/UI_CHANGELOG.md`.
+- Apply the binding `UI constitution` and the bounded
   [`bim-ui-refinement` skill](./.github/skills/bim-ui-refinement/SKILL.md) for T-7 design work.
   The [designer](./.github/agents/bim-ui-designer.agent.md) is read-only; the
   [implementer](./.github/agents/bim-ui-implementer.agent.md) needs separate iteration approval.
@@ -117,10 +117,10 @@ local-private/
 - **Unit tests are mandatory** for: Model Index construction, every native rule (positive, negative and boundary cases), IDS compilation (XSD-valid output), grounding checker (including adversarial fixtures), tool registry (unknown tool, invalid args, cap), configuration validation (contributor-model rejection), finding normaliser.
 - **Scenario tests** run the full review on a fixture with `FakeClient`; one scenario per planned objective; one for `LLM_MODE=off`; one for LLM failure mid-run.
 - **Regression tests** for every fixed bug, named after the issue.
-- **No live API calls in the default test run.** Live tests are marked `@pytest.mark.live` and require explicit session spend approval (`C-06`). The existing T-5 smoke test additionally requires `-m live`, `BIMI_LIVE_LLM=1`, `BIMI_LIVE_APPROVAL=T5-META-MUSE-SPARK-SMOKE` and valid live settings; see the [T-5 register](./docs/IMPLEMENTATION_PLAN.md#t-5--meta-muse-spark-integration). A configured gate is not owner approval.
+- **No live API calls in the default test run.** Live tests are marked `@pytest.mark.live` and require explicit session spend approval (`C-06`). The existing T-5 smoke test additionally requires `-m live`, `BIMI_LIVE_LLM=1`, `BIMI_LIVE_APPROVAL=T5-META-MUSE-SPARK-SMOKE` and valid live settings; see the T-5 register. A configured gate is not owner approval.
 - **Determinism:** tests must not depend on wall-clock time, random ordering or network. Seed anything random.
 - Frontend: Vitest + React Testing Library for panels. The required Playwright smoke test on the benchmark remains outstanding; mocked viewer tests and recorded fixture browser walkthroughs do not replace it.
-- Evaluation runs (`tests/evaluation/run_eval.py`) produce scoped metrics, separate from regression tests. Apply the existing NFR-02 precision/recall target and [EVALUATION](./docs/EVALUATION.md) criteria; do not invent new thresholds or generalise the small synthetic result to real projects or live model quality. Keep counts, dates and hashes in the evidence records, not permanent instructions.
+- Evaluation runs (`tests/evaluation/run_eval.py`) produce scoped metrics, separate from regression tests. Apply the existing NFR-02 precision/recall target and EVALUATION criteria; do not invent new thresholds or generalise the small synthetic result to real projects or live model quality. Keep counts, dates and hashes in the evidence records, not permanent instructions.
 
 ## 7. Documentation responsibilities
 

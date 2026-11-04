@@ -4,7 +4,7 @@
 
 ## Requirement ids served
 
-<!-- e.g. FR-ING-01, NFR-08, ADR-010 — see docs/REQUIREMENTS.md and docs/DECISIONS.md -->
+<!-- e.g. FR-ING-01, NFR-08, ADR-010 — see docs/DECISIONS.md -->
 
 ## Validation
 

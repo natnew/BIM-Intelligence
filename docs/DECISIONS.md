@@ -84,7 +84,7 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 
 **Evidence.** Brief §5 ("favour the smallest effective orchestration architecture"); NFR-05, NFR-06.
 
-**Unresolved.** Whether the planner adds measurable value over the default plan for the benchmark objectives — to be evaluated (EVALUATION §5).
+**Unresolved.** Whether the planner adds measurable value over the default plan for the benchmark objectives — to be evaluated.
 
 ---
 
@@ -146,7 +146,7 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 
 **Evidence.** registry.npmjs.org (`@thatopen/components` 3.6.0, MIT, peer `three >= 0.182.0`, `web-ifc >= 0.0.77`); thatopen.github.io/engine_components lists `core/IfcLoader`, `core/FragmentsManager` and `front/Highlighter`.
 
-**Implementation evidence (T-3, 29 October 2026).** On the minimal IFC, browser verification exercised `getLocalIdsByGuids`, `getGuidsByLocalIds` and `Highlighter.highlightByID`; selecting a finding highlighted its wall, and clicking that wall resolved its GlobalId and selected the matching finding. See [the T-3 implementation record](./IMPLEMENTATION_PLAN.md#t-3--interactive-3d-bim-viewer).
+**Implementation evidence (T-3, 29 October 2026).** On the minimal IFC, browser verification exercised `getLocalIdsByGuids`, `getGuidsByLocalIds` and `Highlighter.highlightByID`; selecting a finding highlighted its wall, and clicking that wall resolved its GlobalId and selected the matching finding. See the T-3 implementation record.
 
 **Licence note.** `web-ifc` 0.0.77 is MPL-2.0, not MIT. It is installed unchanged because it is required by the selected viewer stack; this is a documented exception to the repository's permissive-or-LGPL dependency preference. Owner review of distribution obligations remains required before public distribution.
 
@@ -246,7 +246,7 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 
 ## ADR-015 Contract model: immutable `CheckSpec`, content-addressed `Finding`, per-check `CheckResult`
 
-**Status.** Adopted 27 October 2026 as the owner-approved technical direction for the vertical slice ([BAKEOFF_ARCHITECTURE_REVIEW.md](./BAKEOFF_ARCHITECTURE_REVIEW.md) C-02, C-03, C-05). Implemented in `backend/bim_intelligence/schemas/`.
+**Status.** Adopted 27 October 2026 as the owner-approved technical direction for the vertical slice. Implemented in `backend/bim_intelligence/schemas/`.
 
 **Decision.**
 
@@ -355,7 +355,7 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 - `rule_versions` in the manifest is keyed by `rule_id`; two specifications sharing a name but differing in content collapse to one key there, while `requirement_revisions` and `ids_hashes` still identify the inputs exactly.
 - Holding the lock for a synchronous run blocks uploads for its duration — seconds on the fixture; the background-task design is the remedy for large models.
 - `severity` is `error` for every IDS finding; IDS 1.0 has no severity concept and inventing one from cardinality would be speculative.
-- IfcTester 0.9.0 recognises only lower-case `true`/`false` for boolean `simpleValue`s; `TRUE` happens to work (`bool("TRUE")`) and `FALSE` does not. Authors of IDS files for this system should write booleans in lower case; the fixture is unaffected because it only tests `TRUE`. Recorded in RISKS.md.
+- IfcTester 0.9.0 recognises only lower-case `true`/`false` for boolean `simpleValue`s; `TRUE` happens to work (`bool("TRUE")`) and `FALSE` does not. Authors of IDS files for this system should write booleans in lower case; the fixture is unaffected because it only tests `TRUE`.
 
 **Evidence.** `tests/unit/validation/` (32), `tests/unit/requirements/` (9), `tests/unit/orchestration/` (19), `tests/unit/store/test_session_store_runs.py` (14), `tests/unit/api/test_documents.py`, `test_reviews.py`, `test_cors.py` (31), `tests/unit/schemas/test_document_import.py` (2); `pytest` 461 passed, `ruff`, `mypy --strict` on `schemas/`, `validation/`, `orchestration/` clean, 29 October 2026, Windows/Python 3.12.12, ifcopenshell 0.9.0.post1, ifctester 0.9.0, xmlschema 4.3.2. On the committed fixture: two confirmed requirements, two `failed` check results, exactly two findings (W-002 `0QWMtUzsnUUONCUGc8Sqsa` for the FireRating specification, W-003 `2qvnbd6oPPKR1ac5HegGTJ` for the classification specification), W-003 outside the first specification's two applicable entities, findings equal to `ifctester.reporter.Json` element for element, three consecutive HTTP runs with identical `findings.json` SHA-256, model version directory byte-identical before and after, an upload attempted from inside a run refused with 409, and no socket opened during compile, hydrate or run.
 
@@ -378,7 +378,7 @@ Each record states the decision, the alternatives considered, the trade-offs, th
 
 **Trade-offs.** The current native registry contains one rule, not a general-purpose plugin system. Its parameter-free contract avoids exposing unverified configuration that could weaken a confirmed requirement. A `partial` run is intentionally conservative: `not_applicable` is not a defect, but it does not demonstrate coverage. Benchmark precision/recall and clean-control results are not available until T-6.
 
-**Evidence.** Native rule positive, mismatch, applicability and invalid-spec tests; explicit confirmation API tests; bounded-plan/error tests; and the LLM-off fixture scenario in `tests/unit/validation/test_native_rules.py`, `tests/unit/api/test_native_requirements.py`, `tests/unit/orchestration/test_review_runner.py` and `tests/scenario/test_deterministic_review.py`. Exact commands and results are recorded in [T-4](./IMPLEMENTATION_PLAN.md#t-4--end-to-end-deterministic-review-workflow).
+**Evidence.** Native rule positive, mismatch, applicability and invalid-spec tests; explicit confirmation API tests; bounded-plan/error tests; and the LLM-off fixture scenario in `tests/unit/validation/test_native_rules.py`, `tests/unit/api/test_native_requirements.py`, `tests/unit/orchestration/test_review_runner.py` and `tests/scenario/test_deterministic_review.py`. Exact commands and results are recorded in T-4.
 
 ---
 
@@ -398,7 +398,7 @@ Before each live call, reserve application budget using configured per-million t
 
 **Trade-offs and remaining risks.** A byte-based input estimate plus message overhead is conservative for ordinary UTF-8 prompts but is not provider tokenisation. Provider usage is reconciled after a request; if returned usage exceeds the reservation, the actual amount is recorded and further requests are blocked, but the provider may already have billed more than the reservation. Deleting the local ledger or spending outside this application is outside the safeguard. Meta endpoint, model access and structured-output compatibility have not been verified by a live call; each live test requires explicit owner approval.
 
-**Evidence.** Offline tests cover Fake/Replay, schema validation, quote verification, plan filtering, grounding fallback, API routes, timeout/error sanitisation, reservation persistence and concurrent accounting. Muse Spark Standard price defaults are configurable and sourced from [Meta's published pricing](https://dev.meta.ai/docs/pricing-rate-limits). The exact smoke-test plan and offline validation results are recorded in [T-5](./IMPLEMENTATION_PLAN.md#t-5--meta-muse-spark-integration); no API usage has been measured.
+**Evidence.** Offline tests cover Fake/Replay, schema validation, quote verification, plan filtering, grounding fallback, API routes, timeout/error sanitisation, reservation persistence and concurrent accounting. Muse Spark Standard price defaults are configurable and sourced from [Meta's published pricing](https://dev.meta.ai/docs/pricing-rate-limits). The exact smoke-test plan and offline validation results are recorded in T-5; no API usage has been measured.
 
 ---
 
@@ -406,7 +406,7 @@ Before each live call, reserve application budget using configured per-million t
 
 | ID | Question | Resolution |
 |---|---|---|
-| OQ-01 | Exact That Open Components 3.6 API for GlobalId lookup and highlighting | Resolved in T-3 by browser verification of GlobalId lookup and `Highlighter.highlightByID`; see [ADR-007](#adr-007-browser-side-geometry-with-that-open-components) and the [T-3 evidence](./IMPLEMENTATION_PLAN.md#t-3--interactive-3d-bim-viewer). |
+| OQ-01 | Exact That Open Components 3.6 API for GlobalId lookup and highlighting | Resolved in T-3 by browser verification of GlobalId lookup and `Highlighter.highlightByID`; see [ADR-007](#adr-007-browser-side-geometry-with-that-open-components) and the T-3 evidence. |
 
 ## Open questions register
 
@@ -424,8 +424,7 @@ Before each live call, reserve application budget using configured per-million t
 
 ## ADR-021 Bounded model federation is separate from a session
 
-**Status: Adopted 1 November 2026; implementation is conditional on the feasibility gate in
-[FINAL_48_HOUR_PLAN.md](./FINAL_48_HOUR_PLAN.md).**
+**Status: Adopted 1 November 2026; implementation is conditional on a feasibility gate.**
 
 **Decision.** Preserve the existing `Session` contract: one session has at most one active IFC
 model version. Do not overload a session or replace its uploaded IFC to represent another
@@ -535,8 +534,7 @@ Fabricated progress or unsupported camera controls would misrepresent behaviour.
 verified viewer API. Existing selection, finding identity, viewer lifecycle, version guards,
 read-only model handling, accessibility and palette take precedence over adding controls.
 
-**Evidence.** UI-003 is implemented on `main` and its browser walkthrough is recorded in
-`docs/UI_CHANGELOG.md`. The current viewer exposes orbit, pan, zoom and selection; fit/reset/focus
+**Evidence.** UI-003 is implemented on `main` and was verified in a browser walkthrough. The current viewer exposes orbit, pan, zoom and selection; fit/reset/focus
 controls are explicitly deferred.
 
 **Unresolved.** Which camera operations the installed viewer version safely exposes for a federated
@@ -585,7 +583,7 @@ user-facing integration.
 remains 4 November 2026. A functioning three-minute video is mandatory for the delivery plan.
 Federation and clash detection are an optional, conditional demonstration, with a no-later-than
 2 November 2026 12:00 UTC go/no-go cutoff. Include coordination only if every technical, evidence,
-rights, privacy, regression and recording condition in `docs/FINAL_48_HOUR_PLAN.md` passes.
+rights, privacy, regression and recording condition passes.
 
 If that gate fails, do not show or narrate unverified coordination. Keep the primary demonstration
 on the working deterministic IDS/native review, with the Meta-assisted path included only if its
@@ -714,8 +712,7 @@ VERIFY-009 live gate. No live request is authorised by this decision.
 
 **Evidence.** FIX-001 owner-reported observations; offline LiveClient transport tests; Meta's
 [Chat Completions parameter reference](https://dev.meta.ai/docs/protocols/chat-completions);
-and the FIX-002 offline verification record in [T-5](./IMPLEMENTATION_PLAN.md#t-5--meta-muse-spark-integration)
-and [EVALUATION §8](./EVALUATION.md#fix-002-offline-review-planning-correction-3-november-2026).
+and the FIX-002 offline regression tests.
 
 ## ADR-028 FIX-003 Muse Spark grounded explanation allowance and token-limit labelling
 
@@ -765,10 +762,8 @@ classification and labels only; whether Muse Spark completes a grounded explanat
 tokens at low reasoning effort is OQ-08 and requires a separately approved live retest. No live
 request is authorised by this decision.
 
-**Evidence.** The sanitised VERIFY-009 live result recorded in
-[T-5](./IMPLEMENTATION_PLAN.md#t-5--meta-muse-spark-integration); offline `LiveClient`
-stub-transport and API regression tests named for VERIFY-009 and FIX-003; and the FIX-003 offline
-verification record in [EVALUATION §8](./EVALUATION.md#fix-003-offline-grounded-explanation-correction-3-november-2026).
+**Evidence.** The sanitised VERIFY-009 live result; offline `LiveClient` stub-transport and API
+regression tests named for VERIFY-009 and FIX-003.
 
 ## Implementation outcomes — 1 November 2026
 
@@ -789,9 +784,6 @@ These observations supplement, and do not change, the adopted decisions above.
   the video and official submission fields have not been verified, and release remains no-go.
   Further live calls, publication and submission still require their existing owner gates.
 
-The precise test commands, baseline and limitations are recorded in
-[EVALUATION.md](./EVALUATION.md#release-001-offline-verification--1-november-2026) and
-[DEMO_PLAN.md](./DEMO_PLAN.md).
 
 ## ADR-029 Live structured-output evidence and retained validation
 
@@ -833,6 +825,6 @@ validation creates findings; explanation provenance and grounding remain mandato
 run artefacts remain unchanged. Live calls still require explicit session approval, applicable
 data rights and unchanged fail-closed application spend controls.
 
-**Evidence:** [FIX-002, VERIFY-009 and VERIFY-010](./EVALUATION.md#8-results); the
-[T-5 task register](./IMPLEMENTATION_PLAN.md#t-5--meta-muse-spark-integration); and ADR-027/028.
+**Evidence:** FIX-002, VERIFY-009 and VERIFY-010; the
+T-5 task register; and ADR-027/028.
 No new live call is authorised by this record.
