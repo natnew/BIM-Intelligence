@@ -24,7 +24,7 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "three": "0.182.0",
-    "web-ifc": "0.0.77"
+    "web-ifc": "0.0.78"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^7.0.1",
